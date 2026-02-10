@@ -1,0 +1,12 @@
+---
+# https://clang.llvm.org/docs/ClangFormatStyleOptions.html
+BasedOnStyle: LLVM
+IndentWidth: 2
+ColumnLimit: 85
+BreakBeforeBraces: Attach
+AllowShortIfStatementsOnASingleLine: Always
+PointerAlignment: Left
+AccessModifierOffset: -2
+IndentAccessModifiers: false
+IndentCaseBlocks: false
+...
