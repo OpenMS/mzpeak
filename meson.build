@@ -6,10 +6,18 @@ project('MZPeak C++ Library', 'cpp',
 
 # Source files included in the library:
 lib_sources = [
+  'src/directory.cpp',
+  'src/file.cpp',
+  'src/zip.cpp',
 ]
 
 # Header files to include in packages:
 install_headers([
+  'include/mzpeak/archive.h',
+  'include/mzpeak/buffer.h',
+  'include/mzpeak/directory.h',
+  'include/mzpeak/file.h',
+  'include/mzpeak/zip.h',
 ], subdir : 'mzpeak')
 
 # Library and executable targets:
@@ -35,7 +43,23 @@ deps = [
                required : true),
 ]
 
-library('mzpeak', lib_sources,
-        dependencies : deps,
-        include_directories : include,
-        install : true)
+libmzpeak = library('mzpeak', lib_sources,
+                    dependencies : deps,
+                    include_directories : include,
+                    install : true)
+
+# Testing
+test_names = [
+    'directory',
+    'zip',
+]
+
+foreach test : test_names
+    test(test,
+         executable('@0@_test'.format(test),
+                    'test/@0@_test.cpp'.format(test),
+                    include_directories : include,
+                    dependencies : deps,
+                    link_with : libmzpeak),
+         verbose : false)
+endforeach
