@@ -6,6 +6,7 @@ project('MZPeak C++ Library', 'cpp',
 
 # Source files included in the library:
 lib_sources = [
+  'src/arrow.cpp',
   'src/directory.cpp',
   'src/file.cpp',
   'src/zip.cpp',
@@ -14,6 +15,7 @@ lib_sources = [
 # Header files to include in packages:
 install_headers([
   'include/mzpeak/archive.h',
+  'include/mzpeak/arrow.h',
   'include/mzpeak/buffer.h',
   'include/mzpeak/directory.h',
   'include/mzpeak/file.h',
@@ -50,6 +52,7 @@ libmzpeak = library('mzpeak', lib_sources,
 
 # Testing
 test_names = [
+    'arrow',
     'directory',
     'zip',
 ]
