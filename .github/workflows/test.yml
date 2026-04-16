@@ -1,0 +1,19 @@
+name: "Build and Test"
+
+on:
+  pull_request:
+    branches: [ "trunk" ]
+
+  push:
+    branches: [ "trunk" ]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: nixbuild/nix-quick-install-action@v34
+      - run: nix flake check --print-build-logs
