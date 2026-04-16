@@ -45,10 +45,17 @@ deps = [
                required : true),
 ]
 
-libmzpeak = library('mzpeak', lib_sources,
-                    dependencies : deps,
-                    include_directories : include,
-                    install : true)
+libmzpeak_so = library(
+  'mzpeak', lib_sources,
+  dependencies : deps,
+  include_directories : include,
+  install : true)
+
+libmzpeak_a = static_library(
+  'mzpeak', lib_sources,
+  dependencies : deps,
+  include_directories : include,
+  install : true)
 
 # Testing
 test_names = [
@@ -63,6 +70,6 @@ foreach test : test_names
                     'test/@0@_test.cpp'.format(test),
                     include_directories : include,
                     dependencies : deps,
-                    link_with : libmzpeak),
+                    link_with : libmzpeak_so),
          verbose : false)
 endforeach
