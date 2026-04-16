@@ -15,6 +15,8 @@ stdenv.mkDerivation {
   version = "1.0.0";
   src = nix-gitignore.gitignoreRecursiveSource [ ] ../.;
 
+  doCheck = true;
+
   nativeBuildInputs = [
     meson
     ninja
