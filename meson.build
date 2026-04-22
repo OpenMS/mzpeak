@@ -9,7 +9,8 @@ lib_sources = [
   'src/arrow.cpp',
   'src/directory.cpp',
   'src/file.cpp',
-  'src/zip.cpp',
+  'src/index.cpp',
+  'src/zip.cpp'
 ]
 
 # Header files to include in packages:
@@ -18,8 +19,10 @@ install_headers([
   'include/mzpeak/arrow.h',
   'include/mzpeak/buffer.h',
   'include/mzpeak/directory.h',
+  'include/mzpeak/exception.h',
   'include/mzpeak/file.h',
-  'include/mzpeak/zip.h',
+  'include/mzpeak/index.h',
+  'include/mzpeak/zip.h'
 ], subdir : 'mzpeak')
 
 # Library and executable targets:
@@ -61,6 +64,7 @@ libmzpeak_a = static_library(
 test_names = [
     'arrow',
     'directory',
+    'index',
     'zip',
 ]
 
