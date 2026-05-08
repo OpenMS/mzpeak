@@ -13,6 +13,7 @@ lib_sources = [
   'src/index/data_kind.cpp',
   'src/index/entity_type.cpp',
   'src/index/file.cpp',
+  'src/metadata.cpp',
   'src/parquet.cpp',
   'src/zip.cpp',
 ]
@@ -29,8 +30,9 @@ install_headers([
   'include/mzpeak/index/data_kind.h',
   'include/mzpeak/index/entity_type.h',
   'include/mzpeak/index/file.h',
+  'include/mzpeak/metadata.h',
   'include/mzpeak/parquet.h',
-  'include/mzpeak/zip.h'
+  'include/mzpeak/zip.h',
 ], subdir : 'mzpeak')
 
 # Library and executable targets:
