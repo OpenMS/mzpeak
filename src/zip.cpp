@@ -18,8 +18,10 @@ namespace MzPeak::Archive {
  */
 class ZipFile_ final : public MzPeak::File::Readable {
 public:
-  ZipFile_(zip_file_t* file, std::size_t size)
-      : impl_(std::make_shared<Impl>(file, size)) {}
+  ZipFile_(zip_file_t* file, std::size_t size, fs::path path)
+      : impl_(std::make_shared<Impl>(file, size, path)) {}
+
+  std::string name() const { return impl_->path_; };
 
   std::size_t size() const { return impl_->size_; };
 
@@ -56,7 +58,8 @@ public:
 private:
   class Impl {
   public:
-    Impl(zip_file_t* file, std::size_t size) : size_(size), file_(file) {};
+    Impl(zip_file_t* file, std::size_t size, fs::path path)
+        : size_(size), file_(file), path_(path) {};
     ~Impl() { close(); }
 
     void close() {
@@ -68,6 +71,7 @@ private:
 
     std::size_t size_;
     zip_file_t* file_;
+    fs::path path_;
 
   private:
     Impl(const Impl&) = default;
@@ -170,7 +174,7 @@ std::unique_ptr<MzPeak::File::Readable> Zip::read_file(const fs::path& path) {
     impl_->error_open(path, {});
   }
 
-  return std::make_unique<ZipFile_>(file, stat.size);
+  return std::make_unique<ZipFile_>(file, stat.size, path);
 }
 
 } // namespace MzPeak::Archive

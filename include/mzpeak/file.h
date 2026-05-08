@@ -27,6 +27,11 @@ public:
   virtual ~Readable() {};
 
   /**
+   * The name of this file.
+   */
+  virtual std::string name() const = 0;
+
+  /**
    * Return the size of the file, in bytes.
    */
   virtual std::size_t size() const = 0;

@@ -21,6 +21,8 @@ public:
 
   ~DirFile_() = default;
 
+  std::string name() const { return path_.string(); }
+
   std::size_t size() const { return fs::file_size(path_); };
 
   std::optional<std::size_t> read(uint8_t* buffer, std::size_t size) {
