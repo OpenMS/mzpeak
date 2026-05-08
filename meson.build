@@ -11,6 +11,9 @@ lib_sources = [
   'src/file.cpp',
   'src/index.cpp',
   'src/zip.cpp'
+  'src/index/data_kind.cpp',
+  'src/index/entity_type.cpp',
+  'src/index/file.cpp',
 ]
 
 # Header files to include in packages:
@@ -22,6 +25,9 @@ install_headers([
   'include/mzpeak/exception.h',
   'include/mzpeak/file.h',
   'include/mzpeak/index.h',
+  'include/mzpeak/index/data_kind.h',
+  'include/mzpeak/index/entity_type.h',
+  'include/mzpeak/index/file.h',
   'include/mzpeak/zip.h'
 ], subdir : 'mzpeak')
 
@@ -37,6 +43,7 @@ deps = [
 
     dependency('boost',
                version : '>=1.89.0',
+               modules : ['json'],
                required : true),
 
     dependency('libzip',

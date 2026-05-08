@@ -9,8 +9,9 @@ directory of this repository.
 #pragma once
 
 #include "mzpeak/archive.h"
+#include "mzpeak/index/file.h"
 
-#include <boost/json/src.hpp>
+#include <boost/json.hpp>
 
 namespace MzPeak::Index {
 
@@ -32,9 +33,9 @@ public:
   ~Readable();
 
   /**
-   * Return the raw metadata value from the index.
+   * Return a list of files found in the index.
    */
-  const json::object metadata() const;
+  const std::vector<Index::File>& files() const;
 
 protected:
   std::unique_ptr<Impl> impl_;

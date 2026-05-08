@@ -28,17 +28,16 @@ namespace json = boost::json;
 struct Impl {
 
   /// Constructor.
-  Impl(MzPeak::Archive::Readable& archive)
-      : archive_(archive), json_(parse_index()) {};
+  Impl(MzPeak::Archive::Readable& archive) : archive_(archive) { parse_index(); };
 
   /// Parse the JSON that makes up the MzPeak index.
-  json::value parse_index();
+  void parse_index();
 
   // The archive we are reading files out of.
   MzPeak::Archive::Readable& archive_;
 
-  // The JSON from the index.
-  json::value json_;
+  // Parsed file entries.
+  std::vector<Index::File> files_;
 };
 
 /******************************************************************************/
@@ -49,13 +48,10 @@ Readable::Readable(MzPeak::Archive::Readable& archive)
 Readable::~Readable() = default;
 
 /******************************************************************************/
-const json::object Readable::metadata() const {
-  const json::object& obj = impl_->json_.as_object();
-  return obj.at("metadata").as_object();
-}
+const std::vector<Index::File>& Readable::files() const { return impl_->files_; }
 
 /******************************************************************************/
-json::value Impl::parse_index() {
+void Impl::parse_index() {
   auto file = archive_.read_file(INDEX_FILE_NAME);
   MzPeak::Buffer::Basic buffer;
   std::optional<std::size_t> bytes;
@@ -75,7 +71,19 @@ json::value Impl::parse_index() {
   if (!ec) parser.finish(ec);
   if (ec) throw MzPeak::Exception::JsonError(ec.message());
 
-  return parser.release();
+  json::value v = parser.release();
+  json::object o = v.as_object();
+
+  if (const auto it = o.find("files"); it != o.end() && it->value().is_array()) {
+    const json::array files(it->value().as_array());
+    files_.reserve(files.size());
+
+    for (const auto& file : files) {
+      if (file.is_object()) {
+        files_.push_back(Index::File(file.as_object()));
+      }
+    }
+  }
 }
 
 } // namespace MzPeak::Index
