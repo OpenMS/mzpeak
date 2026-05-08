@@ -9,6 +9,7 @@ directory of this repository.
 #include <arrow/buffer.h>
 #include <arrow/io/api.h>
 #include <arrow/io/buffered.h>
+#include <memory>
 
 #include "mzpeak/arrow.h"
 
@@ -114,11 +115,30 @@ private:
 };
 
 /******************************************************************************/
-Arrow::Arrow(std::unique_ptr<File::Readable> file) : file_(std::move(file)) {}
+struct Arrow::Impl {
+  Impl(std::unique_ptr<File::Readable> file)
+      : file_(std::move(file)), reader_(std::make_shared<ArrowFile_>(file_)) {};
+
+  std::shared_ptr<File::Readable> file_;
+  std::shared_ptr<ArrowFile_> reader_;
+};
 
 /******************************************************************************/
-std::shared_ptr<arrow::io::RandomAccessFile> Arrow::reader() {
-  return std::make_unique<ArrowFile_>(file_);
+Arrow::Arrow(std::unique_ptr<File::Readable> file)
+    : impl_(std::make_unique<Impl>(std::move(file))) {};
+
+/******************************************************************************/
+Arrow::~Arrow() = default;
+
+/******************************************************************************/
+std::shared_ptr<Arrow::random_access_t> Arrow::reader() const {
+  return impl_->reader_;
+}
+
+/******************************************************************************/
+std::unique_ptr<Parquet> Arrow::open() const {
+  auto file = parquet::ParquetFileReader::Open(reader());
+  return std::make_unique<Parquet>(std::move(file));
 }
 
 } // namespace MzPeak

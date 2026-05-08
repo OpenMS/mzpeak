@@ -11,6 +11,7 @@ directory of this repository.
 #include <arrow/io/api.h>
 
 #include "mzpeak/file.h"
+#include "mzpeak/parquet.h"
 
 namespace MzPeak {
 
@@ -19,17 +20,28 @@ namespace MzPeak {
  */
 class Arrow final {
 public:
+  using random_access_t = arrow::io::RandomAccessFile;
+
   /// Constructor.
   Arrow(std::unique_ptr<File::Readable>);
+
+  /// Destructor.
+  ~Arrow();
 
   /**
    * Return an arrow I/O object that can be used to open a Parquet
    * file for reading.
    */
-  std::shared_ptr<arrow::io::RandomAccessFile> reader();
+  std::shared_ptr<random_access_t> reader() const;
+
+  /**
+   * Open a parquet file for reading.
+   */
+  std::unique_ptr<Parquet> open() const;
 
 private:
-  std::shared_ptr<File::Readable> file_;
+  struct Impl;
+  std::unique_ptr<Impl> impl_;
 };
 
 } // namespace MzPeak

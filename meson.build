@@ -10,10 +10,11 @@ lib_sources = [
   'src/directory.cpp',
   'src/file.cpp',
   'src/index.cpp',
-  'src/zip.cpp'
   'src/index/data_kind.cpp',
   'src/index/entity_type.cpp',
   'src/index/file.cpp',
+  'src/parquet.cpp',
+  'src/zip.cpp',
 ]
 
 # Header files to include in packages:
@@ -28,6 +29,7 @@ install_headers([
   'include/mzpeak/index/data_kind.h',
   'include/mzpeak/index/entity_type.h',
   'include/mzpeak/index/file.h',
+  'include/mzpeak/parquet.h',
   'include/mzpeak/zip.h'
 ], subdir : 'mzpeak')
 
@@ -72,6 +74,7 @@ test_names = [
     'arrow',
     'directory',
     'index',
+    'parquet',
     'zip',
 ]
 
