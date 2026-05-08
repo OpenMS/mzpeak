@@ -69,7 +69,7 @@ void Impl::parse_index() {
   } while (bytes.has_value() && !ec);
 
   if (!ec) parser.finish(ec);
-  if (ec) throw MzPeak::Exception::JsonError(ec.message());
+  if (ec) throw MzPeak::JsonError(ec.message());
 
   json::value v = parser.release();
   json::object o = v.as_object();

@@ -10,18 +10,42 @@ directory of this repository.
 
 #include <stdexcept>
 
-namespace MzPeak::Exception {
+namespace MzPeak {
+
+/**
+ * Exception base class for the MzPeak library.
+ */
+class Exception : public std::runtime_error {
+public:
+  /// Constructor.
+  Exception(const std::string& msg) : std::runtime_error(msg) {};
+
+  /// Destructor.
+  ~Exception() = default;
+};
 
 /**
  * Error thrown when a JSON file could not be parsed.
  */
-class JsonError final : public std::runtime_error {
+class JsonError final : public Exception {
 public:
   /// Constructor.
-  JsonError(const std::string& msg) : std::runtime_error(msg) {};
+  JsonError(const std::string& msg) : Exception(msg) {};
 
   /// Destructor.
   ~JsonError() = default;
 };
 
-} // namespace MzPeak::Exception
+/**
+ * Thrown when an Arrow or Parquet error is encountered.
+ */
+class ParquetError final : Exception {
+public:
+  /// Constructor.
+  ParquetError(const std::string& msg) : Exception(msg) {};
+
+  /// Destructor.
+  ~ParquetError() = default;
+};
+
+} // namespace MzPeak
