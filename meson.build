@@ -32,6 +32,7 @@ install_headers([
   'include/mzpeak/index/file.h',
   'include/mzpeak/metadata.h',
   'include/mzpeak/parquet.h',
+  'include/mzpeak/util/enumerable_proxy.h',
   'include/mzpeak/zip.h',
 ], subdir : 'mzpeak')
 
@@ -77,6 +78,7 @@ test_names = [
     'directory',
     'index',
     'parquet',
+    'util',
     'zip',
 ]
 

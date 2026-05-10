@@ -48,4 +48,16 @@ public:
   ~ParquetError() = default;
 };
 
+/**
+ * Attempt to access an invalid iterator.
+ */
+class InvalidIterator final : Exception {
+public:
+  /// Constructor.
+  InvalidIterator(const std::string& msg) : Exception(msg) {};
+
+  /// Destructor.
+  ~InvalidIterator() = default;
+};
+
 } // namespace MzPeak
