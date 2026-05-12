@@ -10,7 +10,7 @@ directory of this repository.
 
 #include <string>
 
-namespace MzPeak::Index {
+namespace MzPeak::Schema {
 
 /**
  * The type of data entity stored in the file.
@@ -40,4 +40,4 @@ std::string entity_type_to_string(EntityType);
  */
 EntityType entity_type_from_string(const std::string_view&);
 
-} // namespace MzPeak::Index
+} // namespace MzPeak::Schema

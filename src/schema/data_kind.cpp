@@ -6,9 +6,9 @@ directory of this repository.
 
 */
 
-#include "mzpeak/index/data_kind.h"
+#include "mzpeak/schema/data_kind.h"
 
-namespace MzPeak::Index {
+namespace MzPeak::Schema {
 
 /******************************************************************************/
 std::string data_kind_to_string(DataKind dk) {
@@ -25,10 +25,9 @@ std::string data_kind_to_string(DataKind dk) {
     return "proprietary";
   case Other:
     return "other";
+  default:
+    return "other";
   }
-
-  // Make the compiler happy:
-  return "other";
 }
 
 /******************************************************************************/
@@ -48,4 +47,4 @@ DataKind data_kind_from_string(const std::string_view& s) {
   }
 }
 
-} // namespace MzPeak::Index
+} // namespace MzPeak::Schema

@@ -30,7 +30,7 @@ BOOST_AUTO_TEST_CASE(is_associated_with) {
   const auto& files = index.files();
 
   const auto& spectra = std::ranges::find(files, "spectra_data.parquet",
-                                          &MzPeak::Index::File::file_name);
+                                          &MzPeak::Schema::File::file_name);
 
   BOOST_TEST((spectra != files.end()), "missing spectra_data.parquet");
 

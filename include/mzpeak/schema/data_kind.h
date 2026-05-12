@@ -10,7 +10,7 @@ directory of this repository.
 
 #include <string>
 
-namespace MzPeak::Index {
+namespace MzPeak::Schema {
 
 /**
  * Indicates how data is encoded in a parquet file.
@@ -48,4 +48,4 @@ std::string data_kind_to_string(DataKind);
  */
 DataKind data_kind_from_string(const std::string_view&);
 
-} // namespace MzPeak::Index
+} // namespace MzPeak::Schema

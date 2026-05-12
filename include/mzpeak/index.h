@@ -9,14 +9,9 @@ directory of this repository.
 #pragma once
 
 #include "mzpeak/archive.h"
-#include "mzpeak/index/file.h"
-
-#include <boost/json.hpp>
+#include "mzpeak/schema/file.h"
 
 namespace MzPeak::Index {
-
-// Save some typing.
-namespace json = boost::json;
 
 // Internal implementation.
 struct Impl;
@@ -35,7 +30,7 @@ public:
   /**
    * Return a list of files found in the index.
    */
-  const std::vector<Index::File>& files() const;
+  const std::vector<Schema::File>& files() const;
 
 protected:
   std::unique_ptr<Impl> impl_;

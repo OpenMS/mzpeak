@@ -11,9 +11,9 @@ directory of this repository.
 #include <arrow/io/buffered.h>
 #include <memory>
 
-#include "mzpeak/arrow.h"
+#include "mzpeak/util/arrow.h"
 
-namespace MzPeak {
+namespace MzPeak::Util {
 
 /******************************************************************************/
 /// Make typing a bit easier.
@@ -135,10 +135,4 @@ std::shared_ptr<Arrow::random_access_t> Arrow::reader() const {
   return impl_->reader_;
 }
 
-/******************************************************************************/
-std::unique_ptr<Parquet> Arrow::open() const {
-  auto file = parquet::ParquetFileReader::Open(reader());
-  return std::make_unique<Parquet>(std::move(file));
-}
-
-} // namespace MzPeak
+} // namespace MzPeak::Util

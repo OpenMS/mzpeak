@@ -11,7 +11,7 @@ directory of this repository.
 #include <memory>
 
 #include "mzpeak/archive.h"
-#include "mzpeak/index/file.h"
+#include "mzpeak/schema/file.h"
 
 namespace MzPeak {
 
@@ -28,7 +28,7 @@ public:
    * NOTE: The given Index::File object *must* be a
    * Index::File::DataKind::Metadata.
    */
-  Metadata(readable_archive_t archive, const Index::File&);
+  Metadata(readable_archive_t archive, const Schema::File&);
 
   /// Destructor.
   ~Metadata();

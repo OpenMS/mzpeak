@@ -35,7 +35,11 @@
             name = "mzpeak shell";
             hardeningDisable = [ "fortify" ];
             inputsFrom = [ self.packages.${system}.default ];
-            buildInputs = [ pkgs.clang-tools ];
+            buildInputs = [
+              pkgs.clang-tools
+              pkgs.python3
+              pkgs.ruff
+            ];
           };
         }
       );

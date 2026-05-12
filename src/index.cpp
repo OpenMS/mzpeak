@@ -37,7 +37,7 @@ struct Impl {
   MzPeak::Archive::Readable& archive_;
 
   // Parsed file entries.
-  std::vector<Index::File> files_;
+  std::vector<Schema::File> files_;
 };
 
 /******************************************************************************/
@@ -48,7 +48,7 @@ Readable::Readable(MzPeak::Archive::Readable& archive)
 Readable::~Readable() = default;
 
 /******************************************************************************/
-const std::vector<Index::File>& Readable::files() const { return impl_->files_; }
+const std::vector<Schema::File>& Readable::files() const { return impl_->files_; }
 
 /******************************************************************************/
 void Impl::parse_index() {
@@ -80,7 +80,7 @@ void Impl::parse_index() {
 
     for (const auto& file : files) {
       if (file.is_object()) {
-        files_.push_back(Index::File(file.as_object()));
+        files_.push_back(Schema::File(file.as_object()));
       }
     }
   }

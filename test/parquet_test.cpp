@@ -6,25 +6,37 @@ directory of this repository.
 
 */
 
-#include "mzpeak/index/entity_type.h"
 #define BOOST_TEST_MODULE Parquet
 #include <boost/test/included/unit_test.hpp>
 
-#include "mzpeak/arrow.h"
+#include "mzpeak/util/parquet.h"
 #include "mzpeak/zip.h"
 
 /******************************************************************************/
-BOOST_AUTO_TEST_CASE(can_open_parque) {
-  MzPeak::Archive::Zip zip("../test/files/small.mzpeak");
-  MzPeak::Arrow arrow(zip.read_file("spectra_data.parquet"));
+BOOST_AUTO_TEST_CASE(can_get_array_index) {
+  using namespace MzPeak;
 
-  auto file = arrow.open();
-  std::size_t count = file->num_entities(MzPeak::Index::EntityType::Spectrum);
+  Archive::Zip zip("../test/files/small.mzpeak");
+  Util::Arrow arrow(zip.read_file("spectra_data.parquet"));
 
+  Util::Parquet file(arrow);
+  Schema::ArrayIndex index(file.array_index(Schema::EntityType::Spectrum));
+
+  BOOST_TEST(index.prefix() == "point");
+  BOOST_TEST(index.arrays().size() == 2);
+
+  BOOST_TEST(index.arrays()[0].array_name == "m/z array");
+  BOOST_TEST((index.arrays()[0].buffer_format == Schema::BufferFormat::Point));
+  BOOST_TEST((index.arrays()[0].context == Schema::EntityType::Spectrum));
+  BOOST_TEST((index.arrays()[0].path == "point.mz"));
+  BOOST_TEST((index.arrays()[0].data_type == Schema::PSI::DataType::Float64));
+  BOOST_TEST((index.arrays()[0].array_type == Schema::PSI::ArrayType::Mz));
+  BOOST_TEST((index.arrays()[0].unit == "MS:1000040"));
+  BOOST_TEST((index.arrays()[0].buffer_priority));
+  BOOST_TEST((index.arrays()[0].sorting_rank == std::optional{0}));
+  BOOST_TEST((index.arrays()[0].data_processing_id == std::nullopt));
+  BOOST_TEST((index.arrays()[0].transform == std::optional{"MS:1003901"}));
+
+  std::size_t count = index.num_entities().value_or(0);
   BOOST_TEST(count == 48);
-
-  // std::size_t max(std::ranges::max(
-  //     file->map_row_group_metadata<int64_t>(&parquet::RowGroupMetaData::num_rows)));
-  //
-  // BOOST_TEST(max == count);
 }

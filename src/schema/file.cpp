@@ -6,9 +6,9 @@ directory of this repository.
 
 */
 
-#include "mzpeak/index/file.h"
+#include "mzpeak/schema/file.h"
 
-namespace MzPeak::Index {
+namespace MzPeak::Schema {
 
 /******************************************************************************/
 File::File(const json::object& o)
@@ -31,4 +31,4 @@ bool File::is_associated_with(const File& other) const {
          (data_kind == DataKind::Metadata && other.data_kind == DataKind::DataArray);
 }
 
-} // namespace MzPeak::Index
+} // namespace MzPeak::Schema

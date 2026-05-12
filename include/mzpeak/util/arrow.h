@@ -11,9 +11,8 @@ directory of this repository.
 #include <arrow/io/api.h>
 
 #include "mzpeak/file.h"
-#include "mzpeak/parquet.h"
 
-namespace MzPeak {
+namespace MzPeak::Util {
 
 /**
  * This is a low-level interface for accessing a Parquet file.
@@ -34,14 +33,9 @@ public:
    */
   std::shared_ptr<random_access_t> reader() const;
 
-  /**
-   * Open a parquet file for reading.
-   */
-  std::unique_ptr<Parquet> open() const;
-
 private:
   struct Impl;
   std::unique_ptr<Impl> impl_;
 };
 
-} // namespace MzPeak
+} // namespace MzPeak::Util

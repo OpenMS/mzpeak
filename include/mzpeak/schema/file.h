@@ -11,10 +11,10 @@ directory of this repository.
 #include <boost/json.hpp>
 #include <string>
 
-#include "mzpeak/index/data_kind.h"
-#include "mzpeak/index/entity_type.h"
+#include "mzpeak/schema/data_kind.h"
+#include "mzpeak/schema/entity_type.h"
 
-namespace MzPeak::Index {
+namespace MzPeak::Schema {
 namespace json = boost::json;
 
 struct File {
@@ -43,4 +43,4 @@ struct File {
   EntityType entity_type = EntityType::Other;
 };
 
-} // namespace MzPeak::Index
+} // namespace MzPeak::Schema
