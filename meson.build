@@ -10,6 +10,8 @@ lib_sources = [
   'src/file.cpp',
   'src/index.cpp',
   'src/metadata.cpp',
+  'src/open.cpp',
+  'src/query.cpp',
   'src/schema/array_index.cpp',
   'src/schema/buffer_format.cpp',
   'src/schema/data_kind.cpp',
@@ -32,6 +34,8 @@ install_headers([
   'include/mzpeak/file.h',
   'include/mzpeak/index.h',
   'include/mzpeak/metadata.h',
+  'include/mzpeak/open.h',
+  'include/mzpeak/query.h',
   'include/mzpeak/schema/array_index.h',
   'include/mzpeak/schema/buffer_format.h',
   'include/mzpeak/schema/data_kind.h',
@@ -42,6 +46,7 @@ install_headers([
   'include/mzpeak/util/arrow.h',
   'include/mzpeak/util/enumerable_proxy.h',
   'include/mzpeak/util/parquet.h',
+  'include/mzpeak/util/parquet_types.h',
   'include/mzpeak/util/row_group_metadata_proxy.h',
   'include/mzpeak/zip.h',
 ], subdir : 'mzpeak')
@@ -88,6 +93,7 @@ test_names = [
     'directory',
     'index',
     'parquet',
+    'query',
     'util',
     'zip',
 ]

@@ -10,8 +10,7 @@ directory of this repository.
 
 #include <memory>
 
-#include "mzpeak/archive.h"
-#include "mzpeak/schema/file.h"
+#include "mzpeak/util/parquet.h"
 
 namespace MzPeak {
 
@@ -20,15 +19,8 @@ namespace MzPeak {
  */
 class Metadata final {
 public:
-  using readable_archive_t = std::shared_ptr<MzPeak::Archive::Readable>;
-
-  /**
-   * Constructor.
-   *
-   * NOTE: The given Index::File object *must* be a
-   * Index::File::DataKind::Metadata.
-   */
-  Metadata(readable_archive_t archive, const Schema::File&);
+  /// Constructor.
+  Metadata(std::unique_ptr<Util::Parquet>);
 
   /// Destructor.
   ~Metadata();

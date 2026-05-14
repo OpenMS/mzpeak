@@ -10,9 +10,9 @@ directory of this repository.
 
 #include <parquet/metadata.h>
 
+#include "mzpeak/file.h"
 #include "mzpeak/schema/array_index.h"
-#include "mzpeak/schema/entity_type.h"
-#include "mzpeak/util/arrow.h"
+#include "mzpeak/schema/file.h"
 #include "mzpeak/util/row_group_metadata_proxy.h"
 
 namespace MzPeak::Util {
@@ -25,10 +25,15 @@ public:
   using file_metadata_t = std::shared_ptr<parquet::FileMetaData>;
 
   /// Constructor.
-  Parquet(const Arrow&);
+  Parquet(std::unique_ptr<File::Readable>, Schema::File);
 
   /// Destructor.
   ~Parquet();
+
+  /**
+   * Return the file information from the MzPeak index.
+   */
+  const Schema::File& index_file() const;
 
   /**
    * Access the file metadata.
@@ -43,7 +48,7 @@ public:
   /**
    * Parse and return the ArrayIndex.
    */
-  Schema::ArrayIndex array_index(Schema::EntityType) const;
+  Schema::ArrayIndex array_index() const;
 
 private:
   struct Impl;

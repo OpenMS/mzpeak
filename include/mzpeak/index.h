@@ -10,6 +10,7 @@ directory of this repository.
 
 #include "mzpeak/archive.h"
 #include "mzpeak/schema/file.h"
+#include "mzpeak/util/parquet.h"
 
 namespace MzPeak::Index {
 
@@ -22,7 +23,7 @@ struct Impl;
 class Readable {
 public:
   /// Constructor.
-  Readable(MzPeak::Archive::Readable&);
+  Readable(std::unique_ptr<MzPeak::Archive::Readable>);
 
   /// Destructor.
   ~Readable();
@@ -31,6 +32,11 @@ public:
    * Return a list of files found in the index.
    */
   const std::vector<Schema::File>& files() const;
+
+  /**
+   * Open a Parquet file directly.
+   */
+  std::unique_ptr<Util::Parquet> parquet(const Schema::File&);
 
 protected:
   std::unique_ptr<Impl> impl_;

@@ -39,7 +39,7 @@ public:
 /**
  * Thrown when an Arrow or Parquet error is encountered.
  */
-class ParquetError final : Exception {
+class ParquetError final : public Exception {
 public:
   /// Constructor.
   ParquetError(const std::string& msg) : Exception(msg) {};
@@ -51,7 +51,7 @@ public:
 /**
  * Attempt to access an invalid iterator.
  */
-class InvalidIterator final : Exception {
+class InvalidIterator final : public Exception {
 public:
   /// Constructor.
   InvalidIterator(const std::string& msg) : Exception(msg) {};

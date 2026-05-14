@@ -16,6 +16,7 @@ directory of this repository.
 #include "mzpeak/exception.h"
 #include "mzpeak/schema/array_index.h"
 #include "mzpeak/schema/entity_type.h"
+#include "mzpeak/util/arrow.h"
 #include "mzpeak/util/parquet.h"
 
 namespace MzPeak::Util {
@@ -49,7 +50,8 @@ std::optional<std::size_t> get_kv_uint(Parquet::file_metadata_t& fmd,
 }
 
 /******************************************************************************/
-Schema::ArrayIndex parse_array_index(const std::optional<std::string>& str) {
+Schema::ArrayIndex parse_array_index(const std::optional<std::string>& str,
+                                     Schema::EntityType entity_type) {
   namespace json = boost::json;
   if (!str.has_value()) throw ParquetError("missing array_index");
 
@@ -58,7 +60,7 @@ Schema::ArrayIndex parse_array_index(const std::optional<std::string>& str) {
   if (ec) throw MzPeak::JsonError(ec.message());
 
   if (v.is_object()) {
-    return Schema::ArrayIndex(v.as_object());
+    return Schema::ArrayIndex(entity_type, v.as_object());
   } else {
     throw JsonError("array_index should be a JSON object");
   }
@@ -66,34 +68,38 @@ Schema::ArrayIndex parse_array_index(const std::optional<std::string>& str) {
 
 /******************************************************************************/
 struct Parquet::Impl {
-  Impl(std::unique_ptr<parquet::arrow::FileReader> file) : file_(std::move(file)) {};
+  Impl(std::unique_ptr<File::Readable> data, Schema::File file)
+      : file_(std::move(file)), arrow_(std::make_unique<Arrow>(std::move(data))) {
+    auto raf = arrow_->reader();
+
+    auto reader_builder = parquet::arrow::FileReaderBuilder();
+    auto status = reader_builder.Open(std::move(raf));
+    if (!status.ok()) throw ParquetError(status.ToString());
+
+    status = reader_builder.Build(&reader_);
+    if (!status.ok()) throw ParquetError(status.ToString());
+  };
 
   ~Impl() = default;
 
-  std::unique_ptr<parquet::arrow::FileReader> file_;
+  Schema::File file_;
+  std::unique_ptr<Arrow> arrow_;
+  std::unique_ptr<parquet::arrow::FileReader> reader_;
 };
 
 /******************************************************************************/
-Parquet::Parquet(const Arrow& arrow) {
-  auto raf = arrow.reader();
-
-  auto reader_builder = parquet::arrow::FileReaderBuilder();
-  auto status = reader_builder.Open(std::move(raf));
-  if (!status.ok()) throw ParquetError(status.ToString());
-
-  std::unique_ptr<parquet::arrow::FileReader> reader;
-  status = reader_builder.Build(&reader);
-  if (!status.ok()) throw ParquetError(status.ToString());
-
-  impl_ = std::make_unique<Impl>(std::move(reader));
-}
+Parquet::Parquet(std::unique_ptr<File::Readable> data, Schema::File file)
+    : impl_(std::make_unique<Impl>(std::move(data), std::move(file))) {}
 
 /******************************************************************************/
 Parquet::~Parquet() = default;
 
 /******************************************************************************/
+const Schema::File& Parquet::index_file() const { return impl_->file_; }
+
+/******************************************************************************/
 Parquet::file_metadata_t Parquet::file_metadata() const {
-  return impl_->file_->parquet_reader()->metadata();
+  return impl_->reader_->parquet_reader()->metadata();
 }
 
 /******************************************************************************/
@@ -102,46 +108,20 @@ Util::RowGroupMetadataProxy Parquet::rg_metadata() const {
 }
 
 /******************************************************************************/
-Schema::ArrayIndex Parquet::array_index(Schema::EntityType et) const {
+Schema::ArrayIndex Parquet::array_index() const {
+  Schema::EntityType entity_type(impl_->file_.entity_type);
   file_metadata_t fmd(file_metadata());
 
-  std::string num_key(Schema::entity_type_to_string(et) + "_count");
+  std::string num_key(Schema::entity_type_to_string(entity_type) + "_count");
   std::optional<std::size_t> num_entities(get_kv_uint(fmd, num_key));
 
-  std::string index_key(Schema::entity_type_to_string(et) + "_array_index");
+  std::string index_key(Schema::entity_type_to_string(entity_type) + "_array_index");
   auto index_str(get_kv_string(fmd, index_key));
 
-  Schema::ArrayIndex ai(parse_array_index(index_str));
+  Schema::ArrayIndex ai(parse_array_index(index_str, impl_->file_.entity_type));
   ai.num_entities(num_entities);
 
   return ai;
 }
-
-/******************************************************************************/
-// Try the row group metadata:
-// {
-//   std::string key(Index::entity_type_to_string(entity_type) + "_index");
-//   auto rgmd = rg_metadata();
-//   std::size_t max{0};
-//
-//   for (auto rg : rgmd) {
-//     for (auto cc : rgmd.column_chunk(rg)) {
-//       if (cc->path_in_schema()->ToDotVector().back() == key) {
-//         auto stats = cc->statistics();
-//         if (stats->HasMinMax()) {
-//           parquet::Int64Statistics* tstats = std::static_pointer_cast(*stats);
-//           max = std::max(max, tstats->max());
-//         }
-//         break;
-//       }
-//     }
-//   }
-//
-//   if (max > 0) {
-//     impl_->num_entities_ = max;
-//     return max;
-//   }
-// }
-//}
 
 } // namespace MzPeak::Util

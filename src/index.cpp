@@ -28,21 +28,24 @@ namespace json = boost::json;
 struct Impl {
 
   /// Constructor.
-  Impl(MzPeak::Archive::Readable& archive) : archive_(archive) { parse_index(); };
+  Impl(std::unique_ptr<MzPeak::Archive::Readable> archive)
+      : archive_(std::move(archive)) {
+    parse_index();
+  };
 
   /// Parse the JSON that makes up the MzPeak index.
   void parse_index();
 
   // The archive we are reading files out of.
-  MzPeak::Archive::Readable& archive_;
+  std::unique_ptr<MzPeak::Archive::Readable> archive_;
 
   // Parsed file entries.
   std::vector<Schema::File> files_;
 };
 
 /******************************************************************************/
-Readable::Readable(MzPeak::Archive::Readable& archive)
-    : impl_(std::make_unique<Impl>(archive)) {}
+Readable::Readable(std::unique_ptr<MzPeak::Archive::Readable> archive)
+    : impl_(std::make_unique<Impl>(std::move(archive))) {}
 
 /******************************************************************************/
 Readable::~Readable() = default;
@@ -52,7 +55,7 @@ const std::vector<Schema::File>& Readable::files() const { return impl_->files_;
 
 /******************************************************************************/
 void Impl::parse_index() {
-  auto file = archive_.read_file(INDEX_FILE_NAME);
+  auto file = archive_->read_file(INDEX_FILE_NAME);
   MzPeak::Buffer::Basic buffer;
   std::optional<std::size_t> bytes;
 
@@ -84,6 +87,12 @@ void Impl::parse_index() {
       }
     }
   }
+}
+
+/******************************************************************************/
+std::unique_ptr<Util::Parquet> Readable::parquet(const Schema::File& file) {
+  std::unique_ptr<File::Readable> data(impl_->archive_->read_file(file.file_name));
+  return std::make_unique<Util::Parquet>(std::move(data), file);
 }
 
 } // namespace MzPeak::Index

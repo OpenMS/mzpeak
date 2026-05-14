@@ -88,10 +88,15 @@ public:
   ArrayIndex() = default;
 
   /// Construct from JSON.
-  explicit ArrayIndex(const json::object&);
+  explicit ArrayIndex(EntityType, const json::object&);
 
   /// Destructor.
   ~ArrayIndex() = default;
+
+  /**
+   * Get the EntityType for the containing data file.
+   */
+  EntityType entity_type() const;
 
   /**
    * Get the path to the root node.
@@ -114,6 +119,9 @@ public:
   std::optional<std::size_t> num_entities() const;
 
 private:
+  // The entity type for the entire Parquet file.
+  EntityType entity_type_;
+
   // Root node.
   std::string prefix_ = "point";
 

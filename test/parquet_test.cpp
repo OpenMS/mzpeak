@@ -9,18 +9,22 @@ directory of this repository.
 #define BOOST_TEST_MODULE Parquet
 #include <boost/test/included/unit_test.hpp>
 
+#include "mzpeak/open.h"
 #include "mzpeak/util/parquet.h"
-#include "mzpeak/zip.h"
 
 /******************************************************************************/
 BOOST_AUTO_TEST_CASE(can_get_array_index) {
   using namespace MzPeak;
 
-  Archive::Zip zip("../test/files/small.mzpeak");
-  Util::Arrow arrow(zip.read_file("spectra_data.parquet"));
+  auto mzpeak = MzPeak::open("../test/files/small.mzpeak");
 
-  Util::Parquet file(arrow);
-  Schema::ArrayIndex index(file.array_index(Schema::EntityType::Spectrum));
+  auto entry = std::ranges::find(mzpeak.files(), Schema::EntityType::Spectrum,
+                                 &Schema::File::entity_type);
+
+  BOOST_TEST((entry != mzpeak.files().end()));
+
+  auto parquet = mzpeak.parquet(*entry);
+  Schema::ArrayIndex index(parquet->array_index());
 
   BOOST_TEST(index.prefix() == "point");
   BOOST_TEST(index.arrays().size() == 2);

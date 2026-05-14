@@ -58,4 +58,29 @@ std::string data_type_to_string(DataType);
  */
 DataType data_type_from_string(const std::string_view&);
 
+/**
+ * Compile-time information about the DataType type.
+ */
+template <DataType T> struct data_type_traits;
+
+template <> struct data_type_traits<DataType::Int32> {
+  using value_type = int32_t;
+};
+
+template <> struct data_type_traits<DataType::Float32> {
+  using value_type = float;
+};
+
+template <> struct data_type_traits<DataType::Int64> {
+  using value_type = int64_t;
+};
+
+template <> struct data_type_traits<DataType::Float64> {
+  using value_type = double;
+};
+
+template <> struct data_type_traits<DataType::ASCII> {
+  using value_type = char*;
+};
+
 } // namespace MzPeak::Schema::PSI

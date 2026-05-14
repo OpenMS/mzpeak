@@ -12,21 +12,18 @@ directory of this repository.
 #include <ranges>
 
 #include "mzpeak/index.h"
-#include "mzpeak/zip.h"
+#include "mzpeak/open.h"
 
 /******************************************************************************/
 BOOST_AUTO_TEST_CASE(can_parse_json) {
-  MzPeak::Archive::Zip zip("../test/files/small.mzpeak");
-  MzPeak::Index::Readable index(zip);
-
+  auto index = MzPeak::open("../test/files/small.mzpeak");
   const auto& files = index.files();
   BOOST_TEST(!files.empty(), "files should not be empty but is");
 }
 
 /******************************************************************************/
 BOOST_AUTO_TEST_CASE(is_associated_with) {
-  MzPeak::Archive::Zip zip("../test/files/small.mzpeak");
-  MzPeak::Index::Readable index(zip);
+  auto index = MzPeak::open("../test/files/small.mzpeak");
   const auto& files = index.files();
 
   const auto& spectra = std::ranges::find(files, "spectra_data.parquet",

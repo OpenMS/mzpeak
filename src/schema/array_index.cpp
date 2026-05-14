@@ -7,12 +7,13 @@ directory of this repository.
 */
 
 #include "mzpeak/schema/array_index.h"
+#include "mzpeak/schema/entity_type.h"
 
 namespace MzPeak::Schema {
 
 /******************************************************************************/
-ArrayIndex::ArrayIndex(const json::object& obj)
-    : prefix_(obj.at("prefix").as_string()) {
+ArrayIndex::ArrayIndex(EntityType entity_type, const json::object& obj)
+    : entity_type_(entity_type), prefix_(obj.at("prefix").as_string()) {
   auto entries = obj.find("entries");
 
   if (entries != obj.end() && entries->value().is_array()) {
@@ -62,6 +63,9 @@ ArrayIndex::ArrayIndex(const json::object& obj)
     }
   }
 }
+
+/******************************************************************************/
+EntityType ArrayIndex::entity_type() const { return entity_type_; }
 
 /******************************************************************************/
 const std::string& ArrayIndex::prefix() const { return prefix_; }
