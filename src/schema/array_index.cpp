@@ -7,9 +7,26 @@ directory of this repository.
 */
 
 #include "mzpeak/schema/array_index.h"
+#include "mzpeak/schema/buffer_format.h"
 #include "mzpeak/schema/entity_type.h"
 
 namespace MzPeak::Schema {
+
+/******************************************************************************/
+ArrayIndex::Array make_index(EntityType entity_type, const std::string& prefix) {
+  ArrayIndex::Array index;
+
+  index.array_name = entity_type_to_string(entity_type) + "_index";
+  index.buffer_format = BufferFormat::Point;
+  index.context = entity_type;
+  index.path = prefix + "." + index.array_name;
+  index.data_type = PSI::DataType::Int64;
+  index.array_type = PSI::ArrayType::NonStandard;
+  index.unit = "MS:1000774";
+  index.buffer_priority = false;
+
+  return index;
+}
 
 /******************************************************************************/
 ArrayIndex::ArrayIndex(EntityType entity_type, const json::object& obj)
@@ -18,7 +35,10 @@ ArrayIndex::ArrayIndex(EntityType entity_type, const json::object& obj)
 
   if (entries != obj.end() && entries->value().is_array()) {
     auto entries_ary(entries->value().as_array());
-    arrays_.reserve(entries_ary.size());
+    arrays_.reserve(entries_ary.size() + 1);
+
+    // The first array entry is actually the index itself.
+    arrays_.push_back(make_index(entity_type, prefix_));
 
     for (const auto& entry : entries_ary) {
       if (entry.is_object()) {
@@ -80,5 +100,19 @@ void ArrayIndex::num_entities(const std::optional<std::size_t>& ne) {
 
 /******************************************************************************/
 std::optional<std::size_t> ArrayIndex::num_entities() const { return num_entities_; }
+
+/******************************************************************************/
+std::optional<int> ArrayIndex::column_index(const Array& array) const {
+  auto it = array_map_.find(array.path);
+
+  if (it == array_map_.end()) {
+    return {};
+  } else {
+    return it->second;
+  }
+}
+
+/******************************************************************************/
+void ArrayIndex::array_map(ArrayMap array_map) { array_map_ = std::move(array_map); }
 
 } // namespace MzPeak::Schema

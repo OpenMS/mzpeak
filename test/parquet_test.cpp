@@ -27,19 +27,19 @@ BOOST_AUTO_TEST_CASE(can_get_array_index) {
   Schema::ArrayIndex index(parquet->array_index());
 
   BOOST_TEST(index.prefix() == "point");
-  BOOST_TEST(index.arrays().size() == 2);
+  BOOST_TEST(index.arrays().size() == 3);
 
-  BOOST_TEST(index.arrays()[0].array_name == "m/z array");
-  BOOST_TEST((index.arrays()[0].buffer_format == Schema::BufferFormat::Point));
-  BOOST_TEST((index.arrays()[0].context == Schema::EntityType::Spectrum));
-  BOOST_TEST((index.arrays()[0].path == "point.mz"));
-  BOOST_TEST((index.arrays()[0].data_type == Schema::PSI::DataType::Float64));
-  BOOST_TEST((index.arrays()[0].array_type == Schema::PSI::ArrayType::Mz));
-  BOOST_TEST((index.arrays()[0].unit == "MS:1000040"));
-  BOOST_TEST((index.arrays()[0].buffer_priority));
-  BOOST_TEST((index.arrays()[0].sorting_rank == std::optional{0}));
-  BOOST_TEST((index.arrays()[0].data_processing_id == std::nullopt));
-  BOOST_TEST((index.arrays()[0].transform == std::optional{"MS:1003901"}));
+  BOOST_TEST((index.arrays()[1].array_name == "m/z array"));
+  BOOST_TEST((index.arrays()[1].buffer_format == Schema::BufferFormat::Point));
+  BOOST_TEST((index.arrays()[1].context == Schema::EntityType::Spectrum));
+  BOOST_TEST((index.arrays()[1].path == "point.mz"));
+  BOOST_TEST((index.arrays()[1].data_type == Schema::PSI::DataType::Float64));
+  BOOST_TEST((index.arrays()[1].array_type == Schema::PSI::ArrayType::Mz));
+  BOOST_TEST((index.arrays()[1].unit == "MS:1000040"));
+  BOOST_TEST((index.arrays()[1].buffer_priority));
+  BOOST_TEST((index.arrays()[1].sorting_rank == std::optional{0}));
+  BOOST_TEST((index.arrays()[1].data_processing_id == std::nullopt));
+  BOOST_TEST((index.arrays()[1].transform == std::optional{"MS:1003901"}));
 
   std::size_t count = index.num_entities().value_or(0);
   BOOST_TEST(count == 48);

@@ -50,6 +50,12 @@ public:
    */
   Schema::ArrayIndex array_index() const;
 
+  /**
+   * Directly access the FileReader.  This reference is only valid
+   * while this Parquet object exists.
+   */
+  parquet::arrow::FileReader& reader() const;
+
 private:
   struct Impl;
   std::unique_ptr<Impl> impl_;

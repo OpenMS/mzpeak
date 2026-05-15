@@ -9,6 +9,7 @@ directory of this repository.
 #pragma once
 
 #include <boost/json.hpp>
+#include <map>
 #include <optional>
 #include <string>
 #include <vector>
@@ -27,6 +28,9 @@ namespace json = boost::json;
  */
 class ArrayIndex final {
 public:
+  /// Mapping from array path in the schema to the column index.
+  using ArrayMap = std::map<std::string, int>;
+
   /**
    * A type to describe each array in the index.
    */
@@ -118,6 +122,16 @@ public:
    */
   std::optional<std::size_t> num_entities() const;
 
+  /**
+   * Return the column index for the given array.
+   */
+  std::optional<int> column_index(const Array&) const;
+
+  /**
+   * Update the array map;
+   */
+  void array_map(ArrayMap array_map);
+
 private:
   // The entity type for the entire Parquet file.
   EntityType entity_type_;
@@ -130,6 +144,9 @@ private:
 
   // We might know how many entities are in the table.
   std::optional<std::size_t> num_entities_;
+
+  // Array -> column index.
+  ArrayMap array_map_;
 };
 
 } // namespace MzPeak::Schema

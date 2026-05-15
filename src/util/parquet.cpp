@@ -121,7 +121,26 @@ Schema::ArrayIndex Parquet::array_index() const {
   Schema::ArrayIndex ai(parse_array_index(index_str, impl_->file_.entity_type));
   ai.num_entities(num_entities);
 
+  const parquet::SchemaDescriptor* schema(fmd->schema());
+  Schema::ArrayIndex::ArrayMap index_map;
+
+  for (auto& array : ai.arrays()) {
+    int column_index = schema->ColumnIndex(array.path);
+
+    if (column_index < 0) {
+      std::string msg("while reading index from " + impl_->file_.file_name);
+      msg += ": column index out of bounds for column: " + array.path;
+      throw ParquetError(msg);
+    }
+
+    index_map[array.path] = column_index;
+  }
+
+  ai.array_map(std::move(index_map));
   return ai;
 }
+
+/******************************************************************************/
+parquet::arrow::FileReader& Parquet::reader() const { return *impl_->reader_; }
 
 } // namespace MzPeak::Util
