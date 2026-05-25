@@ -113,6 +113,12 @@ public:
   const std::vector<Array>& arrays() const;
 
   /**
+   * Get a list of array definitions that are for the given array
+   * type.
+   */
+  std::vector<Array> arrays(PSI::ArrayType) const;
+
+  /**
    * Update the hint as to how many entities are in the data file.
    */
   void num_entities(const std::optional<std::size_t>&);

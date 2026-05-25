@@ -11,6 +11,7 @@ in the LICENSE file found in the top-level directory of this project.
 
 #include "mzpeak/open.h"
 #include "mzpeak/query.h"
+#include "mzpeak/util/parquet.h"
 
 /******************************************************************************/
 BOOST_AUTO_TEST_CASE(can_find_spectrum) {
@@ -25,20 +26,15 @@ BOOST_AUTO_TEST_CASE(can_find_spectrum) {
   BOOST_TEST((entry != index.files().end()));
 
   auto parquet = index.parquet(*entry);
-  Query query(parquet->file_metadata());
+  auto array_index = parquet->array_index();
+  auto spectra_index_array = array_index.arrays()[0];
 
-  Query::Location loc = query.find([&](Query::Cursor& cursor) {
-    auto span = cursor.column_span<DataType::Int64>("point.spectrum_index");
-    BOOST_TEST((span.has_value()));
+  Query query;
+  auto pred = Query::Predicate<DataType::Int64>::equal_to(spectra_index_array, 1);
+  query.push_back(pred);
 
-    // NOTE: This file only has one row group.
-    if (span->first == 0) {
-      return cursor.match();
-    } else {
-      return cursor.stop();
-    }
-  });
+  auto indices = parquet->find_row_groups(query);
 
-  BOOST_TEST(loc.row_group_indices.size() == 1);
-  BOOST_TEST((loc.row_group_indices[0] == 0));
+  BOOST_TEST(indices.size() == 1);
+  BOOST_TEST((indices[0] == 0));
 }

@@ -6,18 +6,22 @@ directory of this repository.
 
 */
 
+#include <arrow/array.h>
+#include <arrow/record_batch.h>
 #include <arrow/util/key_value_metadata.h>
 #include <boost/json.hpp>
 #include <charconv>
 #include <memory>
 #include <parquet/api/reader.h>
 #include <parquet/arrow/reader.h>
+#include <ranges>
 
 #include "mzpeak/exception.h"
 #include "mzpeak/schema/array_index.h"
 #include "mzpeak/schema/entity_type.h"
 #include "mzpeak/util/arrow.h"
 #include "mzpeak/util/parquet.h"
+#include "mzpeak/util/parquet_types.h"
 
 namespace MzPeak::Util {
 
@@ -50,13 +54,12 @@ std::optional<std::size_t> get_kv_uint(Parquet::file_metadata_t& fmd,
 }
 
 /******************************************************************************/
-Schema::ArrayIndex parse_array_index(const std::optional<std::string>& str,
+Schema::ArrayIndex parse_array_index(const std::string& str,
                                      Schema::EntityType entity_type) {
   namespace json = boost::json;
-  if (!str.has_value()) throw ParquetError("missing array_index");
 
   boost::system::error_code ec;
-  json::value v(json::parse(*str));
+  json::value v(json::parse(str));
   if (ec) throw MzPeak::JsonError(ec.message());
 
   if (v.is_object()) {
@@ -82,10 +85,111 @@ struct Parquet::Impl {
 
   ~Impl() = default;
 
+  void error(const std::string& error) {
+    std::string msg("file accessing " + file_.file_name + ": " + error);
+    throw ParquetError(msg);
+  }
+
+  // Get the array index JSON and number of entities.
+  std::pair<std::string, std::size_t> array_index(Parquet::file_metadata_t&);
+
+  // Return all the matching row groups.
+  std::vector<int> run_query(const Query&);
+
+  // Return true if the predicate matches.
+  bool run_predicate(const parquet::RowGroupMetaData&, const Query&,
+                     const Query::predicate_t&);
+
+  // Return true if the predicate matches the given column statistics.
+  template <Schema::PSI::DataType T>
+  bool query_stats(const parquet::ColumnChunkMetaData&, const parquet::Statistics&,
+                   const Query::Predicate<T>&);
+
   Schema::File file_;
   std::unique_ptr<Arrow> arrow_;
   std::unique_ptr<parquet::arrow::FileReader> reader_;
 };
+
+/******************************************************************************/
+std::pair<std::string, std::size_t>
+Parquet::Impl::array_index(Parquet::file_metadata_t& fmd) {
+  Schema::EntityType entity_type(file_.entity_type);
+
+  std::string num_key(Schema::entity_type_to_string(entity_type) + "_count");
+  std::optional<std::size_t> num_entities(get_kv_uint(fmd, num_key));
+
+  std::string index_key(Schema::entity_type_to_string(entity_type) + "_array_index");
+  auto index_str(get_kv_string(fmd, index_key));
+  if (!index_str.has_value()) throw ParquetError("missing array_index");
+
+  return std::make_pair<>(*index_str, num_entities.value_or(0));
+}
+
+/******************************************************************************/
+std::vector<int> Parquet::Impl::run_query(const Query& query) {
+  auto fmd(reader_->parquet_reader()->metadata());
+  std::vector<int> res;
+
+  for (auto row : std::views::iota(0, fmd->num_row_groups())) {
+    auto rg(fmd->RowGroup(row));
+
+    if (std::ranges::all_of(query.predicates(),
+                            [&](auto& p) { return run_predicate(*rg, query, p); })) {
+      res.push_back(row);
+    }
+  }
+
+  return res;
+}
+
+/******************************************************************************/
+bool Parquet::Impl::run_predicate(const parquet::RowGroupMetaData& rg,
+                                  const Query& query,
+                                  const Query::predicate_t& pred) {
+
+  // FIXME: what to do about multiple paths?
+  const Schema::ArrayIndex::Array& array = query.extract_array(pred);
+  const std::string& path(array.path);
+
+  int column_index = rg.schema()->ColumnIndex(path);
+  if (column_index < 0) error("invalid path: " + path);
+
+  auto chunk(rg.ColumnChunk(column_index));
+  if (!chunk->is_stats_set()) return true;
+
+  auto stats(chunk->statistics());
+  if (!stats || !stats->HasMinMax()) return true;
+
+  using enum Schema::PSI::DataType;
+
+  return std::visit(
+      [&](auto&& typed_pred) {
+        using T = std::decay_t<decltype(typed_pred)>;
+
+        if constexpr (std::is_same_v<T, Query::Predicate<Int32>>) {
+          return query_stats(*chunk, *stats, typed_pred);
+        } else if constexpr (std::is_same_v<T, Query::Predicate<Float32>>) {
+          return query_stats(*chunk, *stats, typed_pred);
+        } else if constexpr (std::is_same_v<T, Query::Predicate<Int64>>) {
+          return query_stats(*chunk, *stats, typed_pred);
+        } else if constexpr (std::is_same_v<T, Query::Predicate<Float64>>) {
+          return query_stats(*chunk, *stats, typed_pred);
+        } else {
+          static_assert(false, "failed to detect predicate type!");
+        }
+      },
+      pred);
+}
+
+/******************************************************************************/
+template <Schema::PSI::DataType T>
+bool Parquet::Impl::query_stats(const parquet::ColumnChunkMetaData& col,
+                                const parquet::Statistics& stats,
+                                const Query::Predicate<T>& pred) {
+
+  auto tptr(Util::parquet_statistics_cast<T>(col, stats));
+  return pred.match_in_range(tptr->min(), tptr->max());
+}
 
 /******************************************************************************/
 Parquet::Parquet(std::unique_ptr<File::Readable> data, Schema::File file)
@@ -108,15 +212,15 @@ Util::RowGroupMetadataProxy Parquet::rg_metadata() const {
 }
 
 /******************************************************************************/
-Schema::ArrayIndex Parquet::array_index() const {
-  Schema::EntityType entity_type(impl_->file_.entity_type);
+std::string Parquet::array_index_json() const {
   file_metadata_t fmd(file_metadata());
+  return impl_->array_index(fmd).first;
+}
 
-  std::string num_key(Schema::entity_type_to_string(entity_type) + "_count");
-  std::optional<std::size_t> num_entities(get_kv_uint(fmd, num_key));
-
-  std::string index_key(Schema::entity_type_to_string(entity_type) + "_array_index");
-  auto index_str(get_kv_string(fmd, index_key));
+/******************************************************************************/
+Schema::ArrayIndex Parquet::array_index() const {
+  file_metadata_t fmd(file_metadata());
+  auto [index_str, num_entities] = impl_->array_index(fmd);
 
   Schema::ArrayIndex ai(parse_array_index(index_str, impl_->file_.entity_type));
   ai.num_entities(num_entities);
@@ -142,5 +246,10 @@ Schema::ArrayIndex Parquet::array_index() const {
 
 /******************************************************************************/
 parquet::arrow::FileReader& Parquet::reader() const { return *impl_->reader_; }
+
+/******************************************************************************/
+std::vector<int> Parquet::find_row_groups(const Query& query) {
+  return impl_->run_query(query);
+}
 
 } // namespace MzPeak::Util

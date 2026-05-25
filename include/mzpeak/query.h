@@ -8,137 +8,173 @@ top-level directory of this repository.
 
 #pragma once
 
-#include <functional>
-#include <parquet/metadata.h>
-#include <parquet/statistics.h>
-
+#include "mzpeak/schema/array_index.h"
 #include "mzpeak/schema/psi/data_type.h"
-#include "mzpeak/util/parquet.h"
-#include "mzpeak/util/parquet_types.h"
 
 namespace MzPeak {
 
 /**
- * Helper class for finding the row groups in a Parquet file that
- * contain interesting column values.
+ * FIXME:
  */
-class Query final {
+class Query {
 public:
-  /// Constructor.
-  Query(Util::Parquet::file_metadata_t);
-
-  /// Destructor.
-  ~Query() = default;
-
-  /**
-   * What action to take after reviewing the current row group.
-   */
-  enum class Action {
-    /// The current row group doesn't have the value we are looking
-    /// for.  Skip this row group and move on to the next.
-    Skip,
-
-    /// This row group doesn't match and we don't want to keep
-    /// looking.
-    Stop,
-
-    /// This row group matches and we want to explore more row groups
-    /// so keep going.
-    Match,
-
-    /// This row group matches and we want to stop looking.
-    MatchStop,
-  };
-
-  using Result = std::pair<Action, std::size_t>;
-
-  /**
-   * The locations matched by the query.
-   */
-  struct Location {
-    std::vector<std::size_t> row_group_indices;
-  };
-
-  /**
-   * Helper class to fetch values from the Parquet index and return
-   * query results.
-   */
-  class Cursor {
+  template <Schema::PSI::DataType T> class Predicate final {
   public:
-    /// Min and Max values from the Parquet index.
-    template <typename T> using span_t = std::optional<std::pair<T, T>>;
+    ///
+    using value_type = typename Schema::PSI::data_type_traits<T>::value_type;
+
+    ///
+    using array_type = Schema::ArrayIndex::Array;
+
+    /**
+     * Queried value must be exactly equal to the given value.
+     */
+    static Predicate<T> equal_to(const array_type& array, value_type v) {
+      return Predicate(array, std::make_pair<>(Op::EQ, v));
+    };
+
+    /**
+     * Queried value must be greater than the given value.
+     */
+    static Predicate<T> greater_than(const array_type& array, value_type v) {
+      return Predicate(array, std::make_pair<>(Op::GT, v));
+    };
+
+    /**
+     * Queried value must be less than the given value.
+     */
+    static Predicate<T> less_than(const array_type& array, value_type v) {
+      return Predicate(array, std::make_pair<>(Op::LT, v));
+    };
+
+    /**
+     * Queried value must be greater than or equal to the given value.
+     */
+    static Predicate<T> greater_equal(const array_type& array, value_type v) {
+      return Predicate(array, std::make_pair<>(Op::GE, v));
+    };
+
+    /**
+     * Queried value must be less than or equal to the given value.
+     */
+    static Predicate<T> less_equal(const array_type& array, value_type v) {
+      return Predicate(array, std::make_pair<>(Op::LE, v));
+    };
 
     /// Destructor.
-    ~Cursor() = default;
-
-    /// Get the min/max values for the given column.
-    template <Schema::PSI::DataType D>
-    span_t<typename Schema::PSI::data_type_traits<D>::value_type>
-    column_span(const std::string& path);
+    ~Predicate() = default;
 
     /**
-     * Return this value to skip the current row group.
-     *
-     * Use the `n` parameter to skip more than one row group.
+     * The array this predicate works with.
      */
-    Result skip(std::size_t n = 1) const {
-      return std::make_pair<>(Action::Skip, n);
-    };
+    const array_type& array() const { return array_; };
 
     /**
-     * Return this value to stop the query.
+     * Return `true` if this predicate matches the given value.
      */
-    Result stop() const { return std::make_pair<>(Action::Stop, 1); };
+    bool match(value_type v) const;
 
     /**
-     * Return this value to indicate the current row group matches the
-     * query.  Set the `stop` parameter to `false` if query should
-     * continue looking for more matching row groups.
+     * Return `true` if the predicate would match a value in the range
+     * (min, max).
      */
-    Result match(bool stop = true) const {
-      if (stop) {
-        return std::make_pair<>(Action::MatchStop, 1);
-      } else {
-        return std::make_pair<>(Action::Match, 1);
-      }
-    };
+    bool match_in_range(value_type min, value_type max) const;
 
   private:
-    friend class Query;
+    /// Comparison operations.
+    enum class Op { EQ, GT, LT, GE, LE };
 
-    Cursor(Util::Parquet::file_metadata_t);
-    bool valid() const;
-    void next(std::size_t);
-    bool load(const std::string&);
+    /// Complete description of the predicate.
+    using Comp = std::pair<Op, value_type>;
 
-    Util::Parquet::file_metadata_t file_metadata_;
-    std::size_t num_row_groups_;
+    Predicate(const array_type& array, Comp comp)
+        : array_(array), comp_(std::move(comp)) {};
 
-    std::size_t row_group_idx_ = 0;
-    std::unique_ptr<parquet::RowGroupMetaData> row_group_meta_ = nullptr;
-
-    std::size_t col_chunk_idx_ = 0;
-    std::unique_ptr<parquet::ColumnChunkMetaData> col_chunk_ = nullptr;
-    std::shared_ptr<parquet::Statistics> col_stats_ = nullptr;
+    const array_type& array_;
+    Comp comp_;
   };
 
+public:
+  /// Constructor.
+  Query() {};
+
+  /// Destructor.
+  virtual ~Query() {};
+
   /**
-   * Find matching row groups by providing a query function.
+   * Add a predicate to the list of predicates.
    */
-  const Location& find(std::function<Result(Cursor&)>);
+  template <Schema::PSI::DataType T> void push_back(const Predicate<T>& p) {
+    predicates_.push_back(p);
+  };
+
+public:
+  //
+  using enum Schema::PSI::DataType;
+
+  /// FIXME
+  using predicate_t = std::variant<Predicate<Int32>, Predicate<Float32>,
+                                   Predicate<Int64>, Predicate<Float64>>;
+
+  /**
+   * FIXME
+   */
+  const std::vector<predicate_t> predicates() const { return predicates_; };
+
+  /**
+   * Extract an array from a predicate wrapper.
+   */
+  const Schema::ArrayIndex::Array& extract_array(const predicate_t& p) const {
+    return *std::visit([](auto&& arg) { return &arg.array(); }, p);
+  };
 
 private:
-  Util::Parquet::file_metadata_t file_metadata_;
-  Location location_;
+  std::vector<predicate_t> predicates_;
 };
 
 /******************************************************************************/
-template <Schema::PSI::DataType D>
-Query::Cursor::span_t<typename Schema::PSI::data_type_traits<D>::value_type>
-Query::Cursor::column_span(const std::string& path) {
-  if (!load(path)) return {};
-  auto tptr(Util::parquet_statistics_cast<D>(*col_chunk_, *col_stats_));
-  return std::make_pair<>(tptr->min(), tptr->max());
+template <Schema::PSI::DataType T>
+bool Query::Predicate<T>::match(value_type v) const {
+  switch (comp_.first) {
+  case Op::EQ:
+    return v == comp_.second;
+  case Op::GT:
+    return v > comp_.second;
+
+  case Op::LT:
+    return v < comp_.second;
+
+  case Op::GE:
+    return v >= comp_.second;
+
+  case Op::LE:
+    return v >= comp_.second;
+  }
+
+  return false;
+}
+
+/******************************************************************************/
+template <Schema::PSI::DataType T>
+bool Query::Predicate<T>::match_in_range(value_type min, value_type max) const {
+  switch (comp_.first) {
+  case Op::EQ:
+    return (min == comp_.second || max == comp_.second) ||
+           (comp_.second > min && comp_.second < max);
+  case Op::GT:
+    return max > comp_.second;
+
+  case Op::LT:
+    return min < comp_.second;
+
+  case Op::GE:
+    return max >= comp_.second;
+
+  case Op::LE:
+    return min >= comp_.second;
+  }
+
+  return false;
 }
 
 } // namespace MzPeak

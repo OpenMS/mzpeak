@@ -24,6 +24,8 @@ BOOST_AUTO_TEST_CASE(can_get_array_index) {
   BOOST_TEST((entry != mzpeak.files().end()));
 
   auto parquet = mzpeak.parquet(*entry);
+  // std::cerr << parquet->array_index_json() << "\n\n";
+
   Schema::ArrayIndex index(parquet->array_index());
 
   BOOST_TEST(index.prefix() == "point");

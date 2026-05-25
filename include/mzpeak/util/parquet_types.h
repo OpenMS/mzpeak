@@ -8,6 +8,8 @@ top-level directory of this repository.
 
 #pragma once
 
+#include <arrow/type_fwd.h>
+#include <memory>
 #include <parquet/metadata.h>
 #include <parquet/schema.h>
 #include <parquet/statistics.h>
@@ -25,19 +27,23 @@ namespace PSI = MzPeak::Schema::PSI;
 template <PSI::DataType T> struct psi_to_parquet_tag;
 
 template <> struct psi_to_parquet_tag<PSI::DataType::Int32> {
-  using type = parquet::Int32Type;
+  using scalar_type = parquet::Int32Type;
+  using array_type = arrow::Int32Array;
 };
 
 template <> struct psi_to_parquet_tag<PSI::DataType::Float32> {
-  using type = parquet::FloatType;
+  using scalar_type = parquet::FloatType;
+  using array_type = arrow::FloatArray;
 };
 
 template <> struct psi_to_parquet_tag<PSI::DataType::Int64> {
-  using type = parquet::Int64Type;
+  using scalar_type = parquet::Int64Type;
+  using array_type = arrow::Int64Array;
 };
 
 template <> struct psi_to_parquet_tag<PSI::DataType::Float64> {
-  using type = parquet::DoubleType;
+  using scalar_type = parquet::DoubleType;
+  using array_type = arrow::DoubleArray;
 };
 
 /// Compile-time mapping to get back to the physical type.
@@ -67,7 +73,7 @@ template <> struct parquet_to_physical_tag<parquet::DoubleType> {
 template <PSI::DataType T>
 void runtime_assert_type(parquet::Type::type actual_type, const std::string& path) {
   constexpr parquet::Type::type expected_type =
-      parquet_to_physical_tag<typename psi_to_parquet_tag<T>::type>::value;
+      parquet_to_physical_tag<typename psi_to_parquet_tag<T>::scalar_type>::value;
 
   if (expected_type != actual_type) {
     std::string msg("while inspecting column: " + path + ": ");
@@ -81,7 +87,7 @@ void runtime_assert_type(parquet::Type::type actual_type, const std::string& pat
 /// Parquect statistics cast to the correct type.
 template <PSI::DataType T>
 using parquet_statistics_t =
-    parquet::TypedStatistics<typename psi_to_parquet_tag<T>::type>;
+    parquet::TypedStatistics<typename psi_to_parquet_tag<T>::scalar_type>;
 
 /**
  * Cast Parquet statistics to the correctly typed version.
@@ -95,6 +101,15 @@ parquet_statistics_cast(const parquet::ColumnChunkMetaData& column,
                         const parquet::Statistics& stats) {
   runtime_assert_type<T>(column.type(), column.path_in_schema()->ToDotString());
   return static_cast<const parquet_statistics_t<T>*>(&stats);
+}
+
+/**
+ *
+ */
+template <PSI::DataType T>
+std::shared_ptr<typename psi_to_parquet_tag<T>::array_type>
+parquet_array_cast(std::shared_ptr<arrow::Array>& array) {
+  return std::static_pointer_cast<typename psi_to_parquet_tag<T>::array_type>(array);
 }
 
 } // namespace MzPeak::Util

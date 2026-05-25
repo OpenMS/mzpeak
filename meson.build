@@ -20,6 +20,7 @@ lib_sources = [
   'src/schema/psi/array_type.cpp',
   'src/schema/psi/data_type.cpp',
   'src/util/arrow.cpp',
+  'src/util/data_arrays.cpp',
   'src/util/parquet.cpp',
   'src/zip.cpp',
 ]
@@ -43,6 +44,7 @@ install_headers([
   'include/mzpeak/schema/psi/array_type.h',
   'include/mzpeak/schema/psi/data_type.h',
   'include/mzpeak/util/arrow.h',
+  'include/mzpeak/util/data_arrays.h',
   'include/mzpeak/util/enumerable_proxy.h',
   'include/mzpeak/util/parquet.h',
   'include/mzpeak/util/parquet_types.h',
@@ -89,6 +91,7 @@ libmzpeak_a = static_library(
 # Testing
 test_names = [
     'arrow',
+    'data_arrays',
     'directory',
     'index',
     'parquet',

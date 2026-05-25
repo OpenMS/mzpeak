@@ -11,6 +11,7 @@ directory of this repository.
 #include <parquet/metadata.h>
 
 #include "mzpeak/file.h"
+#include "mzpeak/query.h"
 #include "mzpeak/schema/array_index.h"
 #include "mzpeak/schema/file.h"
 #include "mzpeak/util/row_group_metadata_proxy.h"
@@ -25,7 +26,7 @@ public:
   using file_metadata_t = std::shared_ptr<parquet::FileMetaData>;
 
   /// Constructor.
-  Parquet(std::unique_ptr<File::Readable>, Schema::File);
+  Parquet(std::unique_ptr<MzPeak::File::Readable>, Schema::File);
 
   /// Destructor.
   ~Parquet();
@@ -46,6 +47,11 @@ public:
   Util::RowGroupMetadataProxy rg_metadata() const;
 
   /**
+   * Return the raw array index JSON.
+   */
+  std::string array_index_json() const;
+
+  /**
    * Parse and return the ArrayIndex.
    */
   Schema::ArrayIndex array_index() const;
@@ -55,6 +61,11 @@ public:
    * while this Parquet object exists.
    */
   parquet::arrow::FileReader& reader() const;
+
+  /**
+   * Execute a query and return the row groups that matched.
+   */
+  std::vector<int> find_row_groups(const Query&);
 
 private:
   struct Impl;

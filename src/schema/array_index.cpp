@@ -6,6 +6,8 @@ directory of this repository.
 
 */
 
+#include <ranges>
+
 #include "mzpeak/schema/array_index.h"
 #include "mzpeak/schema/buffer_format.h"
 #include "mzpeak/schema/entity_type.h"
@@ -23,6 +25,7 @@ ArrayIndex::Array make_index(EntityType entity_type, const std::string& prefix) 
   index.data_type = PSI::DataType::Int64;
   index.array_type = PSI::ArrayType::NonStandard;
   index.unit = "MS:1000774";
+  index.sorting_rank = 0;
   index.buffer_priority = false;
 
   return index;
@@ -92,6 +95,13 @@ const std::string& ArrayIndex::prefix() const { return prefix_; }
 
 /******************************************************************************/
 const std::vector<ArrayIndex::Array>& ArrayIndex::arrays() const { return arrays_; }
+
+/******************************************************************************/
+std::vector<ArrayIndex::Array> ArrayIndex::arrays(PSI::ArrayType type) const {
+  return arrays_ |
+         std::views::filter([type](const auto& a) { return a.array_type == type; }) |
+         std::ranges::to<std::vector>();
+}
 
 /******************************************************************************/
 void ArrayIndex::num_entities(const std::optional<std::size_t>& ne) {
