@@ -41,20 +41,18 @@ BOOST_AUTO_TEST_CASE(can_read_file) {
 // Test seeking by reading the Parquet magic bytes in the footer.
 BOOST_AUTO_TEST_CASE(can_seek_file) {
   MzPeak::Archive::Zip zip("../test/files/small.mzpeak");
+
   std::string magic("PAR1");
+  uint8_t buffer[4];
 
   std::unique_ptr<MzPeak::File::Readable> file(
       zip.read_file("spectra_data.parquet"));
 
   file->seek(file->size() - magic.size());
 
-  std::optional<MzPeak::File::Readable::buffer_t> buffer_opt(
-      file->read(magic.size()));
-  BOOST_TEST(buffer_opt.has_value(), "buffer should be allocated");
+  std::optional<std::size_t> n = file->read(buffer, magic.size());
+  BOOST_TEST((n.has_value() && n.value() == magic.size()));
 
-  MzPeak::File::Readable::buffer_t buffer = buffer_opt.value();
-  BOOST_TEST(buffer->size() == magic.size());
-
-  std::string bytes(reinterpret_cast<char*>(buffer->data()), buffer->size());
+  std::string bytes(reinterpret_cast<char*>(buffer), magic.size());
   BOOST_TEST(bytes == magic);
 }

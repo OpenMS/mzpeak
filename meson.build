@@ -28,7 +28,6 @@ lib_sources = [
 install_headers([
   'include/mzpeak.h',
   'include/mzpeak/archive.h',
-  'include/mzpeak/buffer.h',
   'include/mzpeak/directory.h',
   'include/mzpeak/exception.h',
   'include/mzpeak/file.h',

@@ -56,17 +56,17 @@ const std::vector<Schema::File>& Readable::files() const { return impl_->files_;
 /******************************************************************************/
 void Impl::parse_index() {
   auto file = archive_->read_file(INDEX_FILE_NAME);
-  MzPeak::Buffer::Basic buffer;
+  uint8_t buffer[64 * 1024];
   std::optional<std::size_t> bytes;
 
   json::stream_parser parser;
   boost::system::error_code ec;
 
   do {
-    bytes = file->read(buffer.data(), buffer.capacity());
+    bytes = file->read(buffer, sizeof(buffer));
 
     if (bytes.has_value() && *bytes > 0) {
-      parser.write(reinterpret_cast<char const*>(buffer.data()), *bytes, ec);
+      parser.write(reinterpret_cast<char const*>(buffer), *bytes, ec);
     }
 
   } while (bytes.has_value() && !ec);

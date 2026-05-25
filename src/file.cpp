@@ -53,17 +53,4 @@ std::unique_ptr<std::istream> to_istream(std::unique_ptr<Readable> r) {
   return std::make_unique<istream>(source);
 }
 
-/******************************************************************************/
-std::optional<Readable::buffer_t> Readable::read(std::size_t size) {
-  buffer_t buf = std::make_shared<Buffer::Basic<parquet::kDefaultFooterReadSize>>();
-  std::optional<std::size_t> n = read(buf->data(), std::min(size, buf->capacity()));
-
-  if (n.has_value()) {
-    buf->size(n.value());
-    return buf;
-  } else {
-    return {};
-  }
-}
-
 } // namespace MzPeak::File

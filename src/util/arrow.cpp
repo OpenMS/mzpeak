@@ -10,33 +10,12 @@ directory of this repository.
 #include <arrow/io/api.h>
 #include <arrow/io/buffered.h>
 #include <memory>
+#include <parquet/properties.h>
 
+#include "mzpeak/exception.h"
 #include "mzpeak/util/arrow.h"
 
 namespace MzPeak::Util {
-
-/******************************************************************************/
-/// Make typing a bit easier.
-using buffer_t = std::shared_ptr<MzPeak::Buffer::Base>;
-
-/******************************************************************************/
-/**
- * A buffer wrapper using the arrow API.
- */
-class ArrowBuffer_ final : public arrow::Buffer {
-public:
-  /// Constructor.
-  ArrowBuffer_(buffer_t buffer)
-      : arrow::Buffer(buffer->data(), buffer->size()), buffer_(buffer) {
-    capacity_ = buffer_->capacity();
-  };
-
-  /// Destructor.
-  ~ArrowBuffer_() = default;
-
-private:
-  buffer_t buffer_;
-};
 
 /******************************************************************************/
 /**
@@ -45,7 +24,16 @@ private:
 class ArrowFile_ final : public arrow::io::RandomAccessFile {
 public:
   /// Constructor.
-  ArrowFile_(std::shared_ptr<File::Readable> file) : file_(std::move(file)) {};
+  ArrowFile_(std::shared_ptr<File::Readable> file) : file_(std::move(file)) {
+    arrow::Result<std::unique_ptr<arrow::ResizableBuffer>> res(
+        arrow::AllocateResizableBuffer(parquet::kDefaultFooterReadSize));
+
+    if (res.ok()) {
+      buffer_ = std::move(res.ValueOrDie());
+    } else {
+      throw ParquetError(res.status().ToString());
+    }
+  };
 
   /// Destructor.
   ~ArrowFile_() = default;
@@ -60,7 +48,7 @@ public:
       return arrow::Status(arrow::StatusCode::IOError, msg);
     }
 
-    return arrow::Status(); // Good.
+    return arrow::Status::OK();
   };
 
   /// Report the current position.
@@ -82,7 +70,6 @@ public:
     if (n.has_value()) {
       return arrow::Result<int64_t>(n.value());
     } else {
-      // Arrow error result:
       return arrow::Result<int64_t>();
     }
   };
@@ -90,13 +77,18 @@ public:
   /// Read into a buffer.
   arrow::Result<std::shared_ptr<arrow::Buffer>> Read(int64_t nbytes) {
     using arrow_buffer_t = std::shared_ptr<arrow::Buffer>;
-    std::optional<buffer_t> buffer = file_->read(nbytes);
 
-    if (buffer.has_value()) {
-      std::shared_ptr<ArrowBuffer_> arbuf = std::make_shared<ArrowBuffer_>(*buffer);
-      return arrow::Result<arrow_buffer_t>(std::move(arbuf));
+    if (nbytes > buffer_->capacity()) {
+      arrow::Status status = buffer_->Resize(nbytes, true);
+      if (!status.ok()) throw ParquetError(status.ToString());
+      buffer_->ZeroPadding();
+    }
+
+    std::optional<std::size_t> n = file_->read(buffer_->mutable_data(), nbytes);
+
+    if (n.has_value()) {
+      return arrow::Result<arrow_buffer_t>(buffer_);
     } else {
-      // Arrow error result:
       return arrow::Result<arrow_buffer_t>();
     }
   };
@@ -104,7 +96,7 @@ public:
   /// Close the file/stream.
   arrow::Status Close() {
     file_->close();
-    return arrow::Status();
+    return buffer_->Resize(0, true);
   };
 
   /// Return `true` if the file/stream is closed.
@@ -112,6 +104,7 @@ public:
 
 private:
   std::shared_ptr<File::Readable> file_;
+  std::shared_ptr<arrow::ResizableBuffer> buffer_;
 };
 
 /******************************************************************************/

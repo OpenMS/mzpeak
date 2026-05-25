@@ -11,8 +11,6 @@ directory of this repository.
 #include <memory>
 #include <optional>
 
-#include "mzpeak/buffer.h"
-
 namespace MzPeak::File {
 
 /******************************************************************************/
@@ -21,8 +19,6 @@ namespace MzPeak::File {
  */
 class Readable {
 public:
-  using buffer_t = std::shared_ptr<Buffer::Base>;
-
   /// Destructor.
   virtual ~Readable() {};
 
@@ -47,15 +43,6 @@ public:
    * If successful, return the number of bytes actually read.
    */
   virtual std::optional<std::size_t> read(uint8_t* buffer, std::size_t size) = 0;
-
-  /**
-   * Read from the file.
-   *
-   * If successful, return the number of bytes actually read.
-   *
-   * The default implementation uses a simple memory buffer.
-   */
-  virtual std::optional<buffer_t> read(std::size_t size);
 
   /**
    * Move the read pointer to the given file position.
