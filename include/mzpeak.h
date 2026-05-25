@@ -8,23 +8,17 @@ top-level directory of this repository.
 
 #pragma once
 
-#include "mzpeak/archive.h"
-#include "mzpeak/buffer.h"
-#include "mzpeak/directory.h"
-#include "mzpeak/exception.h"
-#include "mzpeak/file.h"
-#include "mzpeak/index.h"
-#include "mzpeak/metadata.h"
-#include "mzpeak/open.h"
-#include "mzpeak/schema/array_index.h"
-#include "mzpeak/schema/data_kind.h"
-#include "mzpeak/schema/encoding.h"
-#include "mzpeak/schema/entity_type.h"
-#include "mzpeak/schema/file.h"
-#include "mzpeak/schema/psi/array_type.h"
-#include "mzpeak/schema/psi/data_type.h"
-#include "mzpeak/util/arrow.h"
-#include "mzpeak/util/enumerable_proxy.h"
-#include "mzpeak/util/parquet.h"
-#include "mzpeak/util/row_group_metadata_proxy.h"
-#include "mzpeak/zip.h"
+#include "mzpeak/archive.h"               // IWYU pragma: keep
+#include "mzpeak/directory.h"             // IWYU pragma: keep
+#include "mzpeak/exception.h"             // IWYU pragma: keep
+#include "mzpeak/file.h"                  // IWYU pragma: keep
+#include "mzpeak/index.h"                 // IWYU pragma: keep
+#include "mzpeak/metadata.h"              // IWYU pragma: keep
+#include "mzpeak/open.h"                  // IWYU pragma: keep
+#include "mzpeak/schema/array_index.h"    // IWYU pragma: keep
+#include "mzpeak/schema/data_kind.h"      // IWYU pragma: keep
+#include "mzpeak/schema/entity_type.h"    // IWYU pragma: keep
+#include "mzpeak/schema/file.h"           // IWYU pragma: keep
+#include "mzpeak/schema/psi/array_type.h" // IWYU pragma: keep
+#include "mzpeak/schema/psi/data_type.h"  // IWYU pragma: keep
+#include "mzpeak/zip.h"                   // IWYU pragma: keep
