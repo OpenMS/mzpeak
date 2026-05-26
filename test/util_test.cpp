@@ -7,8 +7,9 @@ directory of this repository.
 */
 
 #define BOOST_TEST_MODULE Util
-#include <arrow/io/api.h>
 #include <boost/test/included/unit_test.hpp>
+
+#include <arrow/io/api.h>
 
 #include "mzpeak/util/enumerable_proxy.h"
 

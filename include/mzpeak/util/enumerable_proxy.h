@@ -122,6 +122,10 @@ public:
   // Access an element by its index.
   V operator[](std::size_t n) { return fetch_(n); };
 
+protected:
+  /// Update the internal count of records.
+  void resize(std::size_t n) { count_ = n; }
+
 private:
   std::size_t count_ = 0;
   fetch_t fetch_;

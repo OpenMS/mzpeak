@@ -6,7 +6,6 @@ in the LICENSE file found in the top-level directory of this project.
 */
 
 #define BOOST_TEST_MODULE Query
-
 #include <boost/test/included/unit_test.hpp>
 
 #include "mzpeak/open.h"

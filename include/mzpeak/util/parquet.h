@@ -9,6 +9,7 @@ directory of this repository.
 #pragma once
 
 #include <parquet/metadata.h>
+#include <parquet/statistics.h>
 
 #include "mzpeak/file.h"
 #include "mzpeak/query.h"
@@ -55,6 +56,25 @@ public:
    * while this Parquet object exists.
    */
   parquet::arrow::FileReader& reader() const;
+
+  /**
+   * Used to return column statistics.
+   */
+  struct Stats {
+    std::shared_ptr<parquet::RowGroupMetaData> row;
+    std::shared_ptr<parquet::ColumnChunkMetaData> column;
+    std::shared_ptr<parquet::Statistics> stats;
+  };
+
+  /**
+   * Try to get the requested column and its statistics value.
+   *
+   * If the statistics are not set, or it doesn't have a minimum and
+   * maximum values set then nullopt is returned.
+   *
+   * If `row` is equal to `-1` the last row group is used.
+   */
+  std::optional<Stats> statistics(int row, int column) const;
 
   /**
    * Execute a query and return the row groups that matched.

@@ -6,8 +6,9 @@ in the LICENSE file found in the top-level directory of this project.
 */
 
 #define BOOST_TEST_MODULE Arrow
-#include <arrow/io/api.h>
 #include <boost/test/included/unit_test.hpp>
+
+#include <arrow/io/api.h>
 #include <parquet/arrow/reader.h>
 
 #include "mzpeak/directory.h"

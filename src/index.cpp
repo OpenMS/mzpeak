@@ -90,7 +90,15 @@ void Impl::parse_index() {
 }
 
 /******************************************************************************/
-std::unique_ptr<Util::Parquet> Readable::parquet(const Schema::File& file) {
+Spectra Readable::spectra() const {
+  auto it = std::ranges::find(impl_->files_, "spectra_data.parquet",
+                              &Schema::File::file_name);
+  if (it == impl_->files_.end()) return Spectra();
+  return Spectra(parquet(*it));
+}
+
+/******************************************************************************/
+std::unique_ptr<Util::Parquet> Readable::parquet(const Schema::File& file) const {
   std::unique_ptr<File::Readable> data(impl_->archive_->read_file(file.file_name));
   return std::make_unique<Util::Parquet>(std::move(data), file);
 }

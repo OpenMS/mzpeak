@@ -13,6 +13,7 @@ top-level directory of this repository.
 #include "mzpeak/schema/array_index.h"
 #include "mzpeak/schema/psi/data_type.h"
 #include "mzpeak/util/data_arrays.h"
+#include "mzpeak/util/encoding.h"
 #include "mzpeak/util/parquet_types.h"
 
 namespace MzPeak::Util {
@@ -191,10 +192,35 @@ const Schema::ArrayIndex& DataArrays::array_index() const {
 }
 
 /******************************************************************************/
-std::unique_ptr<DataArrays::ArrayMap>
+std::size_t DataArrays::record_count() const {
+  auto ne(impl_->array_index_.num_entities());
+  if (ne.has_value()) return *ne;
+
+  // The first array should be the index.
+  //
+  // FIXME: Is there a better way to do this?
+  const Schema::ArrayIndex::Array& index(impl_->array_index_.arrays()[0]);
+  std::optional<int> col_idx(impl_->array_index_.column_index(index));
+  if (!col_idx.has_value()) throw ParquetError("missing column: " + index.path);
+
+  std::optional<Parquet::Stats> stats(impl_->parquet_->statistics(-1, *col_idx));
+
+  if (stats.has_value()) {
+    auto tptr(Util::parquet_statistics_cast<Schema::PSI::DataType::Int64>(
+        *stats->column, *stats->stats));
+
+    return tptr->max();
+  }
+
+  // FIXME: Should we scan the file at this point?
+  throw ParquetError("no num_entities cache and no column statistics!");
+};
+
+/******************************************************************************/
+std::unique_ptr<array_map_type>
 DataArrays::read_arrays(const Query& query,
                         const std::vector<Schema::ArrayIndex::Array>& arrays) {
-  std::unique_ptr<ArrayMap> map = std::make_unique<ArrayMap>();
+  std::unique_ptr<array_map_type> map = std::make_unique<array_map_type>();
 
   std::vector<int> indices(impl_->parquet_->find_row_groups(query));
   auto batch_reader_res = impl_->parquet_->reader().GetRecordBatchReader(indices);
@@ -233,7 +259,7 @@ DataArrays::read_arrays(const Query& query,
         if (existing != map->end()) {
           existing->second->push_back(*data);
         } else {
-          std::shared_ptr<ArrayVector> vec = std::make_shared<ArrayVector>();
+          std::shared_ptr<raw_array_type> vec = std::make_shared<raw_array_type>();
           vec->push_back(*data);
           (*map)[*index] = vec;
         }

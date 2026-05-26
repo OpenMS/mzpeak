@@ -6,11 +6,11 @@ directory of this repository.
 
 */
 
-#include "mzpeak/schema/psi/array_type.h"
 #define BOOST_TEST_MODULE DataArrays
 #include <boost/test/included/unit_test.hpp>
 
 #include "mzpeak/open.h"
+#include "mzpeak/schema/psi/array_type.h"
 #include "mzpeak/util/data_arrays.h"
 
 /******************************************************************************/
@@ -34,8 +34,9 @@ BOOST_AUTO_TEST_CASE(can_read_mz_array) {
   Query query = Query::Predicate<Int64>::equal_to(spectra_index_array, 0);
 
   auto map = data.read_arrays(query, {mz_array});
-  std::vector<double> mz(data.decode_array<Schema::PSI::DataType::Float64>(
-      *map, Schema::PSI::ArrayType::Mz));
+
+  Util::Encoding<Schema::PSI::DataType::Float64> enc(*map, array_index);
+  std::vector<double> mz(enc.decode_array(Schema::PSI::ArrayType::Mz));
 
   BOOST_TEST(mz.size() == 13589);
   BOOST_TEST(mz[0] == 202.607, boost::test_tools::tolerance(0.001));

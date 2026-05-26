@@ -94,6 +94,10 @@ struct Parquet::Impl {
     throw ParquetError(msg);
   }
 
+  // Get column statistics.
+  std::optional<Stats> statistics(std::shared_ptr<parquet::RowGroupMetaData>,
+                                  int) const;
+
   // Get the array index JSON and number of entities.
   std::pair<std::string, std::size_t> array_index(Parquet::file_metadata_t&);
 
@@ -126,6 +130,19 @@ Parquet::Impl::array_index(Parquet::file_metadata_t& fmd) {
 }
 
 /******************************************************************************/
+std::optional<Parquet::Stats>
+Parquet::Impl::statistics(std::shared_ptr<parquet::RowGroupMetaData> rg,
+                          int index) const {
+  auto chunk(rg->ColumnChunk(index));
+  if (!chunk->is_stats_set()) return {};
+
+  auto stats(chunk->statistics());
+  if (!stats || !stats->HasMinMax()) return {};
+
+  return Stats{rg, std::move(chunk), stats};
+}
+
+/******************************************************************************/
 // Helper for dispatching typed statistics.
 struct MinMaxForType {
 
@@ -149,20 +166,18 @@ std::vector<int> Parquet::Impl::run_query(const Query& query) {
   auto fmd(reader_->parquet_reader()->metadata());
 
   auto get_range =
-      [&](const parquet::RowGroupMetaData& rg,
+      [&](const std::shared_ptr<parquet::RowGroupMetaData>& rg,
           const Schema::ArrayIndex::Array& array) -> std::optional<Query::range_t> {
     const std::string& path(array.path);
 
-    int column_index = rg.schema()->ColumnIndex(path);
+    int column_index = rg->schema()->ColumnIndex(path);
     if (column_index < 0) error("invalid path: " + path);
 
-    auto chunk(rg.ColumnChunk(column_index));
-    if (!chunk->is_stats_set()) return {};
+    std::optional<Stats> stats(statistics(rg, column_index));
+    if (!stats.has_value()) return {};
 
-    auto stats(chunk->statistics());
-    if (!stats || !stats->HasMinMax()) return {};
-
-    return psi::dispatch(array.data_type, MinMaxForType{*chunk, *stats});
+    return psi::dispatch(array.data_type,
+                         MinMaxForType{*stats->column, *stats->stats});
   };
 
   std::vector<int> res;
@@ -170,7 +185,7 @@ std::vector<int> Parquet::Impl::run_query(const Query& query) {
   for (auto row : std::views::iota(0, fmd->num_row_groups())) {
     std::shared_ptr<parquet::RowGroupMetaData> rg(fmd->RowGroup(row));
 
-    if (query.eval(std::bind(get_range, std::ref(*rg), _1))) {
+    if (query.eval(std::bind(get_range, std::ref(rg), _1))) {
       res.push_back(row);
     }
   }
@@ -228,6 +243,20 @@ Schema::ArrayIndex Parquet::array_index() const {
 
 /******************************************************************************/
 parquet::arrow::FileReader& Parquet::reader() const { return *impl_->reader_; }
+
+/******************************************************************************/
+std::optional<Parquet::Stats> Parquet::statistics(int row, int column) const {
+  auto fmd(file_metadata());
+
+  if (row == -1) {
+    int n(fmd->num_row_groups());
+    if (n <= 0) return {};
+    row = n - 1;
+  }
+
+  auto rg = fmd->RowGroup(row);
+  return impl_->statistics(std::move(rg), column);
+}
 
 /******************************************************************************/
 std::vector<int> Parquet::find_row_groups(const Query& query) {

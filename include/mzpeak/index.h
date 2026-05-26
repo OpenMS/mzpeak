@@ -10,6 +10,7 @@ directory of this repository.
 
 #include "mzpeak/archive.h"
 #include "mzpeak/schema/file.h"
+#include "mzpeak/spectra.h"
 #include "mzpeak/util/parquet.h"
 
 namespace MzPeak::Index {
@@ -34,9 +35,14 @@ public:
   const std::vector<Schema::File>& files() const;
 
   /**
+   * Access the spectra in the file.
+   */
+  Spectra spectra() const;
+
+  /**
    * Open a Parquet file directly.
    */
-  std::unique_ptr<Util::Parquet> parquet(const Schema::File&);
+  std::unique_ptr<Util::Parquet> parquet(const Schema::File&) const;
 
 protected:
   std::unique_ptr<Impl> impl_;
