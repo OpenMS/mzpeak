@@ -14,7 +14,6 @@ directory of this repository.
 #include "mzpeak/query.h"
 #include "mzpeak/schema/array_index.h"
 #include "mzpeak/schema/file.h"
-#include "mzpeak/util/row_group_metadata_proxy.h"
 
 namespace MzPeak::Util {
 
@@ -40,11 +39,6 @@ public:
    * Access the file metadata.
    */
   file_metadata_t file_metadata() const;
-
-  /**
-   *
-   */
-  Util::RowGroupMetadataProxy rg_metadata() const;
 
   /**
    * Return the raw array index JSON.

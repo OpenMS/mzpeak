@@ -194,11 +194,6 @@ Parquet::file_metadata_t Parquet::file_metadata() const {
 }
 
 /******************************************************************************/
-Util::RowGroupMetadataProxy Parquet::rg_metadata() const {
-  return Util::RowGroupMetadataProxy(file_metadata());
-}
-
-/******************************************************************************/
 std::string Parquet::array_index_json() const {
   file_metadata_t fmd(file_metadata());
   return impl_->array_index(fmd).first;

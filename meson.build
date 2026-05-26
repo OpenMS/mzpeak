@@ -48,7 +48,6 @@ install_headers([
   'include/mzpeak/util/enumerable_proxy.h',
   'include/mzpeak/util/parquet.h',
   'include/mzpeak/util/parquet_types.h',
-  'include/mzpeak/util/row_group_metadata_proxy.h',
   'include/mzpeak/zip.h',
 ], subdir : 'mzpeak')
 
