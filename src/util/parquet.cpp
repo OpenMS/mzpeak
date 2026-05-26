@@ -19,11 +19,15 @@ directory of this repository.
 #include "mzpeak/exception.h"
 #include "mzpeak/schema/array_index.h"
 #include "mzpeak/schema/entity_type.h"
+#include "mzpeak/schema/psi/data_type.h"
 #include "mzpeak/util/arrow.h"
 #include "mzpeak/util/parquet.h"
 #include "mzpeak/util/parquet_types.h"
 
 namespace MzPeak::Util {
+
+namespace psi = Schema::PSI;
+using namespace std::placeholders;
 
 /******************************************************************************/
 std::optional<std::string> get_kv_string(Parquet::file_metadata_t& fmd,
@@ -96,14 +100,10 @@ struct Parquet::Impl {
   // Return all the matching row groups.
   std::vector<int> run_query(const Query&);
 
-  // Return true if the predicate matches.
-  bool run_predicate(const parquet::RowGroupMetaData&, const Query&,
-                     const Query::predicate_t&);
-
   // Return true if the predicate matches the given column statistics.
-  template <Schema::PSI::DataType T>
-  bool query_stats(const parquet::ColumnChunkMetaData&, const parquet::Statistics&,
-                   const Query::Predicate<T>&);
+  template <psi::DataType T>
+  Query::range_t query_stats(const parquet::ColumnChunkMetaData&,
+                             const parquet::Statistics&);
 
   Schema::File file_;
   std::unique_ptr<Arrow> arrow_;
@@ -126,69 +126,56 @@ Parquet::Impl::array_index(Parquet::file_metadata_t& fmd) {
 }
 
 /******************************************************************************/
+// Helper for dispatching typed statistics.
+struct MinMaxForType {
+
+  template <psi::DataType T> std::optional<Query::range_t> operator()() const {
+    auto tptr(Util::parquet_statistics_cast<T>(col_, stats_));
+    return std::make_pair<>(tptr->min(), tptr->max());
+  }
+
+  const parquet::ColumnChunkMetaData& col_;
+  const parquet::Statistics& stats_;
+};
+
+template <> // Specialized since we don't support ASCII types.
+std::optional<Query::range_t>
+MinMaxForType::operator()<psi::DataType::ASCII>() const {
+  return {};
+}
+
+/******************************************************************************/
 std::vector<int> Parquet::Impl::run_query(const Query& query) {
   auto fmd(reader_->parquet_reader()->metadata());
+
+  auto get_range =
+      [&](const parquet::RowGroupMetaData& rg,
+          const Schema::ArrayIndex::Array& array) -> std::optional<Query::range_t> {
+    const std::string& path(array.path);
+
+    int column_index = rg.schema()->ColumnIndex(path);
+    if (column_index < 0) error("invalid path: " + path);
+
+    auto chunk(rg.ColumnChunk(column_index));
+    if (!chunk->is_stats_set()) return {};
+
+    auto stats(chunk->statistics());
+    if (!stats || !stats->HasMinMax()) return {};
+
+    return psi::dispatch(array.data_type, MinMaxForType{*chunk, *stats});
+  };
+
   std::vector<int> res;
 
   for (auto row : std::views::iota(0, fmd->num_row_groups())) {
-    auto rg(fmd->RowGroup(row));
+    std::shared_ptr<parquet::RowGroupMetaData> rg(fmd->RowGroup(row));
 
-    if (std::ranges::all_of(query.predicates(),
-                            [&](auto& p) { return run_predicate(*rg, query, p); })) {
+    if (query.eval(std::bind(get_range, std::ref(*rg), _1))) {
       res.push_back(row);
     }
   }
 
   return res;
-}
-
-/******************************************************************************/
-bool Parquet::Impl::run_predicate(const parquet::RowGroupMetaData& rg,
-                                  const Query& query,
-                                  const Query::predicate_t& pred) {
-
-  // FIXME: what to do about multiple paths?
-  const Schema::ArrayIndex::Array& array = query.extract_array(pred);
-  const std::string& path(array.path);
-
-  int column_index = rg.schema()->ColumnIndex(path);
-  if (column_index < 0) error("invalid path: " + path);
-
-  auto chunk(rg.ColumnChunk(column_index));
-  if (!chunk->is_stats_set()) return true;
-
-  auto stats(chunk->statistics());
-  if (!stats || !stats->HasMinMax()) return true;
-
-  using enum Schema::PSI::DataType;
-
-  return std::visit(
-      [&](auto&& typed_pred) {
-        using T = std::decay_t<decltype(typed_pred)>;
-
-        if constexpr (std::is_same_v<T, Query::Predicate<Int32>>) {
-          return query_stats(*chunk, *stats, typed_pred);
-        } else if constexpr (std::is_same_v<T, Query::Predicate<Float32>>) {
-          return query_stats(*chunk, *stats, typed_pred);
-        } else if constexpr (std::is_same_v<T, Query::Predicate<Int64>>) {
-          return query_stats(*chunk, *stats, typed_pred);
-        } else if constexpr (std::is_same_v<T, Query::Predicate<Float64>>) {
-          return query_stats(*chunk, *stats, typed_pred);
-        } else {
-          static_assert(false, "failed to detect predicate type!");
-        }
-      },
-      pred);
-}
-
-/******************************************************************************/
-template <Schema::PSI::DataType T>
-bool Parquet::Impl::query_stats(const parquet::ColumnChunkMetaData& col,
-                                const parquet::Statistics& stats,
-                                const Query::Predicate<T>& pred) {
-
-  auto tptr(Util::parquet_statistics_cast<T>(col, stats));
-  return pred.match_in_range(tptr->min(), tptr->max());
 }
 
 /******************************************************************************/

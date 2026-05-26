@@ -25,9 +25,6 @@ namespace MzPeak::Util {
  */
 class DataArrays {
 public:
-  /// Clarify what we mean by Array.
-  using Array = Schema::ArrayIndex::Array;
-
   /// A vector of Arrow arrays.
   using ArrayVector = std::vector<std::shared_ptr<arrow::Array>>;
 
@@ -52,7 +49,8 @@ public:
    * NOTE: The query should really only contain predicates that match
    * arrays that have a sort ranking of 0.
    */
-  std::unique_ptr<ArrayMap> read_arrays(const Query&, const std::vector<Array>&);
+  std::unique_ptr<ArrayMap>
+  read_arrays(const Query&, const std::vector<Schema::ArrayIndex::Array>&);
 
   /**
    * Decode a single array from the given array map.
@@ -77,7 +75,8 @@ public:
    */
   template <Schema::PSI::DataType T>
   std::vector<typename Schema::PSI::data_type_traits<T>::value_type>
-  decode_chunked(const ArrayMap&, const std::vector<Array>&) const;
+  decode_chunked(const ArrayMap&,
+                 const std::vector<Schema::ArrayIndex::Array>&) const;
 
 private:
   struct Impl;
@@ -155,7 +154,8 @@ DataArrays::decode_point(const ArrayMap& map, int index) const {
 /******************************************************************************/
 template <Schema::PSI::DataType T>
 std::vector<typename Schema::PSI::data_type_traits<T>::value_type>
-DataArrays::decode_chunked(const ArrayMap&, const std::vector<Array>&) const {
+DataArrays::decode_chunked(const ArrayMap&,
+                           const std::vector<Schema::ArrayIndex::Array>&) const {
   throw("not implemented");
 }
 

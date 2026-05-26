@@ -6,9 +6,7 @@ top-level directory of this repository.
 
 */
 
-#include <algorithm>
 #include <arrow/record_batch.h>
-#include <iterator>
 #include <memory>
 #include <parquet/arrow/reader.h>
 
@@ -19,56 +17,25 @@ top-level directory of this repository.
 
 namespace MzPeak::Util {
 
+namespace psi = Schema::PSI;
+using namespace std::placeholders;
+
 /******************************************************************************/
 using rec_batch_t = std::shared_ptr<arrow::RecordBatch>;
 
 /******************************************************************************/
-struct DataArrays::Impl {
-  Impl(std::unique_ptr<Util::Parquet> parquet)
-      : parquet_(std::move(parquet)), array_index_(parquet_->array_index()) {};
-
-  struct Batch {
-    Batch(std::shared_ptr<arrow::RecordBatch> batch)
-        : batch_(std::move(batch)), slice_offset_(0),
-          slice_length_(batch_->num_rows()) {};
-
-    std::shared_ptr<arrow::RecordBatch> batch_;
-    std::map<int, std::shared_ptr<arrow::Array>> cache_;
-    int64_t slice_offset_;
-    int64_t slice_length_;
-  };
-
-  /// Try to get an array out of a batch.
-  std::shared_ptr<arrow::Array>
-  array_from_batch(arrow::RecordBatch&, const Schema::ArrayIndex::Array&) const;
-
-  // Return an array with caching.
-  std::shared_ptr<arrow::Array> cached_array(Batch& batch,
-                                             const DataArrays::Array& array);
-
-  // Returned a sliced batch.
-  std::shared_ptr<arrow::RecordBatch> slice_batch(Batch&, const Query&);
-
-  // Adjust the slice with a query.
-  template <Schema::PSI::DataType T>
-  void query_batch(Batch&, const Query::Predicate<T>&);
-
-  std::unique_ptr<Util::Parquet> parquet_;
-  Schema::ArrayIndex array_index_;
-};
-
-/******************************************************************************/
+/// Try to get an array out of a batch.
 std::shared_ptr<arrow::Array>
-DataArrays::Impl::array_from_batch(arrow::RecordBatch& batch,
-                                   const Schema::ArrayIndex::Array& array) const {
+array_from_batch(arrow::RecordBatch& batch, const Schema::ArrayIndex& index,
+                 const Schema::ArrayIndex::Array& array) {
   std::shared_ptr<arrow::Array> col;
-  std::optional<int> index = array_index_.column_index(array);
+  std::optional<int> i = index.column_index(array);
 
   // Could it be in a struct?
-  if (col = batch.GetColumnByName(array_index_.prefix()); col && index) {
+  if (col = batch.GetColumnByName(index.prefix()); col && i) {
     if (col->type_id() == arrow::Type::STRUCT) {
       auto sa = std::static_pointer_cast<arrow::StructArray>(col);
-      return sa->field(*index);
+      return sa->field(*i);
     }
   }
 
@@ -81,8 +48,39 @@ DataArrays::Impl::array_from_batch(arrow::RecordBatch& batch,
 }
 
 /******************************************************************************/
+struct Batch {
+  Batch(std::shared_ptr<arrow::RecordBatch> batch, Schema::ArrayIndex& index)
+      : batch_(std::move(batch)), array_index_(index), slice_offset_(0),
+        slice_length_(batch_->num_rows()) {};
+
+  // Return an array with caching.
+  std::shared_ptr<arrow::Array> cached_array(const Schema::ArrayIndex::Array& array);
+
+  // Returned a sliced batch.
+  std::shared_ptr<arrow::RecordBatch> slice_batch(const Query&);
+
+  // Adjust the slice with a query.
+  void query_batch(const Query&);
+
+  std::shared_ptr<arrow::RecordBatch> batch_;
+  Schema::ArrayIndex& array_index_;
+  std::map<int, std::shared_ptr<arrow::Array>> cache_;
+  int64_t slice_offset_;
+  int64_t slice_length_;
+};
+
+/******************************************************************************/
+struct DataArrays::Impl {
+  Impl(std::unique_ptr<Util::Parquet> parquet)
+      : parquet_(std::move(parquet)), array_index_(parquet_->array_index()) {};
+
+  std::unique_ptr<Util::Parquet> parquet_;
+  Schema::ArrayIndex array_index_;
+};
+
+/******************************************************************************/
 std::shared_ptr<arrow::Array>
-DataArrays::Impl::cached_array(Batch& batch, const DataArrays::Array& array) {
+Batch::cached_array(const Schema::ArrayIndex::Array& array) {
   std::optional<int> index(array_index_.column_index(array));
 
   if (!index.has_value()) {
@@ -90,86 +88,92 @@ DataArrays::Impl::cached_array(Batch& batch, const DataArrays::Array& array) {
     throw ParquetError(msg);
   }
 
-  auto it = batch.cache_.find(*index);
+  auto it = cache_.find(*index);
 
-  if (it != batch.cache_.end()) {
+  if (it != cache_.end()) {
     return it->second;
   } else {
-    auto v = array_from_batch(*batch.batch_, array);
-    batch.cache_[*index] = v;
+    auto v = array_from_batch(*batch_, array_index_, array);
+    cache_[*index] = v;
     return v;
   }
 }
 
 /******************************************************************************/
-std::shared_ptr<arrow::RecordBatch>
-DataArrays::Impl::slice_batch(Batch& batch, const Query& query) {
-  for (auto& pred : query.predicates()) {
-    std::visit(
-        [&](auto&& typed_pred) {
-          using enum Schema::PSI::DataType;
-          using T = std::decay_t<decltype(typed_pred)>;
+std::shared_ptr<arrow::RecordBatch> Batch::slice_batch(const Query& query) {
+  query_batch(query);
 
-          if constexpr (std::is_same_v<T, Query::Predicate<Int32>>) {
-            query_batch(batch, typed_pred);
-          } else if constexpr (std::is_same_v<T, Query::Predicate<Float32>>) {
-            query_batch(batch, typed_pred);
-          } else if constexpr (std::is_same_v<T, Query::Predicate<Int64>>) {
-            query_batch(batch, typed_pred);
-          } else if constexpr (std::is_same_v<T, Query::Predicate<Float64>>) {
-            query_batch(batch, typed_pred);
-          } else {
-            static_assert(false, "failed to detect predicate type!");
-          }
-        },
-        pred);
-  }
-
-  if (batch.slice_offset_ == 0 && batch.slice_length_ == batch.batch_->num_rows()) {
-    return batch.batch_;
+  if (slice_offset_ == 0 && slice_length_ == batch_->num_rows()) {
+    return batch_;
   } else {
-    return batch.batch_->Slice(batch.slice_offset_, batch.slice_length_);
+    return batch_->Slice(slice_offset_, slice_length_);
   }
 }
 
 /******************************************************************************/
-template <Schema::PSI::DataType T>
-void DataArrays::Impl::query_batch(Batch& batch, const Query::Predicate<T>& pred) {
-  using value_type = typename Schema::PSI::data_type_traits<T>::value_type;
+struct ArrayValueHelper {
+  template <psi::DataType T>
+  std::optional<Query::value_t>
+  operator()(const Schema::ArrayIndex::Array& array) const {
+    auto raw = batch_.cached_array(array);
+    auto data = Util::parquet_array_cast<T>(raw);
+    return data->Value(i_);
+  }
 
-  auto raw = cached_array(batch, pred.array());
-  auto data = Util::parquet_array_cast<T>(raw);
+  Batch& batch_;
+  int64_t i_;
+};
 
-  auto match = [pred](std::optional<value_type> v) -> bool {
-    // Can't compare null values.
-    return v.has_value() && pred.match(*v);
+template <> // Specialized since we don't support ASCII types.
+std::optional<Query::value_t> ArrayValueHelper::operator()<psi::DataType::ASCII>(
+    const Schema::ArrayIndex::Array& _) const {
+  return {};
+}
+
+/******************************************************************************/
+void Batch::query_batch(const Query& query) {
+  auto get_value =
+      [&](ArrayValueHelper& helper,
+          const Schema::ArrayIndex::Array& array) -> std::optional<Query::value_t> {
+    return psi::dispatch(array.data_type, helper, array);
   };
 
-  // N.B. If we are working with a sorted array then we can narrow the
-  // batch by trimming the head and tail of the array.  Otherwise we
-  // keep the batch intact and filter later.
-  if (pred.array().sorting_rank.has_value() &&
-      pred.array().sorting_rank.value() == 0) {
+  { // Find the first "row" that matches the query.
+    ArrayValueHelper forward{*this, slice_offset_};
 
-    auto begin = data->begin() + batch.slice_offset_;
-    auto end = data->begin() + batch.slice_length_;
-    auto first = std::find_if(begin, end, match);
-
-    if (first == end) {
-      // We don't even want this batch!
-      batch.slice_length_ = 0;
-      return;
-    } else {
-      batch.slice_offset_ += std::distance(begin, first);
-      begin = first;
+    for (; forward.i_ < slice_length_; ++forward.i_) {
+      if (query.eval(std::bind(get_value, std::ref(forward), _1))) {
+        break;
+      }
     }
 
-    auto begin_r = std::make_reverse_iterator(end);
-    auto end_r = std::make_reverse_iterator(begin);
-    auto last = std::find_if(begin_r, end_r, match);
+    if (forward.i_ == slice_length_) {
+      // No matches.
+      slice_offset_ = 0;
+      slice_length_ = 0;
+      return;
+    } else {
+      slice_offset_ = forward.i_;
+    }
+  }
 
-    if (last != end_r) {
-      batch.slice_length_ -= std::distance(begin_r, last);
+  { // Find the last "row" that matches the query.
+    if (slice_length_ <= 0 || slice_offset_ >= slice_length_) return;
+    ArrayValueHelper backward{*this, slice_length_ - 1};
+
+    for (; backward.i_ > slice_offset_; --backward.i_) {
+      if (query.eval(std::bind(get_value, std::ref(backward), _1))) {
+        break;
+      }
+    }
+
+    if (backward.i_ == slice_offset_) {
+      // No matches.
+      slice_offset_ = 0;
+      slice_length_ = 0;
+      return;
+    } else {
+      slice_length_ = backward.i_ + 1;
     }
   }
 }
@@ -188,7 +192,8 @@ const Schema::ArrayIndex& DataArrays::array_index() const {
 
 /******************************************************************************/
 std::unique_ptr<DataArrays::ArrayMap>
-DataArrays::read_arrays(const Query& query, const std::vector<Array>& arrays) {
+DataArrays::read_arrays(const Query& query,
+                        const std::vector<Schema::ArrayIndex::Array>& arrays) {
   std::unique_ptr<ArrayMap> map = std::make_unique<ArrayMap>();
 
   std::vector<int> indices(impl_->parquet_->find_row_groups(query));
@@ -212,15 +217,15 @@ DataArrays::read_arrays(const Query& query, const std::vector<Array>& arrays) {
     std::shared_ptr<arrow::RecordBatch> batch;
 
     {
-      auto helper = Impl::Batch(batch_r.ValueOrDie());
-      batch = impl_->slice_batch(helper, query);
+      auto helper = Batch(batch_r.ValueOrDie(), impl_->array_index_);
+      batch = helper.slice_batch(query);
     }
 
     for (auto& array : arrays) {
       std::optional<int> index(impl_->array_index_.column_index(array));
 
       std::optional<std::shared_ptr<arrow::Array>> data =
-          impl_->array_from_batch(*batch, array);
+          array_from_batch(*batch, impl_->array_index_, array);
 
       if (index.has_value() && data.has_value()) {
         auto existing = map->find(*index);

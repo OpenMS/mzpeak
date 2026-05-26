@@ -29,10 +29,7 @@ BOOST_AUTO_TEST_CASE(can_find_spectrum) {
   auto array_index = parquet->array_index();
   auto spectra_index_array = array_index.arrays()[0];
 
-  Query query;
-  auto pred = Query::Predicate<DataType::Int64>::equal_to(spectra_index_array, 1);
-  query.push_back(pred);
-
+  Query query = Query::Predicate<DataType::Int64>::equal_to(spectra_index_array, 1);
   auto indices = parquet->find_row_groups(query);
 
   BOOST_TEST(indices.size() == 1);

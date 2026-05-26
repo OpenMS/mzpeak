@@ -9,6 +9,9 @@ directory of this repository.
 #pragma once
 
 #include <string>
+#include <type_traits>
+
+#include "mzpeak/exception.h"
 
 namespace MzPeak::Schema::PSI {
 
@@ -81,6 +84,35 @@ template <> struct data_type_traits<DataType::Float64> {
 
 template <> struct data_type_traits<DataType::ASCII> {
   using value_type = char*;
+};
+
+/// Helper for constant dispatching.
+template <DataType T> using data_type_constant = std::integral_constant<DataType, T>;
+
+/**
+ * Dispatch a function that works with a specific data type.
+ */
+template <typename Fn, typename... Args>
+decltype(auto) dispatch(DataType t, Fn&& func, Args&&... args) {
+  switch (t) {
+  case DataType::Int32:
+    return std::forward<Fn>(func).template operator()<DataType::Int32>(
+        std::forward<Args>(args)...);
+  case DataType::Float32:
+    return std::forward<Fn>(func).template operator()<DataType::Float32>(
+        std::forward<Args>(args)...);
+  case DataType::Int64:
+    return std::forward<Fn>(func).template operator()<DataType::Int64>(
+        std::forward<Args>(args)...);
+  case DataType::Float64:
+    return std::forward<Fn>(func).template operator()<DataType::Float64>(
+        std::forward<Args>(args)...);
+  case DataType::ASCII:
+    return std::forward<Fn>(func).template operator()<DataType::ASCII>(
+        std::forward<Args>(args)...);
+  }
+
+  throw TypeError("unknown DataType: " + data_type_to_string(t));
 };
 
 } // namespace MzPeak::Schema::PSI

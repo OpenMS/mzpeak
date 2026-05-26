@@ -60,4 +60,16 @@ public:
   ~InvalidIterator() = default;
 };
 
+/**
+ * Thrown when an unexpected type is encountered at run time.
+ */
+class TypeError final : public Exception {
+public:
+  /// Constructor.
+  TypeError(const std::string& msg) : Exception(msg) {};
+
+  /// Destructor.
+  ~TypeError() = default;
+};
+
 } // namespace MzPeak

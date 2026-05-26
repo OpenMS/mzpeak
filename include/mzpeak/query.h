@@ -8,57 +8,68 @@ top-level directory of this repository.
 
 #pragma once
 
+#include <any>
+
 #include "mzpeak/schema/array_index.h"
 #include "mzpeak/schema/psi/data_type.h"
 
 namespace MzPeak {
 
 /**
- * FIXME:
+ * A low-level interface for selecting which records to extract from a
+ * Parquet file.
+ *
+ * Queries are built using one of the `Predicate<T>` functions along
+ * with the array the predicate should match.
+ *
+ * More complex queries can be constructed using the logic operators
+ * (`&&`, `||`, and `!`).  NOTE: Keep in mind that complex queries are
+ * built and evaluated using recursion so depth should be kept to a
+ * minimum.
  */
 class Query {
 public:
   template <Schema::PSI::DataType T> class Predicate final {
   public:
-    ///
+    /// The type of the value needed for this predicate.
     using value_type = typename Schema::PSI::data_type_traits<T>::value_type;
 
-    ///
+    /// The schema array type.
     using array_type = Schema::ArrayIndex::Array;
 
     /**
      * Queried value must be exactly equal to the given value.
      */
-    static Predicate<T> equal_to(const array_type& array, value_type v) {
-      return Predicate(array, std::make_pair<>(Op::EQ, v));
+    static Query equal_to(const array_type& array, value_type v) {
+      return Query(Predicate(array, std::make_pair<>(Op::EQ, v)));
     };
 
     /**
      * Queried value must be greater than the given value.
      */
-    static Predicate<T> greater_than(const array_type& array, value_type v) {
-      return Predicate(array, std::make_pair<>(Op::GT, v));
+    static Query greater_than(const array_type& array, value_type v) {
+      return Query(Predicate(array, std::make_pair<>(Op::GT, v)));
     };
 
     /**
      * Queried value must be less than the given value.
      */
-    static Predicate<T> less_than(const array_type& array, value_type v) {
-      return Predicate(array, std::make_pair<>(Op::LT, v));
+    static Query less_than(const array_type& array, value_type v) {
+      return Query(Predicate(array, std::make_pair<>(Op::LT, v)));
     };
 
     /**
      * Queried value must be greater than or equal to the given value.
      */
-    static Predicate<T> greater_equal(const array_type& array, value_type v) {
-      return Predicate(array, std::make_pair<>(Op::GE, v));
+    static Query greater_equal(const array_type& array, value_type v) {
+      return Query(Predicate(array, std::make_pair<>(Op::GE, v)));
     };
 
     /**
      * Queried value must be less than or equal to the given value.
      */
-    static Predicate<T> less_equal(const array_type& array, value_type v) {
-      return Predicate(array, std::make_pair<>(Op::LE, v));
+    static Query less_equal(const array_type& array, value_type v) {
+      return Query(Predicate(array, std::make_pair<>(Op::LE, v)));
     };
 
     /// Destructor.
@@ -78,7 +89,7 @@ public:
      * Return `true` if the predicate would match a value in the range
      * (min, max).
      */
-    bool match_in_range(value_type min, value_type max) const;
+    bool match(const std::pair<value_type, value_type>&) const;
 
   private:
     /// Comparison operations.
@@ -95,44 +106,92 @@ public:
   };
 
 public:
-  /// Constructor.
-  Query() {};
-
   /// Destructor.
-  virtual ~Query() {};
+  ~Query();
 
-  /**
-   * Add a predicate to the list of predicates.
-   */
-  template <Schema::PSI::DataType T> void push_back(const Predicate<T>& p) {
-    predicates_.push_back(p);
+  /// Join two queries together with a logical AND.
+  Query operator&&(const Query&) const;
+
+  /// Join two queries together with a logical OR.
+  Query operator||(const Query&) const;
+
+  /// Negate a query.
+  Query operator!() const;
+
+  // Internal boolean operator type.
+  enum class Oper { AND, OR };
+
+  // Internal type for recursion.
+  struct child_t {
+    Oper oper_;
+    std::any lhs_;
+    std::any rhs_;
   };
 
 public:
-  //
+  // Save some typing.
   using enum Schema::PSI::DataType;
 
-  /// FIXME
+  // The C++ types that are used by predicates.
+  using p_int32_t = Schema::PSI::data_type_traits<Int32>::value_type;
+  using p_float32_t = Schema::PSI::data_type_traits<Float32>::value_type;
+  using p_int64_t = Schema::PSI::data_type_traits<Int64>::value_type;
+  using p_float64_t = Schema::PSI::data_type_traits<Float64>::value_type;
+
+  /// A variant that can hold any predicate type.
   using predicate_t = std::variant<Predicate<Int32>, Predicate<Float32>,
                                    Predicate<Int64>, Predicate<Float64>>;
 
+  /// A variant that can hold any predicate value type.
+  using value_t = std::variant<p_int32_t, p_float32_t, p_int64_t, p_float64_t>;
+
+  /// A variant that can hold a min and max value for range queries.
+  using range_t = std::variant<
+      std::pair<p_int32_t, p_int32_t>, std::pair<p_float32_t, p_float32_t>,
+      std::pair<p_int64_t, p_int64_t>, std::pair<p_float64_t, p_float64_t>>;
+
+  /// A function that when given an array type, should return a single value.
+  /// If this isn't possible it should return nullopt.
+  using eval_callback_t =
+      std::function<std::optional<value_t>(const Schema::ArrayIndex::Array&)>;
+
+  /// A function that when given an array type should return a min and
+  /// max.  If this isn't possible it should return nullopt.
+  using eval_range_callback_t =
+      std::function<std::optional<range_t>(const Schema::ArrayIndex::Array&)>;
   /**
-   * FIXME
+   * Evaluate a query.
    */
-  const std::vector<predicate_t> predicates() const { return predicates_; };
+  bool eval(eval_callback_t) const;
 
   /**
-   * Extract an array from a predicate wrapper.
+   * Evaluate a range query.
+   *
+   * Range queries test to see if the query would match a value within
+   * a min or max range.
    */
-  const Schema::ArrayIndex::Array& extract_array(const predicate_t& p) const {
-    return *std::visit([](auto&& arg) { return &arg.array(); }, p);
-  };
+  bool eval(eval_range_callback_t) const;
+
+protected:
+  /// Constructor.
+  Query(predicate_t p);
+
+  friend Predicate<Int32>;
+  friend Predicate<Float32>;
+  friend Predicate<Int64>;
+  friend Predicate<Float64>;
 
 private:
-  std::vector<predicate_t> predicates_;
+  std::optional<predicate_t> self_;
+  std::optional<child_t> child_;
+  bool not_ = false;
+
+  explicit Query(const child_t&);
+  Query join(const Query& other, Oper oper) const;
 };
 
 /******************************************************************************/
+// Predicate matching the way you would expect.
 template <Schema::PSI::DataType T>
 bool Query::Predicate<T>::match(value_type v) const {
   switch (comp_.first) {
@@ -155,8 +214,12 @@ bool Query::Predicate<T>::match(value_type v) const {
 }
 
 /******************************************************************************/
+// Predicate range matching that returns true if the predicate would
+// match a value that is between a min and max (inclusive).
 template <Schema::PSI::DataType T>
-bool Query::Predicate<T>::match_in_range(value_type min, value_type max) const {
+bool Query::Predicate<T>::match(const std::pair<value_type, value_type>& v) const {
+  auto [min, max] = v;
+
   switch (comp_.first) {
   case Op::EQ:
     return (min == comp_.second || max == comp_.second) ||
