@@ -34,8 +34,8 @@ int main(int argc, char* argv[])
 
   for (const auto& [index, spectrum] : enumerated_spectra) {
     std::print("| {:5d} | ", index);
-    std::print("{:9.2f} | ", spectrum->mz().front());
-    std::print("{:8.2f} | ", spectrum->mz().back());
+    std::print("{:9.2f} | ", spectrum.mz().front());
+    std::print("{:8.2f} | ", spectrum.mz().back());
     std::println();
   }
 

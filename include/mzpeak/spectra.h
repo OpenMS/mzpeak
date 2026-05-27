@@ -8,7 +8,7 @@ top-level directory of this repository.
 
 #pragma once
 
-// #include "mzpeak/spectrum.h"
+#include "mzpeak/spectrum.h"
 #include "mzpeak/util/data_arrays.h"
 #include "mzpeak/util/enumerable_proxy.h"
 
@@ -36,7 +36,7 @@ private:
   std::shared_ptr<Util::DataArrays> data_;
 
   // Function to fetch a specific spectrum.
-  std::shared_ptr<Spectrum> fetch(std::size_t);
+  Spectrum fetch(std::size_t);
 };
 
 } // namespace MzPeak

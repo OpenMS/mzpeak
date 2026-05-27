@@ -27,7 +27,8 @@ Spectra::Spectra(std::unique_ptr<Util::Parquet> parquet)
 }
 
 /******************************************************************************/
-std::shared_ptr<Spectrum> Spectra::fetch(std::size_t index) {
+Spectrum Spectra::fetch(std::size_t index)
+{
   // FIXME: Write a better way of getting the spectrum index
   auto array_index(data_->array_index());
   auto spectra_index_column = array_index.columns()[0];
@@ -36,7 +37,7 @@ std::shared_ptr<Spectrum> Spectra::fetch(std::size_t index) {
   Query query = Query::Predicate<Int64>::equal_to(spectra_index_column, index);
 
   auto map = data_->read_arrays(query, array_index.columns());
-  return std::shared_ptr<Spectrum>(new Spectrum(array_index, std::move(map)));
+  return Spectrum(array_index, std::move(map));
 }
 
 } // namespace MzPeak

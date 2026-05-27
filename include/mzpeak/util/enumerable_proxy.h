@@ -20,7 +20,7 @@ directory of this repository.
 
 namespace MzPeak::Util {
 
-template <typename T, typename V = std::shared_ptr<T>>
+template <typename T, typename V = T>
 class EnumerableProxy : public std::ranges::view_interface<EnumerableProxy<T>> {
 public:
   /// A function that can fetch the requested value.
