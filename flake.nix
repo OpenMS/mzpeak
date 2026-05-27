@@ -23,7 +23,17 @@
     {
       packages = each (
         pkgs: system: {
-          default = pkgs.callPackage nix/package.nix { };
+          default = self.packages.${system}.mzpeak;
+
+          mzpeak = pkgs.callPackage nix/package.nix {
+            # Override clang on macOS:
+            stdenv = if pkgs.stdenv.isDarwin then pkgs.overrideCC pkgs.stdenv pkgs.clang_22 else pkgs.stdenv;
+          };
+
+          mzpeak_clang = self.packages.${system}.mzpeak.override (_: {
+            # Always use clang.
+            stdenv = pkgs.overrideCC pkgs.stdenv pkgs.clang_22;
+          });
         }
       );
 
