@@ -31,7 +31,8 @@ using namespace std::placeholders;
 
 /******************************************************************************/
 std::optional<std::string> get_kv_string(Parquet::file_metadata_t& fmd,
-                                         const std::string& key) {
+                                         const std::string& key)
+{
   auto result(fmd->key_value_metadata()->Get(key));
 
   if (result.ok()) {
@@ -43,7 +44,8 @@ std::optional<std::string> get_kv_string(Parquet::file_metadata_t& fmd,
 
 /******************************************************************************/
 std::optional<std::size_t> get_kv_uint(Parquet::file_metadata_t& fmd,
-                                       const std::string& key) {
+                                       const std::string& key)
+{
   return get_kv_string(fmd, key).and_then(
       [](const std::string& s) -> std::optional<std::size_t> {
         std::size_t r{};
@@ -59,7 +61,8 @@ std::optional<std::size_t> get_kv_uint(Parquet::file_metadata_t& fmd,
 
 /******************************************************************************/
 Schema::ArrayIndex parse_array_index(const std::string& str,
-                                     Schema::EntityType entity_type) {
+                                     Schema::EntityType entity_type)
+{
   namespace json = boost::json;
 
   boost::system::error_code ec;
@@ -76,7 +79,9 @@ Schema::ArrayIndex parse_array_index(const std::string& str,
 /******************************************************************************/
 struct Parquet::Impl {
   Impl(std::unique_ptr<File> data, Schema::File file)
-      : file_(std::move(file)), arrow_(std::make_unique<Arrow>(std::move(data))) {
+      : file_(std::move(file))
+      , arrow_(std::make_unique<Arrow>(std::move(data)))
+  {
     auto raf = arrow_->reader();
 
     auto reader_builder = parquet::arrow::FileReaderBuilder();
@@ -85,11 +90,12 @@ struct Parquet::Impl {
 
     status = reader_builder.Build(&reader_);
     if (!status.ok()) throw ParquetError(status.ToString());
-  };
+  }
 
   ~Impl() = default;
 
-  void error(const std::string& error) {
+  void error(const std::string& error)
+  {
     std::string msg("file accessing " + file_.file_name + ": " + error);
     throw ParquetError(msg);
   }
@@ -116,7 +122,8 @@ struct Parquet::Impl {
 
 /******************************************************************************/
 std::pair<std::string, std::size_t>
-Parquet::Impl::array_index(Parquet::file_metadata_t& fmd) {
+Parquet::Impl::array_index(Parquet::file_metadata_t& fmd)
+{
   Schema::EntityType entity_type(file_.entity_type);
 
   std::string num_key(Schema::entity_type_to_string(entity_type) + "_count");
@@ -132,7 +139,8 @@ Parquet::Impl::array_index(Parquet::file_metadata_t& fmd) {
 /******************************************************************************/
 std::optional<Parquet::Stats>
 Parquet::Impl::statistics(std::shared_ptr<parquet::RowGroupMetaData> rg,
-                          int index) const {
+                          int index) const
+{
   auto chunk(rg->ColumnChunk(index));
   if (!chunk->is_stats_set()) return {};
 
@@ -146,7 +154,8 @@ Parquet::Impl::statistics(std::shared_ptr<parquet::RowGroupMetaData> rg,
 // Helper for dispatching typed statistics.
 struct MinMaxForType {
 
-  template <psi::DataType T> std::optional<Query::range_t> operator()() const {
+  template <psi::DataType T> std::optional<Query::range_t> operator()() const
+  {
     auto tptr(Util::parquet_statistics_cast<T>(col_, stats_));
     return std::make_pair<>(tptr->min(), tptr->max());
   }
@@ -156,13 +165,14 @@ struct MinMaxForType {
 };
 
 template <> // Specialized since we don't support ASCII types.
-std::optional<Query::range_t>
-MinMaxForType::operator()<psi::DataType::ASCII>() const {
+std::optional<Query::range_t> MinMaxForType::operator()<psi::DataType::ASCII>() const
+{
   return {};
 }
 
 /******************************************************************************/
-std::vector<int> Parquet::Impl::run_query(const Query& query) {
+std::vector<int> Parquet::Impl::run_query(const Query& query)
+{
   auto fmd(reader_->parquet_reader()->metadata());
 
   auto get_range = [&](const std::shared_ptr<parquet::RowGroupMetaData>& rg,
@@ -195,7 +205,9 @@ std::vector<int> Parquet::Impl::run_query(const Query& query) {
 
 /******************************************************************************/
 Parquet::Parquet(std::unique_ptr<File> data, Schema::File file)
-    : impl_(std::make_unique<Impl>(std::move(data), std::move(file))) {}
+    : impl_(std::make_unique<Impl>(std::move(data), std::move(file)))
+{
+}
 
 /******************************************************************************/
 Parquet::~Parquet() = default;
@@ -204,18 +216,21 @@ Parquet::~Parquet() = default;
 const Schema::File& Parquet::index_file() const { return impl_->file_; }
 
 /******************************************************************************/
-Parquet::file_metadata_t Parquet::file_metadata() const {
+Parquet::file_metadata_t Parquet::file_metadata() const
+{
   return impl_->reader_->parquet_reader()->metadata();
 }
 
 /******************************************************************************/
-std::string Parquet::array_index_json() const {
+std::string Parquet::array_index_json() const
+{
   file_metadata_t fmd(file_metadata());
   return impl_->array_index(fmd).first;
 }
 
 /******************************************************************************/
-Schema::ArrayIndex Parquet::array_index() const {
+Schema::ArrayIndex Parquet::array_index() const
+{
   file_metadata_t fmd(file_metadata());
   auto [index_str, num_entities] = impl_->array_index(fmd);
 
@@ -245,7 +260,8 @@ Schema::ArrayIndex Parquet::array_index() const {
 parquet::arrow::FileReader& Parquet::reader() const { return *impl_->reader_; }
 
 /******************************************************************************/
-std::optional<Parquet::Stats> Parquet::statistics(int row, int column) const {
+std::optional<Parquet::Stats> Parquet::statistics(int row, int column) const
+{
   auto fmd(file_metadata());
 
   if (row == -1) {
@@ -259,7 +275,8 @@ std::optional<Parquet::Stats> Parquet::statistics(int row, int column) const {
 }
 
 /******************************************************************************/
-std::vector<int> Parquet::find_row_groups(const Query& query) {
+std::vector<int> Parquet::find_row_groups(const Query& query)
+{
   return impl_->run_query(query);
 }
 

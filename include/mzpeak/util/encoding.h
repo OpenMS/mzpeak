@@ -33,7 +33,10 @@ public:
 
   /// Constructor.
   Encoding(const array_map_type& map, const Schema::ArrayIndex& index)
-      : map_(map), array_index_(index) {}
+      : map_(map)
+      , array_index_(index)
+  {
+  }
 
   /// Destructor.
   ~Encoding() = default;
@@ -66,7 +69,8 @@ private:
 /******************************************************************************/
 template <Schema::PSI::DataType T>
 std::vector<typename Encoding<T>::value_type>
-Encoding<T>::decode_array(Schema::PSI::ArrayType array_type) const {
+Encoding<T>::decode_array(Schema::PSI::ArrayType array_type) const
+{
   auto columns = array_index_.columns(array_type);
 
   if (columns.size() == 1) {
@@ -88,7 +92,8 @@ Encoding<T>::decode_array(Schema::PSI::ArrayType array_type) const {
 /******************************************************************************/
 template <Schema::PSI::DataType T>
 std::vector<typename Encoding<T>::value_type>
-Encoding<T>::decode_point(int index) const {
+Encoding<T>::decode_point(int index) const
+{
   auto raw = map_.find(index);
 
   if (raw == map_.end()) {

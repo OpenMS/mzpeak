@@ -20,7 +20,7 @@ namespace MzPeak {
 class File {
 public:
   /// Destructor.
-  virtual ~File() {};
+  virtual ~File() {}
 
   /**
    * The name of this file.

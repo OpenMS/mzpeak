@@ -40,37 +40,42 @@ public:
     /**
      * Queried value must be exactly equal to the given value.
      */
-    static Query equal_to(const column_type& column, value_type v) {
+    static Query equal_to(const column_type& column, value_type v)
+    {
       return Query(Predicate(column, std::make_pair<>(Op::EQ, v)));
-    };
+    }
 
     /**
      * Queried value must be greater than the given value.
      */
-    static Query greater_than(const column_type& column, value_type v) {
+    static Query greater_than(const column_type& column, value_type v)
+    {
       return Query(Predicate(column, std::make_pair<>(Op::GT, v)));
-    };
+    }
 
     /**
      * Queried value must be less than the given value.
      */
-    static Query less_than(const column_type& column, value_type v) {
+    static Query less_than(const column_type& column, value_type v)
+    {
       return Query(Predicate(column, std::make_pair<>(Op::LT, v)));
-    };
+    }
 
     /**
      * Queried value must be greater than or equal to the given value.
      */
-    static Query greater_equal(const column_type& column, value_type v) {
+    static Query greater_equal(const column_type& column, value_type v)
+    {
       return Query(Predicate(column, std::make_pair<>(Op::GE, v)));
-    };
+    }
 
     /**
      * Queried value must be less than or equal to the given value.
      */
-    static Query less_equal(const column_type& column, value_type v) {
+    static Query less_equal(const column_type& column, value_type v)
+    {
       return Query(Predicate(column, std::make_pair<>(Op::LE, v)));
-    };
+    }
 
     /// Destructor.
     ~Predicate() = default;
@@ -78,7 +83,7 @@ public:
     /**
      * The column this predicate works with.
      */
-    const column_type& column() const { return column_; };
+    const column_type& column() const { return column_; }
 
     /**
      * Return `true` if this predicate matches the given value.
@@ -99,7 +104,10 @@ public:
     using Comp = std::pair<Op, value_type>;
 
     Predicate(const column_type& column, Comp comp)
-        : column_(column), comp_(std::move(comp)) {};
+        : column_(column)
+        , comp_(std::move(comp))
+    {
+    }
 
     const column_type& column_;
     Comp comp_;
@@ -139,16 +147,19 @@ public:
   using p_float64_t = Schema::PSI::data_type_traits<Float64>::value_type;
 
   /// A variant that can hold any predicate type.
-  using predicate_t = std::variant<Predicate<Int32>, Predicate<Float32>,
-                                   Predicate<Int64>, Predicate<Float64>>;
+  using predicate_t = std::variant<Predicate<Int32>,
+                                   Predicate<Float32>,
+                                   Predicate<Int64>,
+                                   Predicate<Float64>>;
 
   /// A variant that can hold any predicate value type.
   using value_t = std::variant<p_int32_t, p_float32_t, p_int64_t, p_float64_t>;
 
   /// A variant that can hold a min and max value for range queries.
-  using range_t = std::variant<
-      std::pair<p_int32_t, p_int32_t>, std::pair<p_float32_t, p_float32_t>,
-      std::pair<p_int64_t, p_int64_t>, std::pair<p_float64_t, p_float64_t>>;
+  using range_t = std::variant<std::pair<p_int32_t, p_int32_t>,
+                               std::pair<p_float32_t, p_float32_t>,
+                               std::pair<p_int64_t, p_int64_t>,
+                               std::pair<p_float64_t, p_float64_t>>;
 
   /// A function that when given an column type, should return a single value.
   /// If this isn't possible it should return nullopt.
@@ -193,7 +204,8 @@ private:
 /******************************************************************************/
 // Predicate matching the way you would expect.
 template <Schema::PSI::DataType T>
-bool Query::Predicate<T>::match(value_type v) const {
+bool Query::Predicate<T>::match(value_type v) const
+{
   switch (comp_.first) {
   case Op::EQ:
     return v == comp_.second;
@@ -217,7 +229,8 @@ bool Query::Predicate<T>::match(value_type v) const {
 // Predicate range matching that returns true if the predicate would
 // match a value that is between a min and max (inclusive).
 template <Schema::PSI::DataType T>
-bool Query::Predicate<T>::match(const std::pair<value_type, value_type>& v) const {
+bool Query::Predicate<T>::match(const std::pair<value_type, value_type>& v) const
+{
   auto [min, max] = v;
 
   switch (comp_.first) {

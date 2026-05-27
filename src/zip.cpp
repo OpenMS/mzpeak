@@ -19,13 +19,16 @@ namespace MzPeak {
 class ZipFile_ final : public MzPeak::File {
 public:
   ZipFile_(zip_file_t* file, std::size_t size, fs::path path)
-      : impl_(std::make_shared<Impl>(file, size, path)) {}
+      : impl_(std::make_shared<Impl>(file, size, path))
+  {
+  }
 
-  std::string name() const { return impl_->path_; };
+  std::string name() const { return impl_->path_; }
 
-  std::size_t size() const { return impl_->size_; };
+  std::size_t size() const { return impl_->size_; }
 
-  std::optional<std::size_t> read(uint8_t* buf, std::size_t size) {
+  std::optional<std::size_t> read(uint8_t* buf, std::size_t size)
+  {
     if (buf == nullptr || size == 0 || !is_open()) return {};
 
     zip_int64_t n = zip_fread(impl_->file_, buf, size);
@@ -37,7 +40,8 @@ public:
     }
   }
 
-  std::optional<std::size_t> tell() const {
+  std::optional<std::size_t> tell() const
+  {
     zip_int64_t n = zip_ftell(impl_->file_);
 
     if (n < 0) {
@@ -45,12 +49,13 @@ public:
     } else {
       return n;
     }
-  };
+  }
 
-  bool seek(std::size_t pos) {
+  bool seek(std::size_t pos)
+  {
     zip_int8_t errnum = zip_fseek(impl_->file_, pos, SEEK_SET);
     return errnum == 0;
-  };
+  }
 
   void close() { impl_->close(); }
   bool is_open() const { return impl_->file_ != nullptr; }
@@ -59,15 +64,20 @@ private:
   class Impl {
   public:
     Impl(zip_file_t* file, std::size_t size, fs::path path)
-        : size_(size), file_(file), path_(path) {};
+        : size_(size)
+        , file_(file)
+        , path_(path)
+    {
+    }
     ~Impl() { close(); }
 
-    void close() {
+    void close()
+    {
       if (file_ != nullptr) {
         zip_fclose(file_);
         file_ = nullptr;
       }
-    };
+    }
 
     std::size_t size_;
     zip_file_t* file_;
@@ -84,7 +94,9 @@ private:
 struct Zip::Impl {
 
   /**************************************************************************/
-  Impl(const fs::path& path) : archive(nullptr) {
+  Impl(const fs::path& path)
+      : archive(nullptr)
+  {
     int errnum{};
     archive = zip_open(path.c_str(), ZIP_RDONLY, &errnum);
 
@@ -94,7 +106,8 @@ struct Zip::Impl {
   }
 
   /**************************************************************************/
-  ~Impl() {
+  ~Impl()
+  {
     if (archive != nullptr) {
       zip_close(archive);
       archive = nullptr;
@@ -102,7 +115,8 @@ struct Zip::Impl {
   }
 
   /**************************************************************************/
-  void error(const std::string& msg, const std::optional<int>& errnum) {
+  void error(const std::string& msg, const std::optional<int>& errnum)
+  {
     std::string m(msg);
     zip_error_t error;
     zip_error_t* error_ptr;
@@ -116,21 +130,25 @@ struct Zip::Impl {
 
     m += zip_error_strerror(error_ptr);
     throw(std::invalid_argument(m));
-  };
+  }
 
   /**************************************************************************/
-  void error_open(const fs::path& path, const std::optional<int>& errnum) {
+  void error_open(const fs::path& path, const std::optional<int>& errnum)
+  {
     std::string msg("failed to open file in zip archive ");
     msg += path.string() + ": ";
     error(msg, errnum);
-  };
+  }
 
   /**************************************************************************/
   zip_t* archive;
 };
 
 /******************************************************************************/
-Zip::Zip(const fs::path& path) : impl_(std::make_unique<Impl>(path)) {}
+Zip::Zip(const fs::path& path)
+    : impl_(std::make_unique<Impl>(path))
+{
+}
 
 /******************************************************************************/
 // NOTE: This is needed due to the pimpl pattern and the `Impl` type
@@ -138,7 +156,8 @@ Zip::Zip(const fs::path& path) : impl_(std::make_unique<Impl>(path)) {}
 Zip::~Zip() = default;
 
 /******************************************************************************/
-std::vector<fs::path> Zip::list() {
+std::vector<fs::path> Zip::list()
+{
   zip_int64_t num = zip_get_num_entries(impl_->archive, ZIP_FL_UNCHANGED);
   zip_stat_t stat;
   int errnum;
@@ -158,7 +177,8 @@ std::vector<fs::path> Zip::list() {
 }
 
 /******************************************************************************/
-std::unique_ptr<MzPeak::File> Zip::read_file(const fs::path& path) {
+std::unique_ptr<MzPeak::File> Zip::read_file(const fs::path& path)
+{
   zip_stat_t stat;
   int errnum = zip_stat(impl_->archive, path.c_str(), ZIP_FL_UNCHANGED, &stat);
 

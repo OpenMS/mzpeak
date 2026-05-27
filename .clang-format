@@ -3,10 +3,14 @@
 BasedOnStyle: LLVM
 IndentWidth: 2
 ColumnLimit: 85
-BreakBeforeBraces: Attach
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterFunction: true
 AllowShortIfStatementsOnASingleLine: Always
 PointerAlignment: Left
 AccessModifierOffset: -2
 IndentAccessModifiers: false
 IndentCaseBlocks: false
+BreakConstructorInitializers: BeforeComma
+BinPackParameters: OnePerLine
 ...

@@ -14,7 +14,8 @@ directory of this repository.
 #include "mzpeak/util/enumerable_proxy.h"
 
 /******************************************************************************/
-BOOST_AUTO_TEST_CASE(enumerable_proxy_simple) {
+BOOST_AUTO_TEST_CASE(enumerable_proxy_simple)
+{
   std::vector<int> v1{0, 1, 2, 3, 4, 5}, v2;
   v2.reserve(v1.size());
 

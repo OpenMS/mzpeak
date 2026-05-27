@@ -19,8 +19,9 @@ Spectra::Spectra() {}
 /******************************************************************************/
 Spectra::Spectra(std::unique_ptr<Util::Parquet> parquet)
     : EnumerableProxy(
-          0, std::bind(std::mem_fn(&Spectra::fetch), this, std::placeholders::_1)),
-      data_(std::make_shared<Util::DataArrays>(std::move(parquet))) {
+          0, std::bind(std::mem_fn(&Spectra::fetch), this, std::placeholders::_1))
+    , data_(std::make_shared<Util::DataArrays>(std::move(parquet)))
+{
 
   // Update the record count.
   resize(data_->record_count());

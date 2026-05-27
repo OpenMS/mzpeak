@@ -12,7 +12,8 @@ in the LICENSE file found in the top-level directory of this project.
 #include "mzpeak/file.h"
 
 /******************************************************************************/
-BOOST_AUTO_TEST_CASE(can_list_files) {
+BOOST_AUTO_TEST_CASE(can_list_files)
+{
   namespace fs = std::filesystem;
 
   MzPeak::Directory dir("../src");
@@ -28,7 +29,8 @@ BOOST_AUTO_TEST_CASE(can_list_files) {
 }
 
 /******************************************************************************/
-BOOST_AUTO_TEST_CASE(can_read_file) {
+BOOST_AUTO_TEST_CASE(can_read_file)
+{
   MzPeak::Directory dir("../src");
   std::unique_ptr<MzPeak::File> file(dir.read_file("directory.cpp"));
   std::unique_ptr<std::istream> stream(MzPeak::to_istream(std::move(file)));

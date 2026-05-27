@@ -12,12 +12,15 @@ namespace MzPeak::Schema {
 
 /******************************************************************************/
 File::File(const json::object& o)
-    : file_name(o.at("name").as_string()),
-      data_kind(data_kind_from_string(o.at("data_kind").as_string())),
-      entity_type(entity_type_from_string(o.at("entity_type").as_string())) {}
+    : file_name(o.at("name").as_string())
+    , data_kind(data_kind_from_string(o.at("data_kind").as_string()))
+    , entity_type(entity_type_from_string(o.at("entity_type").as_string()))
+{
+}
 
 /******************************************************************************/
-bool File::is_associated_with(const File& other) const {
+bool File::is_associated_with(const File& other) const
+{
   std::string::size_type underscore(file_name.find("_"));
   if (underscore == std::string::npos) return false;
   if (other.file_name.size() < underscore) return false;

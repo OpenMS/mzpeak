@@ -11,7 +11,8 @@ directory of this repository.
 namespace MzPeak::Schema {
 
 /******************************************************************************/
-std::string buffer_format_to_string(BufferFormat v) {
+std::string buffer_format_to_string(BufferFormat v)
+{
   using enum BufferFormat;
 
   switch (v) {
@@ -33,7 +34,8 @@ std::string buffer_format_to_string(BufferFormat v) {
 }
 
 /******************************************************************************/
-BufferFormat buffer_format_from_string(const std::string_view& s) {
+BufferFormat buffer_format_from_string(const std::string_view& s)
+{
   using enum BufferFormat;
 
   if (s == "point") {

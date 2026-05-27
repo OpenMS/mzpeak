@@ -27,8 +27,10 @@ using rec_batch_t = std::shared_ptr<arrow::RecordBatch>;
 /******************************************************************************/
 /// Try to get an array out of a batch.
 std::shared_ptr<arrow::Array>
-array_from_batch(arrow::RecordBatch& batch, const Schema::ArrayIndex& index,
-                 const Schema::ArrayIndex::Column& column) {
+array_from_batch(arrow::RecordBatch& batch,
+                 const Schema::ArrayIndex& index,
+                 const Schema::ArrayIndex::Column& column)
+{
   std::shared_ptr<arrow::Array> col;
   std::optional<int> i = index.column_index(column);
 
@@ -51,8 +53,12 @@ array_from_batch(arrow::RecordBatch& batch, const Schema::ArrayIndex& index,
 /******************************************************************************/
 struct Batch {
   Batch(std::shared_ptr<arrow::RecordBatch> batch, Schema::ArrayIndex& index)
-      : batch_(std::move(batch)), array_index_(index), slice_offset_(0),
-        slice_length_(batch_->num_rows()) {};
+      : batch_(std::move(batch))
+      , array_index_(index)
+      , slice_offset_(0)
+      , slice_length_(batch_->num_rows())
+  {
+  }
 
   // Return an array with caching.
   std::shared_ptr<arrow::Array>
@@ -74,7 +80,10 @@ struct Batch {
 /******************************************************************************/
 struct DataArrays::Impl {
   Impl(std::unique_ptr<Util::Parquet> parquet)
-      : parquet_(std::move(parquet)), array_index_(parquet_->array_index()) {};
+      : parquet_(std::move(parquet))
+      , array_index_(parquet_->array_index())
+  {
+  }
 
   std::unique_ptr<Util::Parquet> parquet_;
   Schema::ArrayIndex array_index_;
@@ -82,7 +91,8 @@ struct DataArrays::Impl {
 
 /******************************************************************************/
 std::shared_ptr<arrow::Array>
-Batch::cached_array(const Schema::ArrayIndex::Column& column) {
+Batch::cached_array(const Schema::ArrayIndex::Column& column)
+{
   std::optional<int> index(array_index_.column_index(column));
 
   if (!index.has_value()) {
@@ -102,7 +112,8 @@ Batch::cached_array(const Schema::ArrayIndex::Column& column) {
 }
 
 /******************************************************************************/
-std::shared_ptr<arrow::RecordBatch> Batch::slice_batch(const Query& query) {
+std::shared_ptr<arrow::RecordBatch> Batch::slice_batch(const Query& query)
+{
   query_batch(query);
 
   if (slice_offset_ == 0 && slice_length_ == batch_->num_rows()) {
@@ -116,7 +127,8 @@ std::shared_ptr<arrow::RecordBatch> Batch::slice_batch(const Query& query) {
 struct ArrayValueHelper {
   template <psi::DataType T>
   std::optional<Query::value_t>
-  operator()(const Schema::ArrayIndex::Column& column) const {
+  operator()(const Schema::ArrayIndex::Column& column) const
+  {
     auto raw = batch_.cached_array(column);
     auto data = Util::parquet_array_cast<T>(raw);
     return data->Value(i_);
@@ -128,12 +140,14 @@ struct ArrayValueHelper {
 
 template <> // Specialized since we don't support ASCII types.
 std::optional<Query::value_t> ArrayValueHelper::operator()<psi::DataType::ASCII>(
-    const Schema::ArrayIndex::Column& _) const {
+    const Schema::ArrayIndex::Column& _) const
+{
   return {};
 }
 
 /******************************************************************************/
-void Batch::query_batch(const Query& query) {
+void Batch::query_batch(const Query& query)
+{
   auto get_value = [&](ArrayValueHelper& helper,
                        const Schema::ArrayIndex::Column& column)
       -> std::optional<Query::value_t> {
@@ -182,18 +196,22 @@ void Batch::query_batch(const Query& query) {
 
 /******************************************************************************/
 DataArrays::DataArrays(std::unique_ptr<Util::Parquet> parquet)
-    : impl_(std::make_unique<Impl>(std::move(parquet))) {}
+    : impl_(std::make_unique<Impl>(std::move(parquet)))
+{
+}
 
 /******************************************************************************/
 DataArrays::~DataArrays() = default;
 
 /******************************************************************************/
-const Schema::ArrayIndex& DataArrays::array_index() const {
+const Schema::ArrayIndex& DataArrays::array_index() const
+{
   return impl_->array_index_;
 }
 
 /******************************************************************************/
-std::size_t DataArrays::record_count() const {
+std::size_t DataArrays::record_count() const
+{
   auto ne(impl_->array_index_.num_entities());
   if (ne.has_value()) return *ne;
 
@@ -215,12 +233,13 @@ std::size_t DataArrays::record_count() const {
 
   // FIXME: Should we scan the file at this point?
   throw ParquetError("no num_entities cache and no column statistics!");
-};
+}
 
 /******************************************************************************/
 std::unique_ptr<array_map_type>
 DataArrays::read_arrays(const Query& query,
-                        const std::vector<Schema::ArrayIndex::Column>& columns) {
+                        const std::vector<Schema::ArrayIndex::Column>& columns)
+{
   std::unique_ptr<array_map_type> map = std::make_unique<array_map_type>();
 
   std::vector<int> indices(impl_->parquet_->find_row_groups(query));

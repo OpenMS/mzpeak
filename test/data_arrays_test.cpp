@@ -14,7 +14,8 @@ directory of this repository.
 #include "mzpeak/util/data_arrays.h"
 
 /******************************************************************************/
-BOOST_AUTO_TEST_CASE(can_read_mz_array) {
+BOOST_AUTO_TEST_CASE(can_read_mz_array)
+{
   using namespace MzPeak;
 
   auto mzpeak = MzPeak::open("../test/files/small.mzpeak");

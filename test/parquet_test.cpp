@@ -13,7 +13,8 @@ directory of this repository.
 #include "mzpeak/util/parquet.h"
 
 /******************************************************************************/
-BOOST_AUTO_TEST_CASE(can_get_array_index) {
+BOOST_AUTO_TEST_CASE(can_get_array_index)
+{
   using namespace MzPeak;
 
   auto mzpeak = MzPeak::open("../test/files/small.mzpeak");

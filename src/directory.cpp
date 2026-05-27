@@ -17,37 +17,44 @@ namespace MzPeak {
 // Thin wrapper around `std::fstream`.
 class DirFile_ final : public MzPeak::File {
 public:
-  DirFile_(const fs::path& path) : path_(path), stream_(path.c_str()) {};
+  DirFile_(const fs::path& path)
+      : path_(path)
+      , stream_(path.c_str())
+  {
+  }
 
   ~DirFile_() = default;
 
   std::string name() const { return path_.string(); }
 
-  std::size_t size() const { return fs::file_size(path_); };
+  std::size_t size() const { return fs::file_size(path_); }
 
-  std::optional<std::size_t> read(uint8_t* buffer, std::size_t size) {
+  std::optional<std::size_t> read(uint8_t* buffer, std::size_t size)
+  {
     if (stream_.good() && !stream_.eof()) {
       stream_.read(reinterpret_cast<char*>(buffer), size);
       return stream_.gcount();
     } else {
       return {};
     }
-  };
+  }
 
-  std::optional<std::size_t> tell() const {
+  std::optional<std::size_t> tell() const
+  {
     // `tellg` should be const, but it's not marked that way.
     std::fstream& s(const_cast<std::fstream&>(stream_));
     return s.tellg();
-  };
+  }
 
-  bool seek(std::size_t pos) {
+  bool seek(std::size_t pos)
+  {
     stream_.seekg(pos);
     return !stream_.fail();
-  };
+  }
 
   void close() { stream_.close(); }
 
-  bool is_open() const { return stream_.is_open(); };
+  bool is_open() const { return stream_.is_open(); }
 
 private:
   fs::path path_;
@@ -55,7 +62,8 @@ private:
 };
 
 /******************************************************************************/
-std::vector<fs::path> Directory::list() {
+std::vector<fs::path> Directory::list()
+{
   std::vector<fs::path> res;
 
   for (auto const& entry : fs::directory_iterator{path_}) {
@@ -68,7 +76,8 @@ std::vector<fs::path> Directory::list() {
 }
 
 /******************************************************************************/
-std::unique_ptr<MzPeak::File> Directory::read_file(const fs::path& name) {
+std::unique_ptr<MzPeak::File> Directory::read_file(const fs::path& name)
+{
   fs::path path(path_ / name.lexically_normal());
   return std::make_unique<DirFile_>(path.string());
 }

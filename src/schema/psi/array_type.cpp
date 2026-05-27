@@ -11,7 +11,8 @@ directory of this repository.
 namespace MzPeak::Schema::PSI {
 
 /******************************************************************************/
-std::string array_type_to_string(ArrayType v) {
+std::string array_type_to_string(ArrayType v)
+{
   using enum ArrayType;
 
   switch (v) {
@@ -63,7 +64,8 @@ std::string array_type_to_string(ArrayType v) {
 }
 
 /******************************************************************************/
-ArrayType array_type_from_string(const std::string_view& s) {
+ArrayType array_type_from_string(const std::string_view& s)
+{
   using enum ArrayType;
 
   if (s == "MS:1000514") {

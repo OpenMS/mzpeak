@@ -6,8 +6,8 @@ top-level directory of this repository.
 
 */
 
-#include "mzpeak/exception.h"
 #include "mzpeak/query.h"
+#include "mzpeak/exception.h"
 #include "mzpeak/schema/psi/data_type.h"
 #include <type_traits>
 
@@ -37,13 +37,20 @@ template <typename Fn, typename V> struct EvalHelper {
 };
 
 /******************************************************************************/
-Query::Query(predicate_t p) : self_(p) {}
+Query::Query(predicate_t p)
+    : self_(p)
+{
+}
 
 /******************************************************************************/
-Query::Query(const child_t& c) : child_(c) {}
+Query::Query(const child_t& c)
+    : child_(c)
+{
+}
 
 /******************************************************************************/
-Query Query::operator!() const {
+Query Query::operator!() const
+{
   Query q(*this);
   q.not_ = !q.not_;
   return q;
@@ -59,18 +66,21 @@ Query Query::operator&&(const Query& rhs) const { return join(rhs, Oper::AND); }
 Query Query::operator||(const Query& rhs) const { return join(rhs, Oper::OR); }
 
 /******************************************************************************/
-Query Query::join(const Query& other, Oper oper) const {
+Query Query::join(const Query& other, Oper oper) const
+{
   return Query(child_t{oper, *this, other});
 }
 
 /******************************************************************************/
-bool Query::eval(eval_callback_t fn) const {
+bool Query::eval(eval_callback_t fn) const
+{
   EvalHelper<eval_callback_t, value_t> eh{self_, child_, not_};
   return eh.eval(fn);
 }
 
 /******************************************************************************/
-bool Query::eval(eval_range_callback_t fn) const {
+bool Query::eval(eval_range_callback_t fn) const
+{
   EvalHelper<eval_range_callback_t, range_t> eh{self_, child_, not_};
   return eh.eval(fn);
 }
@@ -78,7 +88,8 @@ bool Query::eval(eval_range_callback_t fn) const {
 /******************************************************************************/
 template <typename Fn, typename V>
 template <Schema::PSI::DataType T>
-bool EvalHelper<Fn, V>::dispatch_value(const Query::Predicate<T>& p, Fn fn) const {
+bool EvalHelper<Fn, V>::dispatch_value(const Query::Predicate<T>& p, Fn fn) const
+{
   std::optional<V> val(std::invoke(fn, p.column()));
   if (!val.has_value()) return false;
 
@@ -104,7 +115,8 @@ bool EvalHelper<Fn, V>::dispatch_value(const Query::Predicate<T>& p, Fn fn) cons
 
 /******************************************************************************/
 template <typename Fn, typename V>
-bool EvalHelper<Fn, V>::dispatch_pred(const Query::predicate_t& pred, Fn fn) const {
+bool EvalHelper<Fn, V>::dispatch_pred(const Query::predicate_t& pred, Fn fn) const
+{
   using enum Schema::PSI::DataType;
 
   return std::visit(
@@ -127,7 +139,8 @@ bool EvalHelper<Fn, V>::dispatch_pred(const Query::predicate_t& pred, Fn fn) con
 }
 
 /******************************************************************************/
-template <typename Fn, typename V> bool EvalHelper<Fn, V>::eval(Fn fn) const {
+template <typename Fn, typename V> bool EvalHelper<Fn, V>::eval(Fn fn) const
+{
   bool res = true;
 
   if (self_.has_value()) {

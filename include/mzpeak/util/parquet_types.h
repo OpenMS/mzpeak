@@ -71,7 +71,8 @@ template <> struct parquet_to_physical_tag<parquet::DoubleType> {
  * don't match.
  */
 template <PSI::DataType T>
-void runtime_assert_type(parquet::Type::type actual_type, const std::string& path) {
+void runtime_assert_type(parquet::Type::type actual_type, const std::string& path)
+{
   constexpr parquet::Type::type expected_type =
       parquet_to_physical_tag<typename psi_to_parquet_tag<T>::scalar_type>::value;
 
@@ -98,7 +99,8 @@ using parquet_statistics_t =
 template <PSI::DataType T>
 const parquet_statistics_t<T>*
 parquet_statistics_cast(const parquet::ColumnChunkMetaData& column,
-                        const parquet::Statistics& stats) {
+                        const parquet::Statistics& stats)
+{
   runtime_assert_type<T>(column.type(), column.path_in_schema()->ToDotString());
   return static_cast<const parquet_statistics_t<T>*>(&stats);
 }
@@ -108,7 +110,8 @@ parquet_statistics_cast(const parquet::ColumnChunkMetaData& column,
  */
 template <PSI::DataType T>
 std::shared_ptr<typename psi_to_parquet_tag<T>::array_type>
-parquet_array_cast(std::shared_ptr<arrow::Array>& array) {
+parquet_array_cast(std::shared_ptr<arrow::Array>& array)
+{
   return std::static_pointer_cast<typename psi_to_parquet_tag<T>::array_type>(array);
 }
 

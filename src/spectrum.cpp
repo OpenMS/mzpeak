@@ -16,7 +16,8 @@ namespace MzPeak {
 
 /******************************************************************************/
 inline std::vector<Spectrum::mz_type> decode_mz(const Schema::ArrayIndex& index,
-                                                Util::array_map_type& map) {
+                                                Util::array_map_type& map)
+{
   // FIXME: Remove raw mz values.
   Util::Encoding<Schema::PSI::DataType::Float64> enc(map, index);
   return enc.decode_array(Schema::PSI::ArrayType::Mz);
@@ -24,7 +25,8 @@ inline std::vector<Spectrum::mz_type> decode_mz(const Schema::ArrayIndex& index,
 
 /******************************************************************************/
 inline std::vector<Spectrum::intensity_type>
-decode_intensity(const Schema::ArrayIndex& index, Util::array_map_type& map) {
+decode_intensity(const Schema::ArrayIndex& index, Util::array_map_type& map)
+{
   // FIXME: Remove raw intensity values.
   Util::Encoding<Schema::PSI::DataType::Int32> enc(map, index);
   return enc.decode_array(Schema::PSI::ArrayType::Intensity);
@@ -33,14 +35,19 @@ decode_intensity(const Schema::ArrayIndex& index, Util::array_map_type& map) {
 /******************************************************************************/
 Spectrum::Spectrum(const Schema::ArrayIndex& idx,
                    std::unique_ptr<Util::array_map_type> map)
-    : array_index_(idx), map_(std::move(map)), mz_(decode_mz(array_index_, *map_)),
-      intensity_(decode_intensity(array_index_, *map_)) {}
+    : array_index_(idx)
+    , map_(std::move(map))
+    , mz_(decode_mz(array_index_, *map_))
+    , intensity_(decode_intensity(array_index_, *map_))
+{
+}
 
 /******************************************************************************/
 const std::vector<Spectrum::mz_type>& Spectrum::mz() const { return mz_; }
 
 /******************************************************************************/
-const std::vector<Spectrum::intensity_type>& Spectrum::intensity() const {
+const std::vector<Spectrum::intensity_type>& Spectrum::intensity() const
+{
   return intensity_;
 }
 

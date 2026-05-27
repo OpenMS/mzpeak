@@ -10,7 +10,8 @@ directory of this repository.
 
 namespace MzPeak::Schema {
 
-std::string entity_type_to_string(EntityType et) {
+std::string entity_type_to_string(EntityType et)
+{
   using enum EntityType;
 
   switch (et) {
@@ -28,7 +29,8 @@ std::string entity_type_to_string(EntityType et) {
   return "other";
 }
 
-EntityType entity_type_from_string(const std::string_view& s) {
+EntityType entity_type_from_string(const std::string_view& s)
+{
   using enum EntityType;
 
   if (s == "spectrum") {

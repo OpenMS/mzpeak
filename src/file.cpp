@@ -18,9 +18,13 @@ namespace MzPeak {
 /******************************************************************************/
 class source final : public boost::iostreams::source {
 public:
-  source(std::shared_ptr<File> file) : file_(file) {};
+  source(std::shared_ptr<File> file)
+      : file_(file)
+  {
+  }
 
-  std::streamsize read(char* buf, std::streamsize size) {
+  std::streamsize read(char* buf, std::streamsize size)
+  {
     if (size == 0 || buf == nullptr || !file_->is_open()) return -1;
     std::optional<std::size_t> n =
         file_->read(reinterpret_cast<uint8_t*>(buf), size);
@@ -30,7 +34,7 @@ public:
     } else {
       return -1;
     }
-  };
+  }
 
   void close() { file_->close(); }
   void close(std::ios_base::openmode&) { close(); }
@@ -41,14 +45,19 @@ private:
 
 class istream : public std::istream {
 public:
-  istream(const source& s) : std::istream(&buf_), buf_(s) {};
+  istream(const source& s)
+      : std::istream(&buf_)
+      , buf_(s)
+  {
+  }
 
 private:
   boost::iostreams::stream_buffer<source> buf_;
 };
 
 /******************************************************************************/
-std::unique_ptr<std::istream> to_istream(std::unique_ptr<File> r) {
+std::unique_ptr<std::istream> to_istream(std::unique_ptr<File> r)
+{
   source source(std::move(r));
   return std::make_unique<istream>(source);
 }

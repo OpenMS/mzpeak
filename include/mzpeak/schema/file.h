@@ -20,7 +20,10 @@ namespace json = boost::json;
 struct File {
 
   /// Constructor from a file name.
-  explicit File(const std::string& name) : file_name(name) {};
+  explicit File(const std::string& name)
+      : file_name(name)
+  {
+  }
 
   /// Conversion from JSON.
   explicit File(const json::object&);

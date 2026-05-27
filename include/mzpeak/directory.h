@@ -18,7 +18,10 @@ namespace MzPeak {
 class Directory final : public Archive {
 public:
   /// Constructor.
-  Directory(const fs::path& path) : path_(path.lexically_normal()) {}
+  Directory(const fs::path& path)
+      : path_(path.lexically_normal())
+  {
+  }
 
   /**
    * Return a list of files in the directory.

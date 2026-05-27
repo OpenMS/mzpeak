@@ -12,7 +12,6 @@ directory of this repository.
 #include <cstddef>
 #include <functional>
 #include <iterator>
-#include <memory>
 #include <optional>
 #include <utility>
 
@@ -33,13 +32,23 @@ public:
     using value_type = V;
 
     /// Constructor for a valid iterator.
-    Iterator(std::size_t n, fetch_t fetch) : n_(n), fetch_(fetch) {};
+    Iterator(std::size_t n, fetch_t fetch)
+        : n_(n)
+        , fetch_(fetch)
+    {
+    }
 
     /// Constructor for an invalid iterator.
-    Iterator(std::size_t n) : n_(n) {};
+    Iterator(std::size_t n)
+        : n_(n)
+    {
+    }
 
     /// Default construction also invalid;
-    Iterator() : n_(0) {};
+    Iterator()
+        : n_(0)
+    {
+    }
 
     // Copy, move, and assignment constructors.
     Iterator(const Iterator&) = default;
@@ -48,36 +57,41 @@ public:
     Iterator& operator=(const Iterator&&) = default;
 
     /// Prefix increment.
-    Iterator& operator++() {
+    Iterator& operator++()
+    {
       ++n_;
       return *this;
-    };
+    }
 
     /// Postfix increment.
-    Iterator operator++(int) {
+    Iterator operator++(int)
+    {
       auto tmp = *this;
       ++*this;
       return tmp;
-    };
+    }
 
     /// Prefix decrement.
-    Iterator& operator--() {
+    Iterator& operator--()
+    {
       --n_;
       return *this;
-    };
+    }
 
     /// Postfix decrement.
-    Iterator operator--(int) {
+    Iterator operator--(int)
+    {
       auto tmp = *this;
       --*this;
       return tmp;
-    };
+    }
 
     /// Equality operator.
-    bool operator==(const Iterator& other) const { return n_ == other.n_; };
+    bool operator==(const Iterator& other) const { return n_ == other.n_; }
 
     /// Dereference operator.
-    value_type operator*() const {
+    value_type operator*() const
+    {
       if (cache_.has_value() && cache_->first == n_) {
         return cache_->second;
       } else if (fetch_ != nullptr) {
@@ -86,7 +100,7 @@ public:
       } else {
         throw InvalidIterator("attempt to dereference an invalid iterator");
       }
-    };
+    }
 
   private:
     std::size_t n_;
@@ -108,7 +122,10 @@ public:
 
   /// Meaningful constructor.
   EnumerableProxy(std::size_t count, fetch_t fetch)
-      : count_(count), fetch_(fetch) {};
+      : count_(count)
+      , fetch_(fetch)
+  {
+  }
 
   /// The number of elements.
   std::size_t size() const { return count_; }
@@ -120,7 +137,7 @@ public:
   Iterator end() const { return Iterator(count_); }
 
   // Access an element by its index.
-  V operator[](std::size_t n) { return fetch_(n); };
+  V operator[](std::size_t n) { return fetch_(n); }
 
 protected:
   /// Update the internal count of records.

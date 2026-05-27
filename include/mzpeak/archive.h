@@ -23,7 +23,7 @@ namespace fs = std::filesystem;
 class Archive {
 public:
   /// Destructor.
-  virtual ~Archive() {};
+  virtual ~Archive() {}
 
   /**
    * Return a list of files names.

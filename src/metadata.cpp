@@ -6,8 +6,8 @@ directory of this repository.
 
 */
 
-#include "mzpeak/exception.h"
 #include "mzpeak/metadata.h"
+#include "mzpeak/exception.h"
 #include "mzpeak/util/parquet.h"
 
 #include <parquet/api/reader.h>
@@ -25,14 +25,17 @@ struct Metadata::Impl {
 
 /******************************************************************************/
 Metadata::Metadata(std::unique_ptr<Util::Parquet> parquet)
-    : impl_(std::make_unique<Impl>(std::move(parquet))) {}
+    : impl_(std::make_unique<Impl>(std::move(parquet)))
+{
+}
 
 /******************************************************************************/
 Metadata::~Metadata() = default;
 
 /******************************************************************************/
 Metadata::Impl::Impl(std::unique_ptr<Util::Parquet> parquet)
-    : reader_(std::move(parquet)) {
+    : reader_(std::move(parquet))
+{
   auto file = reader_->index_file();
 
   if (file.data_kind != MzPeak::Schema::DataKind::Metadata) {

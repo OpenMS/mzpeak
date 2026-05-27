@@ -17,7 +17,8 @@ top-level directory of this repository.
 namespace MzPeak {
 
 /******************************************************************************/
-MzPeak::Index open(const fs::path& path) {
+MzPeak::Index open(const fs::path& path)
+{
   std::unique_ptr<MzPeak::Archive> archive;
 
   if (fs::exists(path)) {

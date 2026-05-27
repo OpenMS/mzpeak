@@ -11,7 +11,8 @@ in the LICENSE file found in the top-level directory of this project.
 #include "mzpeak/zip.h"
 
 /******************************************************************************/
-BOOST_AUTO_TEST_CASE(can_list_files) {
+BOOST_AUTO_TEST_CASE(can_list_files)
+{
   namespace fs = std::filesystem;
 
   MzPeak::Zip zip("../test/files/small.mzpeak");
@@ -27,7 +28,8 @@ BOOST_AUTO_TEST_CASE(can_list_files) {
 }
 
 /******************************************************************************/
-BOOST_AUTO_TEST_CASE(can_read_file) {
+BOOST_AUTO_TEST_CASE(can_read_file)
+{
   MzPeak::Zip zip("../test/files/small.mzpeak");
   std::unique_ptr<MzPeak::File> file(zip.read_file("mzpeak_index.json"));
   std::unique_ptr<std::istream> stream(MzPeak::to_istream(std::move(file)));
@@ -39,7 +41,8 @@ BOOST_AUTO_TEST_CASE(can_read_file) {
 
 /******************************************************************************/
 // Test seeking by reading the Parquet magic bytes in the footer.
-BOOST_AUTO_TEST_CASE(can_seek_file) {
+BOOST_AUTO_TEST_CASE(can_seek_file)
+{
   MzPeak::Zip zip("../test/files/small.mzpeak");
 
   std::string magic("PAR1");

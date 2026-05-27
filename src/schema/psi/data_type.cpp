@@ -11,7 +11,8 @@ directory of this repository.
 namespace MzPeak::Schema::PSI {
 
 /******************************************************************************/
-std::string data_type_to_string(DataType v) {
+std::string data_type_to_string(DataType v)
+{
   using enum DataType;
 
   switch (v) {
@@ -31,7 +32,8 @@ std::string data_type_to_string(DataType v) {
 }
 
 /******************************************************************************/
-DataType data_type_from_string(const std::string_view& s) {
+DataType data_type_from_string(const std::string_view& s)
+{
   using enum DataType;
 
   if (s == "MS:1000519") {

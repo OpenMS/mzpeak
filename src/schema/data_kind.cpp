@@ -11,7 +11,8 @@ directory of this repository.
 namespace MzPeak::Schema {
 
 /******************************************************************************/
-std::string data_kind_to_string(DataKind dk) {
+std::string data_kind_to_string(DataKind dk)
+{
   using enum DataKind;
 
   switch (dk) {
@@ -31,7 +32,8 @@ std::string data_kind_to_string(DataKind dk) {
 }
 
 /******************************************************************************/
-DataKind data_kind_from_string(const std::string_view& s) {
+DataKind data_kind_from_string(const std::string_view& s)
+{
   using enum DataKind;
 
   if (s == "data arrays") {

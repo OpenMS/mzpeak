@@ -14,7 +14,8 @@ directory of this repository.
 #include "mzpeak/spectrum.h"
 
 /******************************************************************************/
-BOOST_AUTO_TEST_CASE(can_read_spectra) {
+BOOST_AUTO_TEST_CASE(can_read_spectra)
+{
   using namespace MzPeak;
 
   auto mzpeak = MzPeak::open("../test/files/small.mzpeak");

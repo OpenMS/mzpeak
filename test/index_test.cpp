@@ -15,14 +15,16 @@ directory of this repository.
 #include "mzpeak/open.h"
 
 /******************************************************************************/
-BOOST_AUTO_TEST_CASE(can_parse_json) {
+BOOST_AUTO_TEST_CASE(can_parse_json)
+{
   auto index = MzPeak::open("../test/files/small.mzpeak");
   const auto& files = index.files();
   BOOST_TEST(!files.empty(), "files should not be empty but is");
 }
 
 /******************************************************************************/
-BOOST_AUTO_TEST_CASE(is_associated_with) {
+BOOST_AUTO_TEST_CASE(is_associated_with)
+{
   auto index = MzPeak::open("../test/files/small.mzpeak");
   const auto& files = index.files();
 

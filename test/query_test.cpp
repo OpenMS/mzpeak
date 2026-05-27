@@ -13,7 +13,8 @@ in the LICENSE file found in the top-level directory of this project.
 #include "mzpeak/util/parquet.h"
 
 /******************************************************************************/
-BOOST_AUTO_TEST_CASE(can_find_spectrum) {
+BOOST_AUTO_TEST_CASE(can_find_spectrum)
+{
   using namespace MzPeak;
   using DataType = Schema::PSI::DataType;
 

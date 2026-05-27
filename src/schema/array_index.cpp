@@ -15,7 +15,8 @@ directory of this repository.
 namespace MzPeak::Schema {
 
 /******************************************************************************/
-ArrayIndex::Column make_index(EntityType entity_type, const std::string& prefix) {
+ArrayIndex::Column make_index(EntityType entity_type, const std::string& prefix)
+{
   ArrayIndex::Column index;
 
   index.array_name = entity_type_to_string(entity_type) + "_index";
@@ -33,7 +34,9 @@ ArrayIndex::Column make_index(EntityType entity_type, const std::string& prefix)
 
 /******************************************************************************/
 ArrayIndex::ArrayIndex(EntityType entity_type, const json::object& obj)
-    : entity_type_(entity_type), prefix_(obj.at("prefix").as_string()) {
+    : entity_type_(entity_type)
+    , prefix_(obj.at("prefix").as_string())
+{
   auto entries = obj.find("entries");
 
   if (entries != obj.end() && entries->value().is_array()) {
@@ -95,19 +98,22 @@ EntityType ArrayIndex::entity_type() const { return entity_type_; }
 const std::string& ArrayIndex::prefix() const { return prefix_; }
 
 /******************************************************************************/
-const std::vector<ArrayIndex::Column>& ArrayIndex::columns() const {
+const std::vector<ArrayIndex::Column>& ArrayIndex::columns() const
+{
   return columns_;
 }
 
 /******************************************************************************/
-std::vector<ArrayIndex::Column> ArrayIndex::columns(PSI::ArrayType type) const {
+std::vector<ArrayIndex::Column> ArrayIndex::columns(PSI::ArrayType type) const
+{
   return columns_ |
          std::views::filter([type](const auto& c) { return c.array_type == type; }) |
          std::ranges::to<std::vector>();
 }
 
 /******************************************************************************/
-void ArrayIndex::num_entities(const std::optional<std::size_t>& ne) {
+void ArrayIndex::num_entities(const std::optional<std::size_t>& ne)
+{
   num_entities_ = ne;
 }
 
@@ -115,7 +121,8 @@ void ArrayIndex::num_entities(const std::optional<std::size_t>& ne) {
 std::optional<std::size_t> ArrayIndex::num_entities() const { return num_entities_; }
 
 /******************************************************************************/
-std::optional<int> ArrayIndex::column_index(const Column& column) const {
+std::optional<int> ArrayIndex::column_index(const Column& column) const
+{
   auto it = column_map_.find(column.path);
 
   if (it == column_map_.end()) {
@@ -126,7 +133,8 @@ std::optional<int> ArrayIndex::column_index(const Column& column) const {
 }
 
 /******************************************************************************/
-void ArrayIndex::column_map(ColumnMap column_map) {
+void ArrayIndex::column_map(ColumnMap column_map)
+{
   column_map_ = std::move(column_map);
 }
 

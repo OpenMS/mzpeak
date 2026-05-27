@@ -93,7 +93,8 @@ template <DataType T> using data_type_constant = std::integral_constant<DataType
  * Dispatch a function that works with a specific data type.
  */
 template <typename Fn, typename... Args>
-decltype(auto) dispatch(DataType t, Fn&& func, Args&&... args) {
+decltype(auto) dispatch(DataType t, Fn&& func, Args&&... args)
+{
   switch (t) {
   case DataType::Int32:
     return std::forward<Fn>(func).template operator()<DataType::Int32>(
@@ -113,6 +114,6 @@ decltype(auto) dispatch(DataType t, Fn&& func, Args&&... args) {
   }
 
   throw TypeError("unknown DataType: " + data_type_to_string(t));
-};
+}
 
 } // namespace MzPeak::Schema::PSI

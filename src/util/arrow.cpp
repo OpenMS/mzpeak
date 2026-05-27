@@ -24,7 +24,9 @@ namespace MzPeak::Util {
 class ArrowFile_ final : public arrow::io::RandomAccessFile {
 public:
   /// Constructor.
-  ArrowFile_(std::shared_ptr<File> file) : file_(std::move(file)) {
+  ArrowFile_(std::shared_ptr<File> file)
+      : file_(std::move(file))
+  {
     arrow::Result<std::unique_ptr<arrow::ResizableBuffer>> res(
         arrow::AllocateResizableBuffer(parquet::kDefaultFooterReadSize));
 
@@ -33,26 +35,28 @@ public:
     } else {
       throw ParquetError(res.status().ToString());
     }
-  };
+  }
 
   /// Destructor.
   ~ArrowFile_() = default;
 
   /// Return the total file size in bytes.
-  arrow::Result<int64_t> GetSize() { return file_->size(); };
+  arrow::Result<int64_t> GetSize() { return file_->size(); }
 
   /// Seek in file/stream.
-  arrow::Status Seek(int64_t position) {
+  arrow::Status Seek(int64_t position)
+  {
     if (!file_->seek(position)) {
       std::string msg("unable to seek");
       return arrow::Status(arrow::StatusCode::IOError, msg);
     }
 
     return arrow::Status::OK();
-  };
+  }
 
   /// Report the current position.
-  arrow::Result<int64_t> Tell() const {
+  arrow::Result<int64_t> Tell() const
+  {
     std::optional<std::size_t> n = file_->tell();
 
     if (n.has_value()) {
@@ -61,10 +65,11 @@ public:
       // Arrow error result:
       return arrow::Result<int64_t>();
     }
-  };
+  }
 
   /// Read data from current file position.
-  arrow::Result<int64_t> Read(int64_t nbytes, void* out) {
+  arrow::Result<int64_t> Read(int64_t nbytes, void* out)
+  {
     std::optional<std::size_t> n = file_->read(static_cast<uint8_t*>(out), nbytes);
 
     if (n.has_value()) {
@@ -72,10 +77,11 @@ public:
     } else {
       return arrow::Result<int64_t>();
     }
-  };
+  }
 
   /// Read into a buffer.
-  arrow::Result<std::shared_ptr<arrow::Buffer>> Read(int64_t nbytes) {
+  arrow::Result<std::shared_ptr<arrow::Buffer>> Read(int64_t nbytes)
+  {
     using arrow_buffer_t = std::shared_ptr<arrow::Buffer>;
 
     if (nbytes > buffer_->capacity()) {
@@ -91,16 +97,17 @@ public:
     } else {
       return arrow::Result<arrow_buffer_t>();
     }
-  };
+  }
 
   /// Close the file/stream.
-  arrow::Status Close() {
+  arrow::Status Close()
+  {
     file_->close();
     return buffer_->Resize(0, true);
-  };
+  }
 
   /// Return `true` if the file/stream is closed.
-  bool closed() const { return !file_->is_open(); };
+  bool closed() const { return !file_->is_open(); }
 
 private:
   std::shared_ptr<File> file_;
@@ -110,7 +117,10 @@ private:
 /******************************************************************************/
 struct Arrow::Impl {
   Impl(std::unique_ptr<File> file)
-      : file_(std::move(file)), reader_(std::make_shared<ArrowFile_>(file_)) {};
+      : file_(std::move(file))
+      , reader_(std::make_shared<ArrowFile_>(file_))
+  {
+  }
 
   std::shared_ptr<File> file_;
   std::shared_ptr<ArrowFile_> reader_;
@@ -118,13 +128,16 @@ struct Arrow::Impl {
 
 /******************************************************************************/
 Arrow::Arrow(std::unique_ptr<File> file)
-    : impl_(std::make_unique<Impl>(std::move(file))) {};
+    : impl_(std::make_unique<Impl>(std::move(file)))
+{
+}
 
 /******************************************************************************/
 Arrow::~Arrow() = default;
 
 /******************************************************************************/
-std::shared_ptr<Arrow::random_access_t> Arrow::reader() const {
+std::shared_ptr<Arrow::random_access_t> Arrow::reader() const
+{
   return impl_->reader_;
 }
 

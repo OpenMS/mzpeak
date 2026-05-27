@@ -18,7 +18,10 @@ namespace MzPeak {
 class Exception : public std::runtime_error {
 public:
   /// Constructor.
-  Exception(const std::string& msg) : std::runtime_error(msg) {};
+  Exception(const std::string& msg)
+      : std::runtime_error(msg)
+  {
+  }
 
   /// Destructor.
   ~Exception() = default;
@@ -30,7 +33,10 @@ public:
 class JsonError final : public Exception {
 public:
   /// Constructor.
-  JsonError(const std::string& msg) : Exception(msg) {};
+  JsonError(const std::string& msg)
+      : Exception(msg)
+  {
+  }
 
   /// Destructor.
   ~JsonError() = default;
@@ -42,7 +48,10 @@ public:
 class ParquetError final : public Exception {
 public:
   /// Constructor.
-  ParquetError(const std::string& msg) : Exception(msg) {};
+  ParquetError(const std::string& msg)
+      : Exception(msg)
+  {
+  }
 
   /// Destructor.
   ~ParquetError() = default;
@@ -54,7 +63,10 @@ public:
 class InvalidIterator final : public Exception {
 public:
   /// Constructor.
-  InvalidIterator(const std::string& msg) : Exception(msg) {};
+  InvalidIterator(const std::string& msg)
+      : Exception(msg)
+  {
+  }
 
   /// Destructor.
   ~InvalidIterator() = default;
@@ -66,7 +78,10 @@ public:
 class TypeError final : public Exception {
 public:
   /// Constructor.
-  TypeError(const std::string& msg) : Exception(msg) {};
+  TypeError(const std::string& msg)
+      : Exception(msg)
+  {
+  }
 
   /// Destructor.
   ~TypeError() = default;

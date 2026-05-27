@@ -6,9 +6,9 @@ directory of this repository.
 
 */
 
+#include "mzpeak/index.h"
 #include "mzpeak/archive.h"
 #include "mzpeak/exception.h"
-#include "mzpeak/index.h"
 
 #include <memory>
 
@@ -28,9 +28,11 @@ namespace json = boost::json;
 struct Index::Impl {
 
   /// Constructor.
-  Impl(std::unique_ptr<MzPeak::Archive> archive) : archive_(std::move(archive)) {
+  Impl(std::unique_ptr<MzPeak::Archive> archive)
+      : archive_(std::move(archive))
+  {
     parse_index();
-  };
+  }
 
   /// Parse the JSON that makes up the MzPeak index.
   void parse_index();
@@ -44,7 +46,9 @@ struct Index::Impl {
 
 /******************************************************************************/
 Index::Index(std::unique_ptr<MzPeak::Archive> archive)
-    : impl_(std::make_unique<Impl>(std::move(archive))) {}
+    : impl_(std::make_unique<Impl>(std::move(archive)))
+{
+}
 
 /******************************************************************************/
 Index::~Index() = default;
@@ -53,7 +57,8 @@ Index::~Index() = default;
 const std::vector<Schema::File>& Index::files() const { return impl_->files_; }
 
 /******************************************************************************/
-void Index::Impl::parse_index() {
+void Index::Impl::parse_index()
+{
   auto file = archive_->read_file(INDEX_FILE_NAME);
   uint8_t buffer[64 * 1024];
   std::optional<std::size_t> bytes;
@@ -89,7 +94,8 @@ void Index::Impl::parse_index() {
 }
 
 /******************************************************************************/
-Spectra Index::spectra() const {
+Spectra Index::spectra() const
+{
   auto it = std::ranges::find(impl_->files_, "spectra_data.parquet",
                               &Schema::File::file_name);
   if (it == impl_->files_.end()) return Spectra();
@@ -97,7 +103,8 @@ Spectra Index::spectra() const {
 }
 
 /******************************************************************************/
-std::unique_ptr<Util::Parquet> Index::parquet(const Schema::File& file) const {
+std::unique_ptr<Util::Parquet> Index::parquet(const Schema::File& file) const
+{
   std::unique_ptr<File> data(impl_->archive_->read_file(file.file_name));
   return std::make_unique<Util::Parquet>(std::move(data), file);
 }
