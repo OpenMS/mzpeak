@@ -27,13 +27,13 @@ BOOST_AUTO_TEST_CASE(can_read_mz_array) {
   Util::DataArrays data(std::move(parquet));
 
   auto array_index = data.array_index();
-  auto spectra_index_array = array_index.arrays()[0];
-  auto mz_array = array_index.arrays()[1];
+  auto spectra_index_column = array_index.columns()[0];
+  auto mz_column = array_index.columns()[1];
 
   using enum Schema::PSI::DataType;
-  Query query = Query::Predicate<Int64>::equal_to(spectra_index_array, 0);
+  Query query = Query::Predicate<Int64>::equal_to(spectra_index_column, 0);
 
-  auto map = data.read_arrays(query, {mz_array});
+  auto map = data.read_arrays(query, {mz_column});
 
   Util::Encoding<Schema::PSI::DataType::Float64> enc(*map, array_index);
   std::vector<double> mz(enc.decode_array(Schema::PSI::ArrayType::Mz));

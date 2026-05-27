@@ -28,13 +28,13 @@ namespace json = boost::json;
  */
 class ArrayIndex final {
 public:
-  /// Mapping from array path in the schema to the column index.
-  using ArrayMap = std::map<std::string, int>;
+  /// Mapping from column path in the schema to the column index.
+  using ColumnMap = std::map<std::string, int>;
 
   /**
-   * A type to describe each array in the index.
+   * A type to describe each entry in the index.
    */
-  struct Array {
+  struct Column {
     /// The name of the array being described. If this is an
     /// MS:1000786|non-standard array, this should be the descriptive
     /// name for the array, otherwise it should be the human-readable
@@ -45,27 +45,27 @@ public:
     /// How the array data is stored in the Parquet file.
     BufferFormat buffer_format;
 
-    /// The entity type this array belongs to.
+    /// The entity type this column belongs to.
     EntityType context = EntityType::Other;
 
     /// The path from the *root* of the Parquet file's schema to this
     /// column.
     std::string path;
 
-    /// The data type for this array, denoted using a CURIE from the
+    /// The data type for this column, denoted using a CURIE from the
     /// PSI-MS controlled vocabulary for a child of MS:1000518 (binary
     /// data type).
     PSI::DataType data_type = PSI::DataType::Float64;
 
-    /// The type of array this is.
+    /// The type of column this is.
     PSI::ArrayType array_type = PSI::ArrayType::NonStandard;
 
     /// The unit describing the measurement, denoted using a CURIE
     /// from the PSI-MS controlled vocabulary or the unit ontology.
     std::string unit;
 
-    /// A flag to indicate this array is the representative instance
-    /// of this array type. The primary array of its type SHOULD have
+    /// A flag to indicate this column is the representative instance
+    /// of this column type. The primary column of its type SHOULD have
     /// a simplified name, otherwise the writer should make it as
     /// unique as possible without sacrificing readability.
     bool buffer_priority = false;
@@ -73,15 +73,15 @@ public:
     /// What order, following the entity index, this column was sorted
     /// in ascending order if any. The lower the rank, the earlier the
     /// dimension was sorted, starting from 0. If this value is null
-    /// or absent, this array is assumed not to be sorted.
+    /// or absent, this column is assumed not to be sorted.
     std::optional<std::size_t> sorting_rank;
 
     /// The identifier of a data processing method that governs this
-    /// array. If not specified, assumed to be the default data
+    /// column. If not specified, assumed to be the default data
     /// processing method for this run.
     std::optional<std::string> data_processing_id;
 
-    /// A transformation that may be applied to this array such as
+    /// A transformation that may be applied to this column such as
     /// zero trimming and null marking or Numpress compression,
     /// denoted as a CURIE from the PSI-MS controlled vocabulary. Some
     /// values are only usable with the chunked layout.
@@ -108,15 +108,15 @@ public:
   const std::string& prefix() const;
 
   /**
-   * Get a list of array definitions.
+   * Get a list of column definitions.
    */
-  const std::vector<Array>& arrays() const;
+  const std::vector<Column>& columns() const;
 
   /**
-   * Get a list of array definitions that are for the given array
+   * Get a list of column definitions that are for the given array
    * type.
    */
-  std::vector<Array> arrays(PSI::ArrayType) const;
+  std::vector<Column> columns(PSI::ArrayType) const;
 
   /**
    * Update the hint as to how many entities are in the data file.
@@ -129,14 +129,14 @@ public:
   std::optional<std::size_t> num_entities() const;
 
   /**
-   * Return the column index for the given array.
+   * Return the column index for the given column.
    */
-  std::optional<int> column_index(const Array&) const;
+  std::optional<int> column_index(const Column&) const;
 
   /**
-   * Update the array map;
+   * Update the column map;
    */
-  void array_map(ArrayMap array_map);
+  void column_map(ColumnMap column_map);
 
 private:
   // The entity type for the entire Parquet file.
@@ -146,13 +146,13 @@ private:
   std::string prefix_ = "point";
 
   // Entries;
-  std::vector<Array> arrays_;
+  std::vector<Column> columns_;
 
   // We might know how many entities are in the table.
   std::optional<std::size_t> num_entities_;
 
-  // Array -> column index.
-  ArrayMap array_map_;
+  // Column -> column index.
+  ColumnMap column_map_;
 };
 
 } // namespace MzPeak::Schema

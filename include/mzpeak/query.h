@@ -35,50 +35,50 @@ public:
     using value_type = typename Schema::PSI::data_type_traits<T>::value_type;
 
     /// The schema array type.
-    using array_type = Schema::ArrayIndex::Array;
+    using column_type = Schema::ArrayIndex::Column;
 
     /**
      * Queried value must be exactly equal to the given value.
      */
-    static Query equal_to(const array_type& array, value_type v) {
-      return Query(Predicate(array, std::make_pair<>(Op::EQ, v)));
+    static Query equal_to(const column_type& column, value_type v) {
+      return Query(Predicate(column, std::make_pair<>(Op::EQ, v)));
     };
 
     /**
      * Queried value must be greater than the given value.
      */
-    static Query greater_than(const array_type& array, value_type v) {
-      return Query(Predicate(array, std::make_pair<>(Op::GT, v)));
+    static Query greater_than(const column_type& column, value_type v) {
+      return Query(Predicate(column, std::make_pair<>(Op::GT, v)));
     };
 
     /**
      * Queried value must be less than the given value.
      */
-    static Query less_than(const array_type& array, value_type v) {
-      return Query(Predicate(array, std::make_pair<>(Op::LT, v)));
+    static Query less_than(const column_type& column, value_type v) {
+      return Query(Predicate(column, std::make_pair<>(Op::LT, v)));
     };
 
     /**
      * Queried value must be greater than or equal to the given value.
      */
-    static Query greater_equal(const array_type& array, value_type v) {
-      return Query(Predicate(array, std::make_pair<>(Op::GE, v)));
+    static Query greater_equal(const column_type& column, value_type v) {
+      return Query(Predicate(column, std::make_pair<>(Op::GE, v)));
     };
 
     /**
      * Queried value must be less than or equal to the given value.
      */
-    static Query less_equal(const array_type& array, value_type v) {
-      return Query(Predicate(array, std::make_pair<>(Op::LE, v)));
+    static Query less_equal(const column_type& column, value_type v) {
+      return Query(Predicate(column, std::make_pair<>(Op::LE, v)));
     };
 
     /// Destructor.
     ~Predicate() = default;
 
     /**
-     * The array this predicate works with.
+     * The column this predicate works with.
      */
-    const array_type& array() const { return array_; };
+    const column_type& column() const { return column_; };
 
     /**
      * Return `true` if this predicate matches the given value.
@@ -98,10 +98,10 @@ public:
     /// Complete description of the predicate.
     using Comp = std::pair<Op, value_type>;
 
-    Predicate(const array_type& array, Comp comp)
-        : array_(array), comp_(std::move(comp)) {};
+    Predicate(const column_type& column, Comp comp)
+        : column_(column), comp_(std::move(comp)) {};
 
-    const array_type& array_;
+    const column_type& column_;
     Comp comp_;
   };
 
@@ -150,15 +150,15 @@ public:
       std::pair<p_int32_t, p_int32_t>, std::pair<p_float32_t, p_float32_t>,
       std::pair<p_int64_t, p_int64_t>, std::pair<p_float64_t, p_float64_t>>;
 
-  /// A function that when given an array type, should return a single value.
+  /// A function that when given an column type, should return a single value.
   /// If this isn't possible it should return nullopt.
   using eval_callback_t =
-      std::function<std::optional<value_t>(const Schema::ArrayIndex::Array&)>;
+      std::function<std::optional<value_t>(const Schema::ArrayIndex::Column&)>;
 
-  /// A function that when given an array type should return a min and
+  /// A function that when given an column type should return a min and
   /// max.  If this isn't possible it should return nullopt.
   using eval_range_callback_t =
-      std::function<std::optional<range_t>(const Schema::ArrayIndex::Array&)>;
+      std::function<std::optional<range_t>(const Schema::ArrayIndex::Column&)>;
   /**
    * Evaluate a query.
    */

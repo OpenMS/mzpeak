@@ -165,10 +165,10 @@ MinMaxForType::operator()<psi::DataType::ASCII>() const {
 std::vector<int> Parquet::Impl::run_query(const Query& query) {
   auto fmd(reader_->parquet_reader()->metadata());
 
-  auto get_range =
-      [&](const std::shared_ptr<parquet::RowGroupMetaData>& rg,
-          const Schema::ArrayIndex::Array& array) -> std::optional<Query::range_t> {
-    const std::string& path(array.path);
+  auto get_range = [&](const std::shared_ptr<parquet::RowGroupMetaData>& rg,
+                       const Schema::ArrayIndex::Column& column)
+      -> std::optional<Query::range_t> {
+    const std::string& path(column.path);
 
     int column_index = rg->schema()->ColumnIndex(path);
     if (column_index < 0) error("invalid path: " + path);
@@ -176,7 +176,7 @@ std::vector<int> Parquet::Impl::run_query(const Query& query) {
     std::optional<Stats> stats(statistics(rg, column_index));
     if (!stats.has_value()) return {};
 
-    return psi::dispatch(array.data_type,
+    return psi::dispatch(column.data_type,
                          MinMaxForType{*stats->column, *stats->stats});
   };
 
@@ -223,21 +223,21 @@ Schema::ArrayIndex Parquet::array_index() const {
   ai.num_entities(num_entities);
 
   const parquet::SchemaDescriptor* schema(fmd->schema());
-  Schema::ArrayIndex::ArrayMap index_map;
+  Schema::ArrayIndex::ColumnMap index_map;
 
-  for (auto& array : ai.arrays()) {
-    int column_index = schema->ColumnIndex(array.path);
+  for (auto& column : ai.columns()) {
+    int column_index = schema->ColumnIndex(column.path);
 
     if (column_index < 0) {
       std::string msg("while reading index from " + impl_->file_.file_name);
-      msg += ": column index out of bounds for column: " + array.path;
+      msg += ": column index out of bounds for column: " + column.path;
       throw ParquetError(msg);
     }
 
-    index_map[array.path] = column_index;
+    index_map[column.path] = column_index;
   }
 
-  ai.array_map(std::move(index_map));
+  ai.column_map(std::move(index_map));
   return ai;
 }
 

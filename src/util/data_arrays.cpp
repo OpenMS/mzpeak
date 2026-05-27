@@ -28,9 +28,9 @@ using rec_batch_t = std::shared_ptr<arrow::RecordBatch>;
 /// Try to get an array out of a batch.
 std::shared_ptr<arrow::Array>
 array_from_batch(arrow::RecordBatch& batch, const Schema::ArrayIndex& index,
-                 const Schema::ArrayIndex::Array& array) {
+                 const Schema::ArrayIndex::Column& column) {
   std::shared_ptr<arrow::Array> col;
-  std::optional<int> i = index.column_index(array);
+  std::optional<int> i = index.column_index(column);
 
   // Could it be in a struct?
   if (col = batch.GetColumnByName(index.prefix()); col && i) {
@@ -41,11 +41,11 @@ array_from_batch(arrow::RecordBatch& batch, const Schema::ArrayIndex& index,
   }
 
   // What if I can access it it directly?
-  if (col = batch.GetColumnByName(array.path); col) {
+  if (col = batch.GetColumnByName(column.path); col) {
     return col;
   }
 
-  throw ParquetError("array not in batch: " + array.path);
+  throw ParquetError("column not in batch: " + column.path);
 }
 
 /******************************************************************************/
@@ -55,7 +55,8 @@ struct Batch {
         slice_length_(batch_->num_rows()) {};
 
   // Return an array with caching.
-  std::shared_ptr<arrow::Array> cached_array(const Schema::ArrayIndex::Array& array);
+  std::shared_ptr<arrow::Array>
+  cached_array(const Schema::ArrayIndex::Column& column);
 
   // Returned a sliced batch.
   std::shared_ptr<arrow::RecordBatch> slice_batch(const Query&);
@@ -81,11 +82,11 @@ struct DataArrays::Impl {
 
 /******************************************************************************/
 std::shared_ptr<arrow::Array>
-Batch::cached_array(const Schema::ArrayIndex::Array& array) {
-  std::optional<int> index(array_index_.column_index(array));
+Batch::cached_array(const Schema::ArrayIndex::Column& column) {
+  std::optional<int> index(array_index_.column_index(column));
 
   if (!index.has_value()) {
-    std::string msg("array doesn't appear in the schema: " + array.path);
+    std::string msg("column doesn't appear in the schema: " + column.path);
     throw ParquetError(msg);
   }
 
@@ -94,7 +95,7 @@ Batch::cached_array(const Schema::ArrayIndex::Array& array) {
   if (it != cache_.end()) {
     return it->second;
   } else {
-    auto v = array_from_batch(*batch_, array_index_, array);
+    auto v = array_from_batch(*batch_, array_index_, column);
     cache_[*index] = v;
     return v;
   }
@@ -115,8 +116,8 @@ std::shared_ptr<arrow::RecordBatch> Batch::slice_batch(const Query& query) {
 struct ArrayValueHelper {
   template <psi::DataType T>
   std::optional<Query::value_t>
-  operator()(const Schema::ArrayIndex::Array& array) const {
-    auto raw = batch_.cached_array(array);
+  operator()(const Schema::ArrayIndex::Column& column) const {
+    auto raw = batch_.cached_array(column);
     auto data = Util::parquet_array_cast<T>(raw);
     return data->Value(i_);
   }
@@ -127,16 +128,16 @@ struct ArrayValueHelper {
 
 template <> // Specialized since we don't support ASCII types.
 std::optional<Query::value_t> ArrayValueHelper::operator()<psi::DataType::ASCII>(
-    const Schema::ArrayIndex::Array& _) const {
+    const Schema::ArrayIndex::Column& _) const {
   return {};
 }
 
 /******************************************************************************/
 void Batch::query_batch(const Query& query) {
-  auto get_value =
-      [&](ArrayValueHelper& helper,
-          const Schema::ArrayIndex::Array& array) -> std::optional<Query::value_t> {
-    return psi::dispatch(array.data_type, helper, array);
+  auto get_value = [&](ArrayValueHelper& helper,
+                       const Schema::ArrayIndex::Column& column)
+      -> std::optional<Query::value_t> {
+    return psi::dispatch(column.data_type, helper, column);
   };
 
   { // Find the first "row" that matches the query.
@@ -196,10 +197,10 @@ std::size_t DataArrays::record_count() const {
   auto ne(impl_->array_index_.num_entities());
   if (ne.has_value()) return *ne;
 
-  // The first array should be the index.
+  // The first column should be the index.
   //
   // FIXME: Is there a better way to do this?
-  const Schema::ArrayIndex::Array& index(impl_->array_index_.arrays()[0]);
+  const Schema::ArrayIndex::Column& index(impl_->array_index_.columns()[0]);
   std::optional<int> col_idx(impl_->array_index_.column_index(index));
   if (!col_idx.has_value()) throw ParquetError("missing column: " + index.path);
 
@@ -219,7 +220,7 @@ std::size_t DataArrays::record_count() const {
 /******************************************************************************/
 std::unique_ptr<array_map_type>
 DataArrays::read_arrays(const Query& query,
-                        const std::vector<Schema::ArrayIndex::Array>& arrays) {
+                        const std::vector<Schema::ArrayIndex::Column>& columns) {
   std::unique_ptr<array_map_type> map = std::make_unique<array_map_type>();
 
   std::vector<int> indices(impl_->parquet_->find_row_groups(query));
@@ -247,11 +248,11 @@ DataArrays::read_arrays(const Query& query,
       batch = helper.slice_batch(query);
     }
 
-    for (auto& array : arrays) {
-      std::optional<int> index(impl_->array_index_.column_index(array));
+    for (auto& column : columns) {
+      std::optional<int> index(impl_->array_index_.column_index(column));
 
       std::optional<std::shared_ptr<arrow::Array>> data =
-          array_from_batch(*batch, impl_->array_index_, array);
+          array_from_batch(*batch, impl_->array_index_, column);
 
       if (index.has_value() && data.has_value()) {
         auto existing = map->find(*index);

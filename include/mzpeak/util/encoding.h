@@ -67,16 +67,16 @@ private:
 template <Schema::PSI::DataType T>
 std::vector<typename Encoding<T>::value_type>
 Encoding<T>::decode_array(Schema::PSI::ArrayType array_type) const {
-  auto arrays = array_index_.arrays(array_type);
+  auto columns = array_index_.columns(array_type);
 
-  if (arrays.size() == 1) {
-    std::optional<int> index = array_index_.column_index(arrays[0]);
+  if (columns.size() == 1) {
+    std::optional<int> index = array_index_.column_index(columns[0]);
 
     if (index.has_value() &&
-        arrays[0].buffer_format == Schema::BufferFormat::Point) {
+        columns[0].buffer_format == Schema::BufferFormat::Point) {
       return decode_point(*index);
     } else {
-      std::string msg("unable to decode array, wrong encoding: ");
+      std::string msg("unable to decode column, wrong encoding: ");
       throw ParquetError(msg + Schema::PSI::array_type_to_string(array_type));
     }
   } else {
@@ -92,7 +92,7 @@ Encoding<T>::decode_point(int index) const {
   auto raw = map_.find(index);
 
   if (raw == map_.end()) {
-    std::string msg("index not in array map: " + std::to_string(index) +
+    std::string msg("index not in column map: " + std::to_string(index) +
                     " should be one of: ");
 
     std::vector<std::string> keys;

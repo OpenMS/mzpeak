@@ -46,7 +46,7 @@ public:
    * arrays that have a sort ranking of 0.
    */
   std::unique_ptr<array_map_type>
-  read_arrays(const Query&, const std::vector<Schema::ArrayIndex::Array>&);
+  read_arrays(const Query&, const std::vector<Schema::ArrayIndex::Column>&);
 
 private:
   struct Impl;

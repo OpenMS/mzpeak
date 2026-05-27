@@ -15,8 +15,8 @@ directory of this repository.
 namespace MzPeak::Schema {
 
 /******************************************************************************/
-ArrayIndex::Array make_index(EntityType entity_type, const std::string& prefix) {
-  ArrayIndex::Array index;
+ArrayIndex::Column make_index(EntityType entity_type, const std::string& prefix) {
+  ArrayIndex::Column index;
 
   index.array_name = entity_type_to_string(entity_type) + "_index";
   index.buffer_format = BufferFormat::Point;
@@ -38,50 +38,51 @@ ArrayIndex::ArrayIndex(EntityType entity_type, const json::object& obj)
 
   if (entries != obj.end() && entries->value().is_array()) {
     auto entries_ary(entries->value().as_array());
-    arrays_.reserve(entries_ary.size() + 1);
+    columns_.reserve(entries_ary.size() + 1);
 
-    // The first array entry is actually the index itself.
-    arrays_.push_back(make_index(entity_type, prefix_));
+    // The first column entry is actually the index itself.
+    columns_.push_back(make_index(entity_type, prefix_));
 
     for (const auto& entry : entries_ary) {
       if (entry.is_object()) {
         const auto& eo(entry.as_object());
-        Array array;
-        array.array_name = eo.at("array_name").as_string();
-        array.buffer_format =
+        Column column;
+        column.array_name = eo.at("array_name").as_string();
+        column.buffer_format =
             buffer_format_from_string(eo.at("buffer_format").as_string());
-        array.context = entity_type_from_string(eo.at("context").as_string());
-        array.path = eo.at("path").as_string();
-        array.data_type = PSI::data_type_from_string(eo.at("data_type").as_string());
-        array.array_type =
+        column.context = entity_type_from_string(eo.at("context").as_string());
+        column.path = eo.at("path").as_string();
+        column.data_type =
+            PSI::data_type_from_string(eo.at("data_type").as_string());
+        column.array_type =
             PSI::array_type_from_string(eo.at("array_type").as_string());
-        array.unit = eo.at("unit").as_string();
+        column.unit = eo.at("unit").as_string();
 
         if (auto bp = eo.find("buffer_priority");
             bp != eo.end() && bp->value().is_string()) {
-          array.buffer_priority = bp->value().as_string() == "primary";
+          column.buffer_priority = bp->value().as_string() == "primary";
         }
 
         if (auto sr = eo.find("sorting_rank");
             sr != eo.end() && sr->value().is_number()) {
           if (sr->value().is_int64()) {
-            array.sorting_rank = sr->value().as_int64();
+            column.sorting_rank = sr->value().as_int64();
           } else {
-            array.sorting_rank = sr->value().as_uint64();
+            column.sorting_rank = sr->value().as_uint64();
           }
         }
 
         if (auto dpi = eo.find("data_processing_id");
             dpi != eo.end() && dpi->value().is_string()) {
-          array.data_processing_id = dpi->value().as_string();
+          column.data_processing_id = dpi->value().as_string();
         }
 
         if (auto tr = eo.find("transform");
             tr != eo.end() && tr->value().is_string()) {
-          array.transform = tr->value().as_string();
+          column.transform = tr->value().as_string();
         }
 
-        arrays_.push_back(std::move(array));
+        columns_.push_back(std::move(column));
       }
     }
   }
@@ -94,12 +95,14 @@ EntityType ArrayIndex::entity_type() const { return entity_type_; }
 const std::string& ArrayIndex::prefix() const { return prefix_; }
 
 /******************************************************************************/
-const std::vector<ArrayIndex::Array>& ArrayIndex::arrays() const { return arrays_; }
+const std::vector<ArrayIndex::Column>& ArrayIndex::columns() const {
+  return columns_;
+}
 
 /******************************************************************************/
-std::vector<ArrayIndex::Array> ArrayIndex::arrays(PSI::ArrayType type) const {
-  return arrays_ |
-         std::views::filter([type](const auto& a) { return a.array_type == type; }) |
+std::vector<ArrayIndex::Column> ArrayIndex::columns(PSI::ArrayType type) const {
+  return columns_ |
+         std::views::filter([type](const auto& c) { return c.array_type == type; }) |
          std::ranges::to<std::vector>();
 }
 
@@ -112,10 +115,10 @@ void ArrayIndex::num_entities(const std::optional<std::size_t>& ne) {
 std::optional<std::size_t> ArrayIndex::num_entities() const { return num_entities_; }
 
 /******************************************************************************/
-std::optional<int> ArrayIndex::column_index(const Array& array) const {
-  auto it = array_map_.find(array.path);
+std::optional<int> ArrayIndex::column_index(const Column& column) const {
+  auto it = column_map_.find(column.path);
 
-  if (it == array_map_.end()) {
+  if (it == column_map_.end()) {
     return {};
   } else {
     return it->second;
@@ -123,6 +126,8 @@ std::optional<int> ArrayIndex::column_index(const Array& array) const {
 }
 
 /******************************************************************************/
-void ArrayIndex::array_map(ArrayMap array_map) { array_map_ = std::move(array_map); }
+void ArrayIndex::column_map(ColumnMap column_map) {
+  column_map_ = std::move(column_map);
+}
 
 } // namespace MzPeak::Schema

@@ -79,7 +79,7 @@ bool Query::eval(eval_range_callback_t fn) const {
 template <typename Fn, typename V>
 template <Schema::PSI::DataType T>
 bool EvalHelper<Fn, V>::dispatch_value(const Query::Predicate<T>& p, Fn fn) const {
-  std::optional<V> val(std::invoke(fn, p.array()));
+  std::optional<V> val(std::invoke(fn, p.column()));
   if (!val.has_value()) return false;
 
   return std::visit(
@@ -94,7 +94,7 @@ bool EvalHelper<Fn, V>::dispatch_value(const Query::Predicate<T>& p, Fn fn) cons
           return p.match(v);
         } else {
           std::string msg("predicate and value mismatch: ");
-          msg += Schema::PSI::data_type_to_string(p.array().data_type);
+          msg += Schema::PSI::data_type_to_string(p.column().data_type);
           throw TypeError(msg);
           return false; // clang is too stupid to see the throw
         }
