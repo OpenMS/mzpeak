@@ -21,4 +21,5 @@ top-level directory of this repository.
 #include "mzpeak/schema/file.h"           // IWYU pragma: keep
 #include "mzpeak/schema/psi/array_type.h" // IWYU pragma: keep
 #include "mzpeak/schema/psi/data_type.h"  // IWYU pragma: keep
+#include "mzpeak/spectrum.h"              // IWYU pragma: keep
 #include "mzpeak/zip.h"                   // IWYU pragma: keep

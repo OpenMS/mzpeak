@@ -114,3 +114,19 @@ foreach test : test_names
                     link_with : libmzpeak_so),
          verbose : false)
 endforeach
+
+# Examples
+example_names = [
+  'read_spectra'
+]
+
+foreach example : example_names
+  executable(
+    example,
+    'examples/@0@.cpp'.format(example),
+    include_directories : include,
+    dependencies : deps,
+    link_with : libmzpeak_so,
+    install : true,
+    install_dir : 'examples')
+endforeach

@@ -53,18 +53,62 @@ the summer (2026).
 - [X] Automatic detection and decoding of data tables
 - [ ] Streaming writer interface (summer 2026)
 
-## Example Reader
+## Example Spectra Reader
+
+The following example, taken from the `examples/read_spectra.cpp`
+file, reports some m/z values from the first few spectra in an mzPeak
+file:
 
 ```c++
-#include <iostream>
 #include <mzpeak.h>
+#include <print>
+#include <ranges>
 
-void main() {
-  auto index = MzPeak::open("test/files/small.mzpeak");
-  auto spectrum = index.spectra()[0];
-
-  for (auto& mz : spectrum.mz()) {
-    std::cout << mz << std::endl;
+int main(int argc, char* argv[])
+{
+  if (argc < 2) {
+    std::println(stderr, "Usage: {} file", std::string_view{argv[0]});
+    return 1;
   }
+
+  MzPeak::Index index = MzPeak::open(argv[1]);
+  MzPeak::Spectra spectra = index.spectra();
+
+  std::size_t to_review = std::min(5ul, spectra.size());
+
+  std::println("There are {} spectra in this file.", spectra.size());
+  std::println("Reviewing the first {} spectra.", to_review);
+
+  auto enumerated_spectra =
+      spectra | std::views::take(to_review) | std::views::enumerate;
+
+  std::println();
+  std::println("| Index | First m/z | Last m/z |");
+  std::println("|-------|-----------|----------|");
+
+  for (const auto& [index, spectrum] : enumerated_spectra) {
+    std::print("| {:5d} | ", index);
+    std::print("{:9.2f} | ", spectrum->mz().front());
+    std::print("{:8.2f} | ", spectrum->mz().back());
+    std::println();
+  }
+
+  return 0;
 }
+```
+
+Running the above with the `test/files/small.mzpeak` produces the
+following output:
+
+```
+There are 48 spectra in this file.
+Reviewing the first 5 spectra.
+
+| Index | First m/z | Last m/z |
+|-------|-----------|----------|
+|     0 |    202.61 |  1999.84 |
+|     1 |    200.09 |  1347.76 |
+|     2 |    231.39 |  1911.64 |
+|     3 |    236.05 |   368.35 |
+|     4 |    203.22 |   396.97 |
 ```
