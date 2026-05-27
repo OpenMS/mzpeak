@@ -25,18 +25,18 @@ int main(int argc, char* argv[])
   std::println("There are {} spectra in this file.", spectra.size());
   std::println("Reviewing the first {} spectra.", to_review);
 
-  auto enumerated_spectra =
-      spectra | std::views::take(to_review) | std::views::enumerate;
-
   std::println();
   std::println("| Index | First m/z | Last m/z |");
   std::println("|-------|-----------|----------|");
 
-  for (const auto& [index, spectrum] : enumerated_spectra) {
+  for (auto index = 0;
+       const auto& spectrum : spectra | std::views::take(to_review)) {
     std::print("| {:5d} | ", index);
     std::print("{:9.2f} | ", spectrum.mz().front());
     std::print("{:8.2f} | ", spectrum.mz().back());
     std::println();
+
+    ++index; // std::views::enumerate isn't available on macOS :-(
   }
 
   return 0;
