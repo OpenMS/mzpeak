@@ -14,7 +14,7 @@ in the LICENSE file found in the top-level directory of this project.
 BOOST_AUTO_TEST_CASE(can_list_files) {
   namespace fs = std::filesystem;
 
-  MzPeak::Archive::Zip zip("../test/files/small.mzpeak");
+  MzPeak::Zip zip("../test/files/small.mzpeak");
   std::vector<fs::path> files(zip.list());
 
   bool expect = std::ranges::find(files, "mzpeak_index.json") != files.end();
@@ -28,9 +28,9 @@ BOOST_AUTO_TEST_CASE(can_list_files) {
 
 /******************************************************************************/
 BOOST_AUTO_TEST_CASE(can_read_file) {
-  MzPeak::Archive::Zip zip("../test/files/small.mzpeak");
-  std::unique_ptr<MzPeak::File::Readable> file(zip.read_file("mzpeak_index.json"));
-  std::unique_ptr<std::istream> stream(MzPeak::File::to_istream(std::move(file)));
+  MzPeak::Zip zip("../test/files/small.mzpeak");
+  std::unique_ptr<MzPeak::File> file(zip.read_file("mzpeak_index.json"));
+  std::unique_ptr<std::istream> stream(MzPeak::to_istream(std::move(file)));
   std::string line;
 
   std::getline(*stream, line);
@@ -40,13 +40,12 @@ BOOST_AUTO_TEST_CASE(can_read_file) {
 /******************************************************************************/
 // Test seeking by reading the Parquet magic bytes in the footer.
 BOOST_AUTO_TEST_CASE(can_seek_file) {
-  MzPeak::Archive::Zip zip("../test/files/small.mzpeak");
+  MzPeak::Zip zip("../test/files/small.mzpeak");
 
   std::string magic("PAR1");
   uint8_t buffer[4];
 
-  std::unique_ptr<MzPeak::File::Readable> file(
-      zip.read_file("spectra_data.parquet"));
+  std::unique_ptr<MzPeak::File> file(zip.read_file("spectra_data.parquet"));
 
   file->seek(file->size() - magic.size());
 

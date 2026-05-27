@@ -16,7 +16,7 @@ in the LICENSE file found in the top-level directory of this project.
 
 /******************************************************************************/
 BOOST_AUTO_TEST_CASE(can_open_parque) {
-  MzPeak::Archive::Directory dir("../test/files/small.dir");
+  MzPeak::Directory dir("../test/files/small.dir");
   MzPeak::Util::Arrow arrow(dir.read_file("spectra_data.parquet"));
   std::shared_ptr<arrow::io::RandomAccessFile> file(arrow.reader());
 

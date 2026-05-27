@@ -10,12 +10,12 @@ directory of this repository.
 
 #include "mzpeak/archive.h"
 
-namespace MzPeak::Archive {
+namespace MzPeak {
 
 /**
  * Access files stored in a ZIP archive.
  */
-class Zip final : public Readable {
+class Zip final : public Archive {
 public:
   /**
    * Open a zip archive at the given path.
@@ -38,11 +38,11 @@ public:
    * NOTE: The path given must be one returned from the `list`
    * method.
    */
-  std::unique_ptr<File::Readable> read_file(const fs::path&);
+  std::unique_ptr<File> read_file(const fs::path&);
 
 private:
   struct Impl;
   std::unique_ptr<Impl> impl_;
 };
 
-} // namespace MzPeak::Archive
+} // namespace MzPeak

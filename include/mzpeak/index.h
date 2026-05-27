@@ -13,21 +13,20 @@ directory of this repository.
 #include "mzpeak/spectra.h"
 #include "mzpeak/util/parquet.h"
 
-namespace MzPeak::Index {
+namespace MzPeak {
 
 // Internal implementation.
-struct Impl;
 
 /**
  * Read-only access to the index inside a MzPeak archive.
  */
-class Readable {
+class Index {
 public:
   /// Constructor.
-  Readable(std::unique_ptr<MzPeak::Archive::Readable>);
+  Index(std::unique_ptr<MzPeak::Archive>);
 
   /// Destructor.
-  ~Readable();
+  ~Index();
 
   /**
    * Return a list of files found in the index.
@@ -45,7 +44,8 @@ public:
   std::unique_ptr<Util::Parquet> parquet(const Schema::File&) const;
 
 protected:
+  struct Impl;
   std::unique_ptr<Impl> impl_;
 };
 
-} // namespace MzPeak::Index
+} // namespace MzPeak

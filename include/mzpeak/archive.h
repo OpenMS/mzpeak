@@ -13,17 +13,17 @@ directory of this repository.
 
 #include "mzpeak/file.h"
 
-namespace MzPeak::Archive {
+namespace MzPeak {
 
 namespace fs = std::filesystem;
 
 /**
  * An interface for read-only archives.
  */
-class Readable {
+class Archive {
 public:
   /// Destructor.
-  virtual ~Readable() {};
+  virtual ~Archive() {};
 
   /**
    * Return a list of files names.
@@ -33,10 +33,10 @@ public:
   /**
    * Open a file and gain random read-only access.
    */
-  virtual std::unique_ptr<File::Readable> read_file(const fs::path&) = 0;
+  virtual std::unique_ptr<File> read_file(const fs::path&) = 0;
 
 protected:
-  Readable() = default;
+  Archive() = default;
 };
 
-} // namespace MzPeak::Archive
+} // namespace MzPeak

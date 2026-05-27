@@ -18,6 +18,6 @@ namespace fs = std::filesystem;
 /**
  * Open a MzPeak file for reading.
  */
-MzPeak::Index::Readable open(const fs::path&);
+MzPeak::Index open(const fs::path&);
 
 }; // namespace MzPeak

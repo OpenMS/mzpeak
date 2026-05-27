@@ -26,7 +26,7 @@ public:
   using file_metadata_t = std::shared_ptr<parquet::FileMetaData>;
 
   /// Constructor.
-  Parquet(std::unique_ptr<MzPeak::File::Readable>, Schema::File);
+  Parquet(std::unique_ptr<MzPeak::File>, Schema::File);
 
   /// Destructor.
   ~Parquet();

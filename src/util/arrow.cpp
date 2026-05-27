@@ -24,7 +24,7 @@ namespace MzPeak::Util {
 class ArrowFile_ final : public arrow::io::RandomAccessFile {
 public:
   /// Constructor.
-  ArrowFile_(std::shared_ptr<File::Readable> file) : file_(std::move(file)) {
+  ArrowFile_(std::shared_ptr<File> file) : file_(std::move(file)) {
     arrow::Result<std::unique_ptr<arrow::ResizableBuffer>> res(
         arrow::AllocateResizableBuffer(parquet::kDefaultFooterReadSize));
 
@@ -103,21 +103,21 @@ public:
   bool closed() const { return !file_->is_open(); };
 
 private:
-  std::shared_ptr<File::Readable> file_;
+  std::shared_ptr<File> file_;
   std::shared_ptr<arrow::ResizableBuffer> buffer_;
 };
 
 /******************************************************************************/
 struct Arrow::Impl {
-  Impl(std::unique_ptr<File::Readable> file)
+  Impl(std::unique_ptr<File> file)
       : file_(std::move(file)), reader_(std::make_shared<ArrowFile_>(file_)) {};
 
-  std::shared_ptr<File::Readable> file_;
+  std::shared_ptr<File> file_;
   std::shared_ptr<ArrowFile_> reader_;
 };
 
 /******************************************************************************/
-Arrow::Arrow(std::unique_ptr<File::Readable> file)
+Arrow::Arrow(std::unique_ptr<File> file)
     : impl_(std::make_unique<Impl>(std::move(file))) {};
 
 /******************************************************************************/

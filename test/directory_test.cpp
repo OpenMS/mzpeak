@@ -15,7 +15,7 @@ in the LICENSE file found in the top-level directory of this project.
 BOOST_AUTO_TEST_CASE(can_list_files) {
   namespace fs = std::filesystem;
 
-  MzPeak::Archive::Directory dir("../src");
+  MzPeak::Directory dir("../src");
   std::vector<fs::path> files(dir.list());
 
   bool expect = std::ranges::find(files, "directory.cpp") != files.end();
@@ -29,9 +29,9 @@ BOOST_AUTO_TEST_CASE(can_list_files) {
 
 /******************************************************************************/
 BOOST_AUTO_TEST_CASE(can_read_file) {
-  MzPeak::Archive::Directory dir("../src");
-  std::unique_ptr<MzPeak::File::Readable> file(dir.read_file("directory.cpp"));
-  std::unique_ptr<std::istream> stream(MzPeak::File::to_istream(std::move(file)));
+  MzPeak::Directory dir("../src");
+  std::unique_ptr<MzPeak::File> file(dir.read_file("directory.cpp"));
+  std::unique_ptr<std::istream> stream(MzPeak::to_istream(std::move(file)));
   std::string line;
 
   std::getline(*stream, line);

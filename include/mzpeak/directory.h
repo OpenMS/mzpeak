@@ -10,12 +10,12 @@ directory of this repository.
 
 #include "mzpeak/archive.h"
 
-namespace MzPeak::Archive {
+namespace MzPeak {
 
 /**
  * Access files from a directory.
  */
-class Directory final : public Readable {
+class Directory final : public Archive {
 public:
   /// Constructor.
   Directory(const fs::path& path) : path_(path.lexically_normal()) {}
@@ -35,10 +35,10 @@ public:
    * The path *must* be a file name relative to the directory as
    * returned by the `list` method.
    */
-  std::unique_ptr<File::Readable> read_file(const fs::path& path);
+  std::unique_ptr<File> read_file(const fs::path& path);
 
 private:
   fs::path path_;
 };
 
-} // namespace MzPeak::Archive
+} // namespace MzPeak

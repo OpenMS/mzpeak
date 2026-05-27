@@ -75,7 +75,7 @@ Schema::ArrayIndex parse_array_index(const std::string& str,
 
 /******************************************************************************/
 struct Parquet::Impl {
-  Impl(std::unique_ptr<File::Readable> data, Schema::File file)
+  Impl(std::unique_ptr<File> data, Schema::File file)
       : file_(std::move(file)), arrow_(std::make_unique<Arrow>(std::move(data))) {
     auto raf = arrow_->reader();
 
@@ -194,7 +194,7 @@ std::vector<int> Parquet::Impl::run_query(const Query& query) {
 }
 
 /******************************************************************************/
-Parquet::Parquet(std::unique_ptr<File::Readable> data, Schema::File file)
+Parquet::Parquet(std::unique_ptr<File> data, Schema::File file)
     : impl_(std::make_unique<Impl>(std::move(data), std::move(file))) {}
 
 /******************************************************************************/

@@ -13,12 +13,12 @@ directory of this repository.
 
 #include "mzpeak/file.h"
 
-namespace MzPeak::File {
+namespace MzPeak {
 
 /******************************************************************************/
 class source final : public boost::iostreams::source {
 public:
-  source(std::shared_ptr<Readable> file) : file_(file) {};
+  source(std::shared_ptr<File> file) : file_(file) {};
 
   std::streamsize read(char* buf, std::streamsize size) {
     if (size == 0 || buf == nullptr || !file_->is_open()) return -1;
@@ -36,7 +36,7 @@ public:
   void close(std::ios_base::openmode&) { close(); }
 
 private:
-  std::shared_ptr<Readable> file_;
+  std::shared_ptr<File> file_;
 };
 
 class istream : public std::istream {
@@ -48,9 +48,9 @@ private:
 };
 
 /******************************************************************************/
-std::unique_ptr<std::istream> to_istream(std::unique_ptr<Readable> r) {
+std::unique_ptr<std::istream> to_istream(std::unique_ptr<File> r) {
   source source(std::move(r));
   return std::make_unique<istream>(source);
 }
 
-} // namespace MzPeak::File
+} // namespace MzPeak

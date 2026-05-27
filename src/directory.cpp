@@ -11,11 +11,11 @@ directory of this repository.
 
 #include "mzpeak/directory.h"
 
-namespace MzPeak::Archive {
+namespace MzPeak {
 
 /******************************************************************************/
 // Thin wrapper around `std::fstream`.
-class DirFile_ final : public MzPeak::File::Readable {
+class DirFile_ final : public MzPeak::File {
 public:
   DirFile_(const fs::path& path) : path_(path), stream_(path.c_str()) {};
 
@@ -68,9 +68,9 @@ std::vector<fs::path> Directory::list() {
 }
 
 /******************************************************************************/
-std::unique_ptr<MzPeak::File::Readable> Directory::read_file(const fs::path& name) {
+std::unique_ptr<MzPeak::File> Directory::read_file(const fs::path& name) {
   fs::path path(path_ / name.lexically_normal());
   return std::make_unique<DirFile_>(path.string());
 }
 
-} // namespace MzPeak::Archive
+} // namespace MzPeak

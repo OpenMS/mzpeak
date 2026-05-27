@@ -11,16 +11,16 @@ directory of this repository.
 #include <memory>
 #include <optional>
 
-namespace MzPeak::File {
+namespace MzPeak {
 
 /******************************************************************************/
 /**
  * An interface for files that can be read from.
  */
-class Readable {
+class File {
 public:
   /// Destructor.
-  virtual ~Readable() {};
+  virtual ~File() {};
 
   /**
    * The name of this file.
@@ -63,17 +63,17 @@ public:
 
 protected:
   // Prevent construction.
-  Readable() = default;
+  File() = default;
 
 private:
   // Prevent copying.
-  Readable(const Readable&) = default;
+  File(const File&) = default;
 };
 
 /******************************************************************************/
 /**
- * Turn a `File::Readable` object into an `std::istream`.
+ * Turn a `File` object into an `std::istream`.
  */
-std::unique_ptr<std::istream> to_istream(std::unique_ptr<Readable>);
+std::unique_ptr<std::istream> to_istream(std::unique_ptr<File>);
 
-} // namespace MzPeak::File
+} // namespace MzPeak

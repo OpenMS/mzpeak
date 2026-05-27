@@ -22,7 +22,7 @@ public:
   using random_access_t = arrow::io::RandomAccessFile;
 
   /// Constructor.
-  Arrow(std::unique_ptr<File::Readable>);
+  Arrow(std::unique_ptr<File>);
 
   /// Destructor.
   ~Arrow();

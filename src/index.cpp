@@ -16,7 +16,7 @@ directory of this repository.
  * Boost JSON:
  *   https://www.boost.org/doc/libs/latest/libs/json/doc/html/index.html
  */
-namespace MzPeak::Index {
+namespace MzPeak {
 
 /******************************************************************************/
 const static char* INDEX_FILE_NAME = "mzpeak_index.json";
@@ -25,11 +25,10 @@ const static char* INDEX_FILE_NAME = "mzpeak_index.json";
 namespace json = boost::json;
 
 /******************************************************************************/
-struct Impl {
+struct Index::Impl {
 
   /// Constructor.
-  Impl(std::unique_ptr<MzPeak::Archive::Readable> archive)
-      : archive_(std::move(archive)) {
+  Impl(std::unique_ptr<MzPeak::Archive> archive) : archive_(std::move(archive)) {
     parse_index();
   };
 
@@ -37,24 +36,24 @@ struct Impl {
   void parse_index();
 
   // The archive we are reading files out of.
-  std::unique_ptr<MzPeak::Archive::Readable> archive_;
+  std::unique_ptr<MzPeak::Archive> archive_;
 
   // Parsed file entries.
   std::vector<Schema::File> files_;
 };
 
 /******************************************************************************/
-Readable::Readable(std::unique_ptr<MzPeak::Archive::Readable> archive)
+Index::Index(std::unique_ptr<MzPeak::Archive> archive)
     : impl_(std::make_unique<Impl>(std::move(archive))) {}
 
 /******************************************************************************/
-Readable::~Readable() = default;
+Index::~Index() = default;
 
 /******************************************************************************/
-const std::vector<Schema::File>& Readable::files() const { return impl_->files_; }
+const std::vector<Schema::File>& Index::files() const { return impl_->files_; }
 
 /******************************************************************************/
-void Impl::parse_index() {
+void Index::Impl::parse_index() {
   auto file = archive_->read_file(INDEX_FILE_NAME);
   uint8_t buffer[64 * 1024];
   std::optional<std::size_t> bytes;
@@ -90,7 +89,7 @@ void Impl::parse_index() {
 }
 
 /******************************************************************************/
-Spectra Readable::spectra() const {
+Spectra Index::spectra() const {
   auto it = std::ranges::find(impl_->files_, "spectra_data.parquet",
                               &Schema::File::file_name);
   if (it == impl_->files_.end()) return Spectra();
@@ -98,9 +97,9 @@ Spectra Readable::spectra() const {
 }
 
 /******************************************************************************/
-std::unique_ptr<Util::Parquet> Readable::parquet(const Schema::File& file) const {
-  std::unique_ptr<File::Readable> data(impl_->archive_->read_file(file.file_name));
+std::unique_ptr<Util::Parquet> Index::parquet(const Schema::File& file) const {
+  std::unique_ptr<File> data(impl_->archive_->read_file(file.file_name));
   return std::make_unique<Util::Parquet>(std::move(data), file);
 }
 
-} // namespace MzPeak::Index
+} // namespace MzPeak
