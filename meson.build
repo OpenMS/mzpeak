@@ -68,7 +68,7 @@ deps = [
 
     dependency('boost',
                version : '>=1.89.0',
-               modules : ['json'],
+               modules : ['json', 'program_options'],
                required : true),
 
     dependency('libzip',
@@ -129,4 +129,19 @@ foreach example : example_names
     link_with : libmzpeak_so,
     install : true,
     install_dir : 'examples')
+endforeach
+
+# Tools
+tool_names = [
+  'mzp-inspect'
+]
+
+foreach tool : tool_names
+  executable(
+    tool,
+    'bin/@0@.cpp'.format(tool),
+    include_directories : include,
+    dependencies : deps,
+    link_with : libmzpeak_so,
+    install : true)
 endforeach
