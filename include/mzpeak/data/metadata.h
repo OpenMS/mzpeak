@@ -12,7 +12,7 @@ directory of this repository.
 
 #include "mzpeak/util/parquet.h"
 
-namespace MzPeak {
+namespace MzPeak::Data {
 
 /**
  * Low-level access to metadata files in a mzpeak file.
@@ -30,4 +30,4 @@ private:
   std::unique_ptr<Impl> impl_;
 };
 
-} // namespace MzPeak
+} // namespace MzPeak::Data
