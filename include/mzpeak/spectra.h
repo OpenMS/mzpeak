@@ -9,12 +9,15 @@ top-level directory of this repository.
 #pragma once
 
 #include "mzpeak/spectrum.h"
-#include "mzpeak/util/data_arrays.h"
 #include "mzpeak/util/enumerable_proxy.h"
 
-namespace MzPeak {
+// Forward declarations:
+namespace MzPeak::Data {
+class Arrays;
+class Metadata;
+} // namespace MzPeak::Data
 
-class Spectrum;
+namespace MzPeak {
 
 /**
  * Access all spectra in a MzPeak file.
@@ -29,11 +32,12 @@ public:
 
 public:
   /// Low-level constructor from a Parquet file.
-  explicit Spectra(std::unique_ptr<Util::Parquet> parquet);
+  explicit Spectra(std::unique_ptr<Data::Arrays>, std::unique_ptr<Data::Metadata>);
 
 private:
   // Internal data access.
-  std::shared_ptr<Util::DataArrays> data_;
+  std::shared_ptr<Data::Arrays> data_;
+  std::shared_ptr<Data::Metadata> meta_;
 
   // Function to fetch a specific spectrum.
   Spectrum fetch(std::size_t);

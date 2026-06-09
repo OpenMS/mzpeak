@@ -18,7 +18,7 @@ top-level directory of this repository.
 #include "mzpeak/schema/psi/data_type.h"
 #include "mzpeak/util/parquet_types.h"
 
-namespace MzPeak::Util {
+namespace MzPeak::Data {
 
 /// A vector of Arrow arrays.
 using raw_array_type = std::vector<std::shared_ptr<arrow::Array>>;
@@ -122,7 +122,7 @@ Encoding<T>::decode_point(int index) const
   res.reserve(size);
 
   for (auto& array : *raw->second) {
-    auto ta(parquet_array_cast<T>(array));
+    auto ta(Util::parquet_array_cast<T>(array));
 
     for (int64_t i : std::views::iota(0, ta->length())) {
       if (ta->IsNull(i)) {
@@ -137,4 +137,4 @@ Encoding<T>::decode_point(int index) const
   return res;
 }
 
-} // namespace MzPeak::Util
+} // namespace MzPeak::Data

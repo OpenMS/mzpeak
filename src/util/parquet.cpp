@@ -86,10 +86,18 @@ struct Parquet::Impl {
 
     auto reader_builder = parquet::arrow::FileReaderBuilder();
     auto status = reader_builder.Open(std::move(raf));
-    if (!status.ok()) throw ParquetError(status.ToString());
+
+    if (!status.ok()) {
+      std::string msg("while opening file: " + file.file_name + ": ");
+      throw ParquetError(msg + status.ToString());
+    }
 
     status = reader_builder.Build(&reader_);
-    if (!status.ok()) throw ParquetError(status.ToString());
+
+    if (!status.ok()) {
+      std::string msg("while reading file: " + file.file_name + ": ");
+      throw ParquetError(msg + status.ToString());
+    }
   }
 
   ~Impl() = default;

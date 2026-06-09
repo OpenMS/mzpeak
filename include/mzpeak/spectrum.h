@@ -10,8 +10,8 @@ top-level directory of this repository.
 
 #include <memory>
 
+#include "mzpeak/data/encoding.h"
 #include "mzpeak/schema/psi/data_type.h"
-#include "mzpeak/util/encoding.h"
 
 namespace MzPeak {
 
@@ -57,7 +57,7 @@ public:
    * the returned object.  Use the corresponding methods in this
    * class to fetch those values instead.
    */
-  const Util::array_map_type& raw_encoded_arrays() const;
+  const Data::array_map_type& raw_encoded_arrays() const;
 
   /**
    * The array index for this spectrum.
@@ -68,11 +68,11 @@ protected:
   friend class Spectra;
 
   /// Internal constructor.
-  Spectrum(const Schema::ArrayIndex&, std::unique_ptr<Util::array_map_type>);
+  Spectrum(const Schema::ArrayIndex&, std::unique_ptr<Data::array_map_type>);
 
 private:
   Schema::ArrayIndex array_index_;
-  std::shared_ptr<Util::array_map_type> map_;
+  std::shared_ptr<Data::array_map_type> map_;
   std::vector<mz_type> mz_;
   std::vector<intensity_type> intensity_;
 };

@@ -10,23 +10,23 @@ top-level directory of this repository.
 
 #include <arrow/array.h>
 
+#include "mzpeak/data/encoding.h"
 #include "mzpeak/query.h"
 #include "mzpeak/schema/array_index.h"
-#include "mzpeak/util/encoding.h"
 #include "mzpeak/util/parquet.h"
 
-namespace MzPeak::Util {
+namespace MzPeak::Data {
 
 /**
  * Low-level access to a single data table in a Parquet file.
  */
-class DataArrays {
+class Arrays {
 public:
   /// Constructor.
-  DataArrays(std::unique_ptr<Util::Parquet> parquet);
+  Arrays(std::unique_ptr<Util::Parquet> parquet);
 
   /// Destructor.
-  ~DataArrays();
+  ~Arrays();
 
   /**
    * Access the ArrayIndex for this data file.
@@ -45,7 +45,7 @@ public:
    * NOTE: The query should really only contain predicates that match
    * arrays that have a sort ranking of 0.
    */
-  std::unique_ptr<array_map_type>
+  std::unique_ptr<Data::array_map_type>
   read_arrays(const Query&, const std::vector<Schema::ArrayIndex::Column>&);
 
 private:
@@ -53,4 +53,4 @@ private:
   std::unique_ptr<Impl> impl_;
 };
 
-} // namespace MzPeak::Util
+} // namespace MzPeak::Data

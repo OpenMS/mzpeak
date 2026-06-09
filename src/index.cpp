@@ -6,9 +6,11 @@ directory of this repository.
 
 */
 
-#include "mzpeak/index.h"
 #include "mzpeak/archive.h"
+#include "mzpeak/data/arrays.h"
+#include "mzpeak/data/metadata.h"
 #include "mzpeak/exception.h"
+#include "mzpeak/index.h"
 
 #include <memory>
 
@@ -42,6 +44,12 @@ struct Index::Impl {
 
   // Parsed file entries.
   std::vector<Schema::File> files_;
+
+  // Return an iterator to the requested file.
+  std::vector<Schema::File>::const_iterator find_file(const std::string_view& name)
+  {
+    return std::ranges::find(files_, name, &Schema::File::file_name);
+  }
 };
 
 /******************************************************************************/
@@ -96,10 +104,22 @@ void Index::Impl::parse_index()
 /******************************************************************************/
 Spectra Index::spectra() const
 {
-  auto it = std::ranges::find(impl_->files_, "spectra_data.parquet",
-                              &Schema::File::file_name);
-  if (it == impl_->files_.end()) return Spectra();
-  return Spectra(parquet(*it));
+  auto data_it = impl_->find_file("spectra_data.parquet");
+  auto meta_it = impl_->find_file("spectra_metadata.parquet");
+
+  if (data_it == impl_->files_.end()) {
+    return Spectra();
+  }
+
+  std::unique_ptr<Data::Arrays> data =
+      std::make_unique<Data::Arrays>(parquet(*data_it));
+  std::unique_ptr<Data::Metadata> meta = nullptr;
+
+  if (meta_it != impl_->files_.end()) {
+    meta = std::make_unique<Data::Metadata>(parquet(*meta_it));
+  }
+
+  return Spectra(std::move(data), std::move(meta));
 }
 
 /******************************************************************************/

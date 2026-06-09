@@ -9,9 +9,9 @@ directory of this repository.
 #define BOOST_TEST_MODULE DataArrays
 #include <boost/test/included/unit_test.hpp>
 
+#include "mzpeak/data/arrays.h"
 #include "mzpeak/open.h"
 #include "mzpeak/schema/psi/array_type.h"
-#include "mzpeak/util/data_arrays.h"
 
 /******************************************************************************/
 BOOST_AUTO_TEST_CASE(can_read_mz_array)
@@ -25,7 +25,7 @@ BOOST_AUTO_TEST_CASE(can_read_mz_array)
   BOOST_TEST((entry != mzpeak.files().end()));
 
   auto parquet = mzpeak.parquet(*entry);
-  Util::DataArrays data(std::move(parquet));
+  Data::Arrays data(std::move(parquet));
 
   auto array_index = data.array_index();
   auto spectra_index_column = array_index.columns()[0];
@@ -36,10 +36,10 @@ BOOST_AUTO_TEST_CASE(can_read_mz_array)
 
   auto map = data.read_arrays(query, {mz_column});
 
-  Util::Encoding<Schema::PSI::DataType::Float64> enc(*map, array_index);
+  Data::Encoding<Schema::PSI::DataType::Float64> enc(*map, array_index);
   std::vector<double> mz(enc.decode_array(Schema::PSI::ArrayType::Mz));
 
-  BOOST_TEST(mz.size() == 13589);
+  BOOST_TEST(mz.size() == 13589ul);
   BOOST_TEST(mz[0] == 202.607, boost::test_tools::tolerance(0.001));
   BOOST_TEST(mz[mz.size() - 1] == 1999.840, boost::test_tools::tolerance(0.001));
 }
