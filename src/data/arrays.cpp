@@ -10,13 +10,13 @@ top-level directory of this repository.
 #include <memory>
 #include <parquet/arrow/reader.h>
 
+#include "mzpeak/data/arrays.h"
+#include "mzpeak/data/encoding.h"
 #include "mzpeak/schema/array_index.h"
 #include "mzpeak/schema/psi/data_type.h"
-#include "mzpeak/util/data_arrays.h"
-#include "mzpeak/util/encoding.h"
 #include "mzpeak/util/parquet_types.h"
 
-namespace MzPeak::Util {
+namespace MzPeak::Data {
 
 namespace psi = Schema::PSI;
 using namespace std::placeholders;
@@ -78,7 +78,7 @@ struct Batch {
 };
 
 /******************************************************************************/
-struct DataArrays::Impl {
+struct Arrays::Impl {
   Impl(std::unique_ptr<Util::Parquet> parquet)
       : parquet_(std::move(parquet))
       , array_index_(parquet_->array_index())
@@ -195,22 +195,19 @@ void Batch::query_batch(const Query& query)
 }
 
 /******************************************************************************/
-DataArrays::DataArrays(std::unique_ptr<Util::Parquet> parquet)
+Arrays::Arrays(std::unique_ptr<Util::Parquet> parquet)
     : impl_(std::make_unique<Impl>(std::move(parquet)))
 {
 }
 
 /******************************************************************************/
-DataArrays::~DataArrays() = default;
+Arrays::~Arrays() = default;
 
 /******************************************************************************/
-const Schema::ArrayIndex& DataArrays::array_index() const
-{
-  return impl_->array_index_;
-}
+const Schema::ArrayIndex& Arrays::array_index() const { return impl_->array_index_; }
 
 /******************************************************************************/
-std::size_t DataArrays::record_count() const
+std::size_t Arrays::record_count() const
 {
   auto ne(impl_->array_index_.num_entities());
   if (ne.has_value()) return *ne;
@@ -222,7 +219,8 @@ std::size_t DataArrays::record_count() const
   std::optional<int> col_idx(impl_->array_index_.column_index(index));
   if (!col_idx.has_value()) throw ParquetError("missing column: " + index.path);
 
-  std::optional<Parquet::Stats> stats(impl_->parquet_->statistics(-1, *col_idx));
+  std::optional<Util::Parquet::Stats> stats(
+      impl_->parquet_->statistics(-1, *col_idx));
 
   if (stats.has_value()) {
     auto tptr(Util::parquet_statistics_cast<Schema::PSI::DataType::Int64>(
@@ -237,8 +235,8 @@ std::size_t DataArrays::record_count() const
 
 /******************************************************************************/
 std::unique_ptr<array_map_type>
-DataArrays::read_arrays(const Query& query,
-                        const std::vector<Schema::ArrayIndex::Column>& columns)
+Arrays::read_arrays(const Query& query,
+                    const std::vector<Schema::ArrayIndex::Column>& columns)
 {
   std::unique_ptr<array_map_type> map = std::make_unique<array_map_type>();
 
@@ -290,4 +288,4 @@ DataArrays::read_arrays(const Query& query,
   return map;
 }
 
-} // namespace MzPeak::Util
+} // namespace MzPeak::Data

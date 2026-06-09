@@ -6,8 +6,10 @@ top-level directory of this repository.
 
 */
 
+#include "arrow/util/key_value_metadata.h"
 #include <boost/program_options.hpp>
 #include <iostream>
+#include <memory>
 #include <mzpeak.h>
 #include <print>
 
@@ -15,17 +17,65 @@ top-level directory of this repository.
 namespace po = boost::program_options;
 
 /******************************************************************************/
-int print_array_index(MzPeak::Index& index, const std::string& file)
+std::unique_ptr<MzPeak::Util::Parquet> open_parquet_file(MzPeak::Index& index,
+                                                         const std::string& file)
 {
   auto it = std::ranges::find(index.files(), file, &MzPeak::Schema::File::file_name);
 
   if (it == index.files().end()) {
     std::println(stderr, "file \"{}\" is not in the mzPeak file index", file);
-    return 1;
+    return nullptr;
   }
 
-  auto parquet = index.parquet(*it);
+  return index.parquet(*it);
+}
+
+/******************************************************************************/
+int print_array_index(MzPeak::Index& index, const std::string& file)
+{
+  auto parquet = open_parquet_file(index, file);
+  if (parquet == nullptr) return 1;
+
   std::print("{}", parquet->array_index_json());
+  return 0;
+}
+
+/******************************************************************************/
+int print_schema(MzPeak::Index& index, const std::string& file)
+{
+  auto parquet = open_parquet_file(index, file);
+  if (parquet == nullptr) return 1;
+
+  auto schema = parquet->file_metadata()->schema();
+  std::println("{}", schema->ToString());
+  return 0;
+}
+
+/******************************************************************************/
+int print_fmd_kv(MzPeak::Index& index,
+                 const std::string& file,
+                 std::optional<std::string> key)
+{
+  auto parquet = open_parquet_file(index, file);
+  if (parquet == nullptr) return 1;
+
+  const std::shared_ptr<const arrow::KeyValueMetadata>& kv =
+      parquet->file_metadata()->key_value_metadata();
+
+  if (key.has_value()) {
+    auto res = kv->Get(*key);
+
+    if (!res.ok()) {
+      std::println(stderr, "no such key: {}", *key);
+      return 1;
+    }
+
+    std::println("{}", res.ValueOrDie());
+  } else {
+    for (const std::string& key : kv->keys()) {
+      std::println("{}", key);
+    }
+  }
 
   return 0;
 }
@@ -41,6 +91,14 @@ int main(int argc, char* argv[])
 
     desc.add_options()("array-index", po::value<std::string>(),
                        "Print array index for a Parquet file");
+
+    desc.add_options()("schema", po::value<std::string>(), "Print schema details");
+
+    desc.add_options()("fmdkv", po::value<std::string>(),
+                       "Dump the file meta data kv store");
+
+    desc.add_options()("fmd-key", po::value<std::string>(),
+                       "Used with --fmdkv to print the value of the given key");
 
     po::positional_options_description pops;
     pops.add("file", 1);
@@ -65,6 +123,16 @@ int main(int argc, char* argv[])
 
     if (vmap.count("array-index")) {
       return print_array_index(index, vmap["array-index"].as<std::string>());
+    } else if (vmap.count("schema")) {
+      return print_schema(index, vmap["schema"].as<std::string>());
+    } else if (vmap.count("fmdkv")) {
+      std::optional<std::string> key;
+
+      if (vmap.count("fmd-key")) {
+        key = vmap["fmd-key"].as<std::string>();
+      }
+
+      return print_fmd_kv(index, vmap["fmdkv"].as<std::string>(), key);
     } else {
       std::println("WARN: no command given");
       return 1;
