@@ -93,7 +93,8 @@ public:
     std::optional<std::size_t> n = file_->read(buffer_->mutable_data(), nbytes);
 
     if (n.has_value()) {
-      return arrow::Result<arrow_buffer_t>(buffer_);
+      auto slice = arrow::SliceBuffer(buffer_, 0, *n);
+      return arrow::Result<arrow_buffer_t>(slice);
     } else {
       return arrow::Result<arrow_buffer_t>();
     }
