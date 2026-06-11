@@ -73,8 +73,11 @@ field_type_from_parquet(const std::shared_ptr<parquet::schema::GroupNode>& node)
 }
 
 /******************************************************************************/
-Struct::Field::Field(const std::string_view& column_name, int column_index)
-    : index_(column_index)
+Struct::Field::Field(const std::string_view& column_name,
+                     int32_t rel_index,
+                     int32_t abs_index)
+    : rel_index_(rel_index)
+    , abs_index_(abs_index)
     , schema_name_(column_name)
 {
   using std::operator""sv;
@@ -107,7 +110,10 @@ Struct::Field::Field(const std::string_view& column_name, int column_index)
 }
 
 /******************************************************************************/
-int Struct::Field::index() const { return index_; }
+int32_t Struct::Field::relative_index() const { return rel_index_; }
+
+/******************************************************************************/
+int32_t Struct::Field::absolute_index() const { return abs_index_; }
 
 /******************************************************************************/
 const std::string& Struct::Field::name() const { return clean_name_; }
@@ -128,13 +134,15 @@ const std::optional<Schema::PSI::DataType>& Struct::Field::data_type() const
 }
 
 /******************************************************************************/
-Struct::Struct(const parquet::schema::GroupNode& node, int index)
+Struct::Struct(const parquet::schema::GroupNode& node, int32_t index, int32_t offset)
     : name_(node.name())
     , index_(index)
 {
-  for (int i : std::views::iota(0, node.field_count())) {
+  for (int32_t i : std::views::iota(0, node.field_count())) {
     auto child = node.field(i);
-    std::shared_ptr<Field> field = std::make_shared<Field>(child->name(), i);
+
+    std::shared_ptr<Field> field =
+        std::make_shared<Field>(child->name(), i, offset + i);
 
     if (child->is_primitive()) {
       auto prim = std::static_pointer_cast<parquet::schema::PrimitiveNode>(child);
@@ -160,16 +168,16 @@ Struct::Struct(const parquet::schema::GroupNode& node, int index)
 const std::string& Struct::name() const { return name_; }
 
 /******************************************************************************/
-int Struct::index() const { return index_; }
+int32_t Struct::index() const { return index_; }
 
 /******************************************************************************/
-std::optional<std::reference_wrapper<const Struct::Field>>
+std::optional<std::shared_ptr<const Struct::Field>>
 Struct::field(const std::string_view& name) const
 {
   auto it = fields_.find(std::string{name});
 
   if (it != fields_.end()) {
-    return std::ref(*it->second);
+    return it->second;
   } else {
     return {};
   }

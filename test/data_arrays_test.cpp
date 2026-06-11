@@ -16,6 +16,8 @@ directory of this repository.
 /******************************************************************************/
 BOOST_AUTO_TEST_CASE(can_read_mz_array)
 {
+  // FIXME: Use proper field access.
+
   using namespace MzPeak;
 
   auto mzpeak = MzPeak::open("../test/files/small.mzpeak");
@@ -25,16 +27,19 @@ BOOST_AUTO_TEST_CASE(can_read_mz_array)
   BOOST_TEST((entry != mzpeak.files().end()));
 
   auto parquet = mzpeak.parquet(*entry);
+
   Data::Arrays data(std::move(parquet));
 
+  auto index_field = data.field("spectrum_index");
+  auto mz_column = data.field("mz");
+
+  BOOST_TEST(index_field.has_value());
+  BOOST_TEST(mz_column.has_value());
+
   auto array_index = data.array_index();
-  auto spectra_index_column = array_index.columns()[0];
-  auto mz_column = array_index.columns()[1];
 
-  using enum Schema::PSI::DataType;
-  Query query = Query::Predicate<Int64>::equal_to(spectra_index_column, 0);
-
-  auto map = data.read_arrays(query, {mz_column});
+  auto query = Query::Builder(*index_field).eq<int64_t>(0);
+  auto map = data.read_arrays(query, {*mz_column->second});
 
   Data::Encoding<Schema::PSI::DataType::Float64> enc(*map, array_index);
   std::vector<double> mz(enc.decode_array(Schema::PSI::ArrayType::Mz));
