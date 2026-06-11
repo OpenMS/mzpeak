@@ -15,6 +15,7 @@ directory of this repository.
 #include "mzpeak/query.h"
 #include "mzpeak/schema/array_index.h"
 #include "mzpeak/schema/file.h"
+#include "mzpeak/util/struct.h"
 
 namespace MzPeak::Util {
 
@@ -24,6 +25,8 @@ namespace MzPeak::Util {
 class Parquet final {
 public:
   using file_metadata_t = std::shared_ptr<parquet::FileMetaData>;
+
+  using struct_map_t = std::map<std::string, std::shared_ptr<Struct>>;
 
   /// Constructor.
   Parquet(std::unique_ptr<MzPeak::File>, Schema::File);
@@ -35,6 +38,11 @@ public:
    * Return the file information from the MzPeak index.
    */
   const Schema::File& index_file() const;
+
+  /**
+   * Return the schema encoded as a map of Struct objects.
+   */
+  const struct_map_t& structs() const;
 
   /**
    * Access the file metadata.

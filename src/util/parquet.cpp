@@ -98,6 +98,8 @@ struct Parquet::Impl {
       std::string msg("while reading file: " + file.file_name + ": ");
       throw ParquetError(msg + status.ToString());
     }
+
+    parse_schema();
   }
 
   ~Impl() = default;
@@ -107,6 +109,9 @@ struct Parquet::Impl {
     std::string msg("file accessing " + file_.file_name + ": " + error);
     throw ParquetError(msg);
   }
+
+  /// Load the schema.
+  void parse_schema();
 
   // Get column statistics.
   std::optional<Stats> statistics(std::shared_ptr<parquet::RowGroupMetaData>,
@@ -126,7 +131,29 @@ struct Parquet::Impl {
   Schema::File file_;
   std::unique_ptr<Arrow> arrow_;
   std::unique_ptr<parquet::arrow::FileReader> reader_;
+  struct_map_t structs_;
 };
+
+/******************************************************************************/
+void Parquet::Impl::parse_schema()
+{
+  auto fmd = reader_->parquet_reader()->metadata();
+  auto root = fmd->schema()->group_node();
+
+  for (int i : std::views::iota(0, root->field_count())) {
+    auto node = root->field(i);
+
+    // TODO: Should we emit a warning if there is a top-level
+    // primitive column?
+    if (node->is_group()) {
+      std::shared_ptr<parquet::schema::GroupNode> group =
+          std::static_pointer_cast<parquet::schema::GroupNode>(node);
+
+      std::shared_ptr<Struct> s = std::make_shared<Struct>(*group, i);
+      structs_[s->name()] = s;
+    }
+  }
+}
 
 /******************************************************************************/
 std::pair<std::string, std::size_t>
@@ -222,6 +249,9 @@ Parquet::~Parquet() = default;
 
 /******************************************************************************/
 const Schema::File& Parquet::index_file() const { return impl_->file_; }
+
+/******************************************************************************/
+const Parquet::struct_map_t& Parquet::structs() const { return impl_->structs_; }
 
 /******************************************************************************/
 Parquet::file_metadata_t Parquet::file_metadata() const
