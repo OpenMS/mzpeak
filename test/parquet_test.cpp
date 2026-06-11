@@ -30,7 +30,7 @@ BOOST_AUTO_TEST_CASE(can_get_array_index)
   Schema::ArrayIndex index(parquet->array_index());
 
   BOOST_TEST(index.prefix() == "point");
-  BOOST_TEST(index.columns().size() == 3);
+  BOOST_TEST(index.columns().size() == 3ul);
 
   BOOST_TEST((index.columns()[1].array_name == "m/z array"));
   BOOST_TEST((index.columns()[1].buffer_format == Schema::BufferFormat::Point));
@@ -45,5 +45,5 @@ BOOST_AUTO_TEST_CASE(can_get_array_index)
   BOOST_TEST((index.columns()[1].transform == std::optional{"MS:1003901"}));
 
   std::size_t count = index.num_entities().value_or(0);
-  BOOST_TEST(count == 48);
+  BOOST_TEST(count == 48ul);
 }
