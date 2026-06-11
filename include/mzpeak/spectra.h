@@ -40,7 +40,7 @@ private:
   std::shared_ptr<Data::Metadata> meta_;
 
   // Function to fetch a specific spectrum.
-  Spectrum fetch(std::size_t);
+  Spectrum fetch(int64_t);
 };
 
 } // namespace MzPeak

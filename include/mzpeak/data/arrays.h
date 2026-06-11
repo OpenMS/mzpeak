@@ -14,6 +14,7 @@ top-level directory of this repository.
 #include "mzpeak/query.h"
 #include "mzpeak/schema/array_index.h"
 #include "mzpeak/util/parquet.h"
+#include "mzpeak/util/struct.h"
 
 namespace MzPeak::Data {
 
@@ -39,6 +40,22 @@ public:
   std::size_t record_count() const;
 
   /**
+   * Low-level interface for accessing a struct field given its name.
+   *
+   * Useful if you need to manually construct queries.
+   */
+  std::optional<Query::destination_t> field(const std::string_view&) const;
+
+  /**
+   * Convert array index columns into struct fields.
+   *
+   * This is a temporary function while we migrate to a new query
+     system.
+   */
+  std::vector<Util::Struct::Field>
+  columns_to_fields(const std::vector<Schema::ArrayIndex::Column>&) const;
+
+  /**
    * Extract all of the requested arrays from the current table using
    * the given query to limit the resulting data.
    *
@@ -46,7 +63,7 @@ public:
    * arrays that have a sort ranking of 0.
    */
   std::unique_ptr<Data::array_map_type>
-  read_arrays(const Query&, const std::vector<Schema::ArrayIndex::Column>&);
+  read_arrays(const Query&, const std::vector<Util::Struct::Field>&);
 
 private:
   struct Impl;

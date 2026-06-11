@@ -19,20 +19,21 @@ BOOST_AUTO_TEST_CASE(can_parse_column_names)
   using namespace MzPeak::Util;
 
   // All components.
-  Struct::Field a("MS_1000528_lowest_observed_mz_unit_MS_1000040", 0);
-  BOOST_TEST(a.index() == 0);
+  Struct::Field a("MS_1000528_lowest_observed_mz_unit_MS_1000040", 0, 2);
+  BOOST_TEST(a.relative_index() == 0);
+  BOOST_TEST(a.absolute_index() == 2);
   BOOST_TEST(a.name() == "lowest_observed_mz");
   BOOST_TEST((a.cv_type().has_value() && a.cv_type().value() == "MS:1000528"));
   BOOST_TEST((a.cv_unit().has_value() && a.cv_unit().value() == "MS:1000040"));
 
   // No unit.
-  Struct::Field b("MS_1000016_scan_start_time", 0);
+  Struct::Field b("MS_1000016_scan_start_time", 0, 0);
   BOOST_TEST(b.name() == "scan_start_time");
   BOOST_TEST((b.cv_type().has_value() && b.cv_type().value() == "MS:1000016"));
   BOOST_TEST((!b.cv_unit().has_value()));
 
   // Nmae only.
-  Struct::Field c("mz", 0);
+  Struct::Field c("mz", 0, 0);
   BOOST_TEST(c.name() == "mz");
   BOOST_TEST(!c.cv_type().has_value());
   BOOST_TEST(!c.cv_unit().has_value());
@@ -50,15 +51,13 @@ BOOST_AUTO_TEST_CASE(can_load_all_structs)
   BOOST_TEST((entry != mzpeak.files().end()));
 
   auto parquet = mzpeak.parquet(*entry);
-  auto structs = parquet->structs();
 
+  auto structs = parquet->structs();
   BOOST_TEST((structs.size() == 4));
 
-  auto spectrum = structs["spectrum"];
-  auto spectrum_index = spectrum->field("index");
-
-  BOOST_TEST((spectrum_index.has_value()));
-  BOOST_TEST((spectrum_index->get().data_type().has_value()));
-  BOOST_TEST((spectrum_index->get().data_type().value() ==
+  auto spectrum_index = parquet->field("spectrum", "index");
+  BOOST_TEST(spectrum_index.has_value());
+  BOOST_TEST((spectrum_index->second->data_type().has_value()));
+  BOOST_TEST((spectrum_index->second->data_type().value() ==
               MzPeak::Schema::PSI::DataType::Int64));
 }

@@ -50,7 +50,9 @@ public:
     };
 
     /// Constructor from an encoded column name.
-    explicit Field(const std::string_view& column_name, int column_index);
+    explicit Field(const std::string_view& column_name,
+                   int32_t rel_index,
+                   int32_t abs_index);
 
     /// Destructor.
     ~Field() = default;
@@ -58,7 +60,12 @@ public:
     /**
      * Column index inside the parent struct.
      */
-    int index() const;
+    int32_t relative_index() const;
+
+    /**
+     * Column index inside the parquet file.
+     */
+    int32_t absolute_index() const;
 
     /**
      * The name of this field using underscores to replace spaces and
@@ -89,7 +96,8 @@ public:
   private:
     friend class Struct;
 
-    int index_;
+    int32_t rel_index_;
+    int32_t abs_index_;
     std::string schema_name_;
     std::string clean_name_;
     std::optional<std::string> cv_type_;
@@ -103,7 +111,7 @@ public:
   using field_map_t = std::map<std::string, std::shared_ptr<Field>>;
 
   /// Constructor from a parquet schema descriptor.
-  explicit Struct(const parquet::schema::GroupNode&, int index);
+  explicit Struct(const parquet::schema::GroupNode&, int32_t index, int32_t offset);
 
   /// Destructor.
   ~Struct() = default;
@@ -116,7 +124,7 @@ public:
   /**
    * Return the schema column index of this struct.
    */
-  int index() const;
+  int32_t index() const;
 
   /**
    * Find a field given it's name.
@@ -124,8 +132,7 @@ public:
    * NOTE: For metadata structs this is the cleaned name, not the raw
    * schema node name.
    */
-  std::optional<std::reference_wrapper<const Field>>
-  field(const std::string_view&) const;
+  std::optional<std::shared_ptr<const Field>> field(const std::string_view&) const;
 
   /**
    * Return a map of all fields.
@@ -134,7 +141,7 @@ public:
 
 private:
   std::string name_;
-  int index_;
+  int32_t index_;
   field_map_t fields_;
 };
 

@@ -29,6 +29,15 @@ namespace MzPeak::Util {
 namespace psi = Schema::PSI;
 using namespace std::placeholders;
 
+/**
+ * Used to return column statistics.
+ */
+struct Stats {
+  std::shared_ptr<parquet::RowGroupMetaData> row;
+  std::shared_ptr<parquet::ColumnChunkMetaData> column;
+  std::shared_ptr<parquet::Statistics> stats;
+};
+
 /******************************************************************************/
 std::optional<std::string> get_kv_string(Parquet::file_metadata_t& fmd,
                                          const std::string& key)
@@ -115,7 +124,7 @@ struct Parquet::Impl {
 
   // Get column statistics.
   std::optional<Stats> statistics(std::shared_ptr<parquet::RowGroupMetaData>,
-                                  int) const;
+                                  const Query::destination_t&) const;
 
   // Get the array index JSON and number of entities.
   std::pair<std::string, std::size_t> array_index(Parquet::file_metadata_t&);
@@ -139,8 +148,9 @@ void Parquet::Impl::parse_schema()
 {
   auto fmd = reader_->parquet_reader()->metadata();
   auto root = fmd->schema()->group_node();
+  int32_t offset = 0;
 
-  for (int i : std::views::iota(0, root->field_count())) {
+  for (int32_t i : std::views::iota(0, root->field_count())) {
     auto node = root->field(i);
 
     // TODO: Should we emit a warning if there is a top-level
@@ -149,8 +159,9 @@ void Parquet::Impl::parse_schema()
       std::shared_ptr<parquet::schema::GroupNode> group =
           std::static_pointer_cast<parquet::schema::GroupNode>(node);
 
-      std::shared_ptr<Struct> s = std::make_shared<Struct>(*group, i);
+      std::shared_ptr<Struct> s = std::make_shared<Struct>(*group, i, offset);
       structs_[s->name()] = s;
+      offset += group->field_count();
     }
   }
 }
@@ -172,11 +183,11 @@ Parquet::Impl::array_index(Parquet::file_metadata_t& fmd)
 }
 
 /******************************************************************************/
-std::optional<Parquet::Stats>
+std::optional<Stats>
 Parquet::Impl::statistics(std::shared_ptr<parquet::RowGroupMetaData> rg,
-                          int index) const
+                          const Query::destination_t& dest) const
 {
-  auto chunk(rg->ColumnChunk(index));
+  auto chunk(rg->ColumnChunk(dest.first->index() + dest.second->relative_index()));
   if (!chunk->is_stats_set()) return {};
 
   auto stats(chunk->statistics());
@@ -189,10 +200,10 @@ Parquet::Impl::statistics(std::shared_ptr<parquet::RowGroupMetaData> rg,
 // Helper for dispatching typed statistics.
 struct MinMaxForType {
 
-  template <psi::DataType T> std::optional<Query::range_t> operator()() const
+  template <psi::DataType T> Query::Result<Query::range_t> operator()() const
   {
     auto tptr(Util::parquet_statistics_cast<T>(col_, stats_));
-    return std::make_pair<>(tptr->min(), tptr->max());
+    return Query::Result<Query::range_t>(std::make_pair<>(tptr->min(), tptr->max()));
   }
 
   const parquet::ColumnChunkMetaData& col_;
@@ -200,9 +211,9 @@ struct MinMaxForType {
 };
 
 template <> // Specialized since we don't support ASCII types.
-std::optional<Query::range_t> MinMaxForType::operator()<psi::DataType::ASCII>() const
+Query::Result<Query::range_t> MinMaxForType::operator()<psi::DataType::ASCII>() const
 {
-  return {};
+  return Query::Result<Query::range_t>::fail();
 }
 
 /******************************************************************************/
@@ -210,19 +221,18 @@ std::vector<int> Parquet::Impl::run_query(const Query& query)
 {
   auto fmd(reader_->parquet_reader()->metadata());
 
-  auto get_range = [&](const std::shared_ptr<parquet::RowGroupMetaData>& rg,
-                       const Schema::ArrayIndex::Column& column)
-      -> std::optional<Query::range_t> {
-    const std::string& path(column.path);
+  auto get_range =
+      [&](const std::shared_ptr<parquet::RowGroupMetaData>& rg,
+          const Query::destination_t& dest) -> Query::Result<Query::range_t> {
+    std::optional<Stats> stats(statistics(rg, dest));
+    if (!stats.has_value()) return Query::Result<Query::range_t>::fail();
 
-    int column_index = rg->schema()->ColumnIndex(path);
-    if (column_index < 0) error("invalid path: " + path);
-
-    std::optional<Stats> stats(statistics(rg, column_index));
-    if (!stats.has_value()) return {};
-
-    return psi::dispatch(column.data_type,
-                         MinMaxForType{*stats->column, *stats->stats});
+    if (dest.second->data_type().has_value()) {
+      return psi::dispatch(dest.second->data_type().value(),
+                           MinMaxForType{*stats->column, *stats->stats});
+    } else {
+      return Query::Result<Query::range_t>::fail();
+    }
   };
 
   std::vector<int> res;
@@ -230,7 +240,8 @@ std::vector<int> Parquet::Impl::run_query(const Query& query)
   for (auto row : std::views::iota(0, fmd->num_row_groups())) {
     std::shared_ptr<parquet::RowGroupMetaData> rg(fmd->RowGroup(row));
 
-    if (query.eval(std::bind(get_range, std::ref(rg), _1))) {
+    auto qres = query.eval(std::bind(get_range, std::ref(rg), _1));
+    if (qres.has_value() && qres.value()) {
       res.push_back(row);
     }
   }
@@ -252,6 +263,20 @@ const Schema::File& Parquet::index_file() const { return impl_->file_; }
 
 /******************************************************************************/
 const Parquet::struct_map_t& Parquet::structs() const { return impl_->structs_; }
+
+/******************************************************************************/
+std::optional<Query::destination_t>
+Parquet::field(const std::string_view& struct_name,
+               const std::string_view& field_name) const
+{
+  auto struct_ptr = impl_->structs_.find(std::string{struct_name});
+  if (struct_ptr == impl_->structs_.end()) return {};
+
+  auto field_ptr = struct_ptr->second->field(field_name);
+  if (!field_ptr.has_value()) return {};
+
+  return std::make_pair(struct_ptr->second, field_ptr.value());
+}
 
 /******************************************************************************/
 Parquet::file_metadata_t Parquet::file_metadata() const
@@ -296,21 +321,6 @@ Schema::ArrayIndex Parquet::array_index() const
 
 /******************************************************************************/
 parquet::arrow::FileReader& Parquet::reader() const { return *impl_->reader_; }
-
-/******************************************************************************/
-std::optional<Parquet::Stats> Parquet::statistics(int row, int column) const
-{
-  auto fmd(file_metadata());
-
-  if (row == -1) {
-    int n(fmd->num_row_groups());
-    if (n <= 0) return {};
-    row = n - 1;
-  }
-
-  auto rg = fmd->RowGroup(row);
-  return impl_->statistics(std::move(rg), column);
-}
 
 /******************************************************************************/
 std::vector<int> Parquet::find_row_groups(const Query& query)

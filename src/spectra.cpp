@@ -31,17 +31,22 @@ Spectra::Spectra(std::unique_ptr<Data::Arrays> data,
 }
 
 /******************************************************************************/
-Spectrum Spectra::fetch(std::size_t index)
+Spectrum Spectra::fetch(int64_t index)
 {
   // FIXME: Throw an error if data_ is a nullptr.
   // FIXME: Write a better way of getting the spectrum index
   auto array_index(data_->array_index());
-  auto spectra_index_column = array_index.columns()[0];
 
-  using enum Schema::PSI::DataType;
-  Query query = Query::Predicate<Int64>::equal_to(spectra_index_column, index);
+  auto dest = data_->field("spectrum_index");
 
-  auto map = data_->read_arrays(query, array_index.columns());
+  if (!dest.has_value()) {
+    throw("missing spectrum_index");
+  }
+
+  Query query = Query::Builder(*dest).eq(index);
+
+  auto map =
+      data_->read_arrays(query, data_->columns_to_fields(array_index.columns()));
   return Spectrum(array_index, std::move(map));
 }
 

@@ -16,6 +16,13 @@ directory of this repository.
 
 namespace MzPeak::Schema::PSI {
 
+template <typename T>
+concept supported_data_type = std::same_as<std::remove_cvref_t<T>, int32_t> ||
+                              std::same_as<std::remove_cvref_t<T>, int64_t> ||
+                              std::same_as<std::remove_cvref_t<T>, float> ||
+                              std::same_as<std::remove_cvref_t<T>, double> ||
+                              std::same_as<std::remove_cvref_t<T>, std::string>;
+
 /**
  * Children of the MS:1000518 type:
  *
@@ -89,7 +96,7 @@ template <> struct data_type_traits<DataType::Float64> {
 };
 
 template <> struct data_type_traits<DataType::ASCII> {
-  using value_type = char*;
+  using value_type = std::string;
 };
 
 /// Helper for constant dispatching.
@@ -120,6 +127,27 @@ decltype(auto) dispatch(DataType t, Fn&& func, Args&&... args)
   }
 
   throw TypeError("unknown DataType: " + data_type_to_string(t));
+}
+
+/**
+ * Return a DataType at run-time that matches the given value type.
+ */
+template <supported_data_type T> constexpr DataType data_type_for_value_type()
+{
+  if constexpr (std::is_same_v<T, int32_t>) {
+    return DataType::Int32;
+  } else if constexpr (std::is_same_v<T, int64_t>) {
+    return DataType::Int64;
+  } else if constexpr (std::is_same_v<T, float>) {
+    return DataType::Float32;
+  } else if constexpr (std::is_same_v<T, double>) {
+    return DataType::Float64;
+  } else if constexpr (std::is_same_v<T, std::string>) {
+    return DataType::ASCII;
+  }
+
+  // Just to make the compiler happy.
+  return DataType::Int32;
 }
 
 } // namespace MzPeak::Schema::PSI

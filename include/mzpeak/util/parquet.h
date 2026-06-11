@@ -45,6 +45,12 @@ public:
   const struct_map_t& structs() const;
 
   /**
+   * Return a Struct and Field matching the given names.
+   */
+  std::optional<Query::destination_t> field(const std::string_view&,
+                                            const std::string_view&) const;
+
+  /**
    * Access the file metadata.
    */
   file_metadata_t file_metadata() const;
@@ -64,25 +70,6 @@ public:
    * while this Parquet object exists.
    */
   parquet::arrow::FileReader& reader() const;
-
-  /**
-   * Used to return column statistics.
-   */
-  struct Stats {
-    std::shared_ptr<parquet::RowGroupMetaData> row;
-    std::shared_ptr<parquet::ColumnChunkMetaData> column;
-    std::shared_ptr<parquet::Statistics> stats;
-  };
-
-  /**
-   * Try to get the requested column and its statistics value.
-   *
-   * If the statistics are not set, or it doesn't have a minimum and
-   * maximum values set then nullopt is returned.
-   *
-   * If `row` is equal to `-1` the last row group is used.
-   */
-  std::optional<Stats> statistics(int row, int column) const;
 
   /**
    * Execute a query and return the row groups that matched.

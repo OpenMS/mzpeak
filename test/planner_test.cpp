@@ -1,0 +1,119 @@
+/*
+
+This file is part of the package mzpeak.  It is subject to the license
+in the LICENSE file found in the top-level directory of this project.
+
+*/
+
+#define BOOST_TEST_MODULE Planner
+#include <boost/test/included/unit_test.hpp>
+
+#include "mzpeak/open.h"
+#include "mzpeak/util/parquet.h"
+#include "mzpeak/util/planner.h"
+
+/******************************************************************************/
+BOOST_AUTO_TEST_CASE(can_locate_correct_rows)
+{
+  using namespace MzPeak;
+  auto index = MzPeak::open("../test/files/small.mzpeak");
+
+  auto entry = std::ranges::find(index.files(), "spectra_data.parquet",
+                                 &Schema::File::file_name);
+
+  BOOST_TEST((entry != index.files().end()));
+
+  auto parquet = index.parquet(*entry);
+
+  auto index_field = parquet->field("point", "spectrum_index");
+  BOOST_TEST(index_field.has_value());
+
+  auto mz_field = parquet->field("point", "mz");
+  BOOST_TEST(mz_field.has_value());
+
+  Query queries[] = {
+      Query::Builder(*index_field).eq<int64_t>(20),
+      Query::Builder(*mz_field).gt<double>(0),
+  };
+
+  for (auto& query : queries) {
+    Util::Planner planner(parquet->reader(), query);
+    auto ranges = planner.plan();
+
+    // Ug, this file is too small to exercise the planner.
+    BOOST_TEST(ranges.size() == 1ul);
+
+    auto first = ranges[0];
+    BOOST_TEST(first.row_group == 0);
+    BOOST_TEST(first.offset == 0);
+    BOOST_TEST(first.length == 217710);
+  }
+}
+
+/******************************************************************************/
+BOOST_AUTO_TEST_CASE(can_use_two_columns)
+{
+  using namespace MzPeak;
+  auto index = MzPeak::open("../test/files/small.mzpeak");
+
+  auto entry = std::ranges::find(index.files(), "spectra_metadata.parquet",
+                                 &Schema::File::file_name);
+
+  BOOST_TEST((entry != index.files().end()));
+
+  auto parquet = index.parquet(*entry);
+
+  auto index_field = parquet->field("scan", "source_index");
+  BOOST_TEST(index_field.has_value());
+
+  auto start_time_field = parquet->field("scan", "scan_start_time");
+  BOOST_TEST(start_time_field.has_value());
+
+  auto query = Query::Builder(*index_field).eq<int64_t>(3) &&
+               Query::Builder(*start_time_field).gt<float>(0);
+
+  Util::Planner planner(parquet->reader(), query);
+
+  auto ranges = planner.plan();
+  BOOST_TEST(ranges.size() == 1ul);
+
+  // Ug, this file is too small to exercise the planner.
+  auto first = ranges[0];
+  BOOST_TEST(first.row_group == 0);
+  BOOST_TEST(first.offset == 0);
+  BOOST_TEST(first.length == 48);
+}
+
+/******************************************************************************/
+BOOST_AUTO_TEST_CASE(can_access_multiple_structs)
+{
+  using namespace MzPeak;
+  auto index = MzPeak::open("../test/files/small.mzpeak");
+
+  auto entry = std::ranges::find(index.files(), "spectra_metadata.parquet",
+                                 &Schema::File::file_name);
+
+  BOOST_TEST((entry != index.files().end()));
+
+  auto parquet = index.parquet(*entry);
+
+  auto index_field = parquet->field("scan", "source_index");
+  BOOST_TEST(index_field.has_value());
+
+  auto level_field = parquet->field("spectrum", "ms_level");
+  BOOST_TEST(level_field.has_value());
+
+  auto query = Query::Builder(*index_field).eq<int64_t>(30) &&
+               Query::Builder(*level_field).ge(1);
+
+  Util::Planner planner(parquet->reader(), query);
+
+  auto ranges = planner.plan();
+  BOOST_TEST(ranges.size() == 1ul);
+
+  // Ug, this file is too small to exercise the planner.
+  auto first = ranges[0];
+  BOOST_TEST(first.row_group == 0);
+  BOOST_TEST(first.offset == 0);
+  BOOST_TEST(first.length == 48);
+}

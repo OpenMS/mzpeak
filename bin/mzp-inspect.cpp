@@ -67,7 +67,7 @@ int print_structs(MzPeak::Index& index, const std::string& file)
                  s->fields().size());
 
     auto fields = s->fields() | std::views::values | std::ranges::to<std::vector>();
-    std::ranges::sort(fields, {}, &MzPeak::Util::Struct::Field::index);
+    std::ranges::sort(fields, {}, &MzPeak::Util::Struct::Field::relative_index);
 
     for (const auto& field : fields) {
       std::string kind("?");
@@ -93,8 +93,9 @@ int print_structs(MzPeak::Index& index, const std::string& file)
         type = MzPeak::Schema::PSI::data_type_to_string(field->data_type().value());
       }
 
-      std::println("  | {} [index:{}, kind: {}, type:{}]", field->name(),
-                   field->index(), kind, type);
+      std::println("  | {} [rel_idx:{}, abs_idx: {}, kind: {}, type:{}]",
+                   field->name(), field->relative_index(), field->absolute_index(),
+                   kind, type);
     }
   }
 
