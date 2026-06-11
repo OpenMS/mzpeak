@@ -8,6 +8,7 @@ directory of this repository.
 
 #pragma once
 
+#include <optional>
 #include <string>
 #include <type_traits>
 
@@ -60,6 +61,11 @@ std::string data_type_to_string(DataType);
  * Parse a DataType from a string.
  */
 DataType data_type_from_string(const std::string_view&);
+
+/**
+ * Convert to a DataType from a parquet type enum.
+ */
+std::optional<DataType> data_type_from_parquet(int);
 
 /**
  * Compile-time information about the DataType type.

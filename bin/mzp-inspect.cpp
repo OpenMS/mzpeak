@@ -7,6 +7,7 @@ top-level directory of this repository.
 */
 
 #include "arrow/util/key_value_metadata.h"
+#include "mzpeak/util/struct.h"
 #include <boost/program_options.hpp>
 #include <iostream>
 #include <memory>
@@ -48,6 +49,55 @@ int print_schema(MzPeak::Index& index, const std::string& file)
 
   auto schema = parquet->file_metadata()->schema();
   std::println("{}", schema->ToString());
+  return 0;
+}
+
+/******************************************************************************/
+int print_structs(MzPeak::Index& index, const std::string& file)
+{
+  auto parquet = open_parquet_file(index, file);
+  if (parquet == nullptr) return 1;
+
+  auto structs =
+      parquet->structs() | std::views::values | std::ranges::to<std::vector>();
+  std::ranges::sort(structs, {}, &MzPeak::Util::Struct::index);
+
+  for (const auto& s : structs) {
+    std::println("{} [index:{}, fields:{}]", s->name(), s->index(),
+                 s->fields().size());
+
+    auto fields = s->fields() | std::views::values | std::ranges::to<std::vector>();
+    std::ranges::sort(fields, {}, &MzPeak::Util::Struct::Field::index);
+
+    for (const auto& field : fields) {
+      std::string kind("?");
+      std::string type("?");
+
+      using enum MzPeak::Util::Struct::Field::Kind;
+      switch (field->kind()) {
+      case Scalar:
+        kind = "scalar";
+        break;
+      case List:
+        kind = "list";
+        break;
+      case Params:
+        kind = "params";
+        break;
+      case Unknown:
+        kind = "unknown";
+        break;
+      }
+
+      if (field->data_type().has_value()) {
+        type = MzPeak::Schema::PSI::data_type_to_string(field->data_type().value());
+      }
+
+      std::println("  | {} [index:{}, kind: {}, type:{}]", field->name(),
+                   field->index(), kind, type);
+    }
+  }
+
   return 0;
 }
 
@@ -94,6 +144,9 @@ int main(int argc, char* argv[])
 
     desc.add_options()("schema", po::value<std::string>(), "Print schema details");
 
+    desc.add_options()("structs", po::value<std::string>(),
+                       "Print struct information");
+
     desc.add_options()("fmdkv", po::value<std::string>(),
                        "Dump the file meta data kv store");
 
@@ -125,6 +178,8 @@ int main(int argc, char* argv[])
       return print_array_index(index, vmap["array-index"].as<std::string>());
     } else if (vmap.count("schema")) {
       return print_schema(index, vmap["schema"].as<std::string>());
+    } else if (vmap.count("structs")) {
+      return print_structs(index, vmap["structs"].as<std::string>());
     } else if (vmap.count("fmdkv")) {
       std::optional<std::string> key;
 

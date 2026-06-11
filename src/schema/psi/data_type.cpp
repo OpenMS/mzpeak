@@ -6,6 +6,8 @@ directory of this repository.
 
 */
 
+#include <parquet/types.h>
+
 #include "mzpeak/schema/psi/data_type.h"
 
 namespace MzPeak::Schema::PSI {
@@ -49,6 +51,35 @@ DataType data_type_from_string(const std::string_view& s)
   } else {
     return ASCII;
   }
+}
+
+/******************************************************************************/
+std::optional<DataType> data_type_from_parquet(int type_code)
+{
+  using enum DataType;
+
+  switch (type_code) {
+  case parquet::Type::BOOLEAN:
+    return {};
+  case parquet::Type::INT32:
+    return Int32;
+  case parquet::Type::INT64:
+    return Int64;
+  case parquet::Type::INT96:
+    return {};
+  case parquet::Type::FLOAT:
+    return Float32;
+  case parquet::Type::DOUBLE:
+    return Float64;
+  case parquet::Type::BYTE_ARRAY:
+    return {};
+  case parquet::Type::FIXED_LEN_BYTE_ARRAY:
+    return {};
+  case parquet::Type::UNDEFINED:
+    return {};
+  }
+
+  return {};
 }
 
 } // namespace MzPeak::Schema::PSI
