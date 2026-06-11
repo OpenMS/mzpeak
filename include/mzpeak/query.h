@@ -9,108 +9,112 @@ top-level directory of this repository.
 #pragma once
 
 #include <any>
+#include <functional>
+#include <type_traits>
+#include <variant>
 
-#include "mzpeak/schema/array_index.h"
-#include "mzpeak/schema/psi/data_type.h"
+#include "mzpeak/util/struct.h"
 
 namespace MzPeak {
+
+template <typename T>
+concept query_comparable = std::same_as<std::remove_cvref_t<T>, int32_t> ||
+                           std::same_as<std::remove_cvref_t<T>, int64_t> ||
+                           std::same_as<std::remove_cvref_t<T>, float> ||
+                           std::same_as<std::remove_cvref_t<T>, double>;
 
 /**
  * A low-level interface for selecting which records to extract from a
  * Parquet file.
  *
- * Queries are built using one of the `Predicate<T>` functions along
- * with the array the predicate should match.
+ * Queries are built using the Builder class and one of the provided
+ * predicate functions.
  *
  * More complex queries can be constructed using the logic operators
  * (`&&`, `||`, and `!`).  NOTE: Keep in mind that complex queries are
  * built and evaluated using recursion so depth should be kept to a
  * minimum.
  */
-class Query {
+class Query final {
 public:
-  template <Schema::PSI::DataType T> class Predicate final {
+  using Struct = Util::Struct;
+  using Field = Util::Struct::Field;
+  struct Predicate;
+
+  // How to specify what field you want to query.
+  using destination_t =
+      std::pair<std::shared_ptr<const Struct>, std::shared_ptr<const Field>>;
+
+  /**
+   * This class is used to construct a Query object using two inputs:
+   *
+   * 1. A Parquet struct and field to compare to (`destination_t`)
+   *
+   * 2. A predicate function with a comparison value.
+   *
+   * NOTE: The C++ type given to the predicate functions (e.g., `eq`,
+   * `gt`) must be compatible with the field type.  Currently this
+   * is rather strict.  For example, if the field type is a PSI Int32,
+   * then the predicate value *must* be an `int32_t`.
+   *
+   * Unfortunately this can only be checked at run-time without making
+   * the query interface very difficult to use.  Therefore, mismatches
+   * are reported as run-time exceptions.
+   */
+  class Builder final {
   public:
-    /// The type of the value needed for this predicate.
-    using value_type = typename Schema::PSI::data_type_traits<T>::value_type;
-
-    /// The schema array type.
-    using column_type = Schema::ArrayIndex::Column;
-
-    /**
-     * Queried value must be exactly equal to the given value.
-     */
-    static Query equal_to(const column_type& column, value_type v)
+    /// Constructor.
+    Builder(destination_t destination)
+        : dest_(destination)
     {
-      return Query(Predicate(column, std::make_pair<>(Op::EQ, v)));
     }
 
     /**
-     * Queried value must be greater than the given value.
+     * Field must match `val` exactly.
      */
-    static Query greater_than(const column_type& column, value_type v)
+    template <query_comparable T> Query eq(T val) const
     {
-      return Query(Predicate(column, std::make_pair<>(Op::GT, v)));
+      return validate({dest_, Predicate::Op::EQ, val});
     }
 
     /**
-     * Queried value must be less than the given value.
+     * Field must be greater than `val`.
      */
-    static Query less_than(const column_type& column, value_type v)
+    template <query_comparable T> Query gt(T val) const
     {
-      return Query(Predicate(column, std::make_pair<>(Op::LT, v)));
+      return validate({dest_, Predicate::Op::GT, val});
     }
 
     /**
-     * Queried value must be greater than or equal to the given value.
+     * Field must be less than `val`.
      */
-    static Query greater_equal(const column_type& column, value_type v)
+    template <query_comparable T> Query lt(T val) const
     {
-      return Query(Predicate(column, std::make_pair<>(Op::GE, v)));
+      return validate({dest_, Predicate::Op::LT, val});
     }
 
     /**
-     * Queried value must be less than or equal to the given value.
+     * Field must be greater than or equal to `val`.
      */
-    static Query less_equal(const column_type& column, value_type v)
+    template <query_comparable T> Query ge(T val) const
     {
-      return Query(Predicate(column, std::make_pair<>(Op::LE, v)));
+      return validate({dest_, Predicate::Op::GE, val});
+    }
+
+    /**
+     * Field must be less than or equal to `val`.
+     */
+    template <query_comparable T> Query le(T val) const
+    {
+      return validate({dest_, Predicate::Op::LE, val});
     }
 
     /// Destructor.
-    ~Predicate() = default;
-
-    /**
-     * The column this predicate works with.
-     */
-    const column_type& column() const { return column_; }
-
-    /**
-     * Return `true` if this predicate matches the given value.
-     */
-    bool match(value_type v) const;
-
-    /**
-     * Return `true` if the predicate would match a value in the range
-     * (min, max).
-     */
-    bool match(const std::pair<value_type, value_type>&) const;
+    ~Builder() = default;
 
   private:
-    /// Comparison operations.
-    enum class Op { EQ, GT, LT, GE, LE };
-
-    /// Complete description of the predicate.
-    using Comp = std::pair<Op, value_type>;
-
-    Predicate(const column_type& column, Comp comp)
-        : column_(column)
-        , comp_(std::move(comp))
-    {
-    }
-
-    const column_type& column_;
-    Comp comp_;
+    Query validate(Predicate&& p) const;
+    destination_t dest_;
   };
 
 public:
@@ -136,44 +140,86 @@ public:
     std::any rhs_;
   };
 
-public:
-  // Save some typing.
-  using enum Schema::PSI::DataType;
+  using value_t = std::variant<int32_t, int64_t, float, double>;
 
-  // The C++ types that are used by predicates.
-  using p_int32_t = Schema::PSI::data_type_traits<Int32>::value_type;
-  using p_float32_t = Schema::PSI::data_type_traits<Float32>::value_type;
-  using p_int64_t = Schema::PSI::data_type_traits<Int64>::value_type;
-  using p_float64_t = Schema::PSI::data_type_traits<Float64>::value_type;
+  using range_t = std::variant<std::pair<int32_t, int32_t>,
+                               std::pair<int64_t, int64_t>,
+                               std::pair<float, float>,
+                               std::pair<double, double>>;
 
-  /// A variant that can hold any predicate type.
-  using predicate_t = std::variant<Predicate<Int32>,
-                                   Predicate<Float32>,
-                                   Predicate<Int64>,
-                                   Predicate<Float64>>;
+  /**
+   * A class used to return values to the query engine, and also the
+   * final result return from query evaluation.
+   *
+   * This class models three possible states:
+   *
+   * 1. Failure.  The query should be terminated.
+   *
+   * 2. Null.  Treated like SQL NULL values.  That is, not an error
+   * but might cause queries to short circuit.  Useful to signal that
+   * certain columns can't be read because they are NULL.
+   *
+   * 3. Contains a valid value.
+   */
+  template <typename T> class Result {
+  public:
+    /// Unrecoverable failure.
+    static Result fail() { return Result(true, std::nullopt); }
 
-  /// A variant that can hold any predicate value type.
-  using value_t = std::variant<p_int32_t, p_float32_t, p_int64_t, p_float64_t>;
+    /// NULL.
+    static Result skip() { return Result(false, std::nullopt); }
 
-  /// A variant that can hold a min and max value for range queries.
-  using range_t = std::variant<std::pair<p_int32_t, p_int32_t>,
-                               std::pair<p_float32_t, p_float32_t>,
-                               std::pair<p_int64_t, p_int64_t>,
-                               std::pair<p_float64_t, p_float64_t>>;
+    /// Valid value.
+    Result(T);
+
+    /// Did the column request fail?
+    bool failed() const { return failed_; }
+
+    /// Not failed and not NULL.
+    bool has_value() const;
+
+    /// Get the actual value recorded.
+    T value() const;
+
+    /// Return true if the result is not failed, not skipped, has a
+    /// value, and that value is the given value.
+    bool is(T) const;
+
+    /// Convert to another type while preserving failure and NULL
+    /// status.  That is, U is ignored if the current result is NULL.
+    template <typename U> Result<U> to(U) const;
+
+    /// Combine values using logical operations.
+    Result operator&&(const Result& other);
+    Result operator||(const Result& other);
+    Result operator!();
+
+  private:
+    explicit Result(bool f, std::optional<T> r)
+        : failed_(f)
+        , result_(r)
+    {
+    }
+
+    // This is so stupid.
+    template <typename U> friend class Result;
+
+    bool failed_;
+    std::optional<T> result_;
+  };
 
   /// A function that when given an column type, should return a single value.
   /// If this isn't possible it should return nullopt.
-  using eval_callback_t =
-      std::function<std::optional<value_t>(const Schema::ArrayIndex::Column&)>;
+  using eval_callback_t = std::function<Result<value_t>(destination_t)>;
 
-  /// A function that when given an column type should return a min and
+  /// A func ion that when given an column type should return a min and
   /// max.  If this isn't possible it should return nullopt.
-  using eval_range_callback_t =
-      std::function<std::optional<range_t>(const Schema::ArrayIndex::Column&)>;
+  using eval_range_callback_t = std::function<Result<range_t>(destination_t)>;
+
   /**
    * Evaluate a query.
    */
-  bool eval(eval_callback_t) const;
+  Result<bool> eval(eval_callback_t) const;
 
   /**
    * Evaluate a range query.
@@ -181,76 +227,90 @@ public:
    * Range queries test to see if the query would match a value within
    * a min or max range.
    */
-  bool eval(eval_range_callback_t) const;
+  Result<bool> eval(eval_range_callback_t) const;
 
-protected:
-  /// Constructor.
-  Query(predicate_t p);
-
-  friend Predicate<Int32>;
-  friend Predicate<Float32>;
-  friend Predicate<Int64>;
-  friend Predicate<Float64>;
+  // Internal predicate details.
+  struct Predicate {
+    enum class Op { EQ, GT, LT, GE, LE };
+    destination_t dest;
+    Op op;
+    value_t val;
+  };
 
 private:
-  std::optional<predicate_t> self_;
+  friend class Builder;
+
+  std::optional<Predicate> self_;
   std::optional<child_t> child_;
   bool not_ = false;
 
+  Query(Predicate pred);
   explicit Query(const child_t&);
   Query join(const Query& other, Oper oper) const;
 };
 
 /******************************************************************************/
-// Predicate matching the way you would expect.
-template <Schema::PSI::DataType T>
-bool Query::Predicate<T>::match(value_type v) const
+template <typename T>
+Query::Result<T>::Result(T v)
+    : failed_(false)
+    , result_(v)
 {
-  switch (comp_.first) {
-  case Op::EQ:
-    return v == comp_.second;
-  case Op::GT:
-    return v > comp_.second;
-
-  case Op::LT:
-    return v < comp_.second;
-
-  case Op::GE:
-    return v >= comp_.second;
-
-  case Op::LE:
-    return v >= comp_.second;
-  }
-
-  return false;
 }
 
 /******************************************************************************/
-// Predicate range matching that returns true if the predicate would
-// match a value that is between a min and max (inclusive).
-template <Schema::PSI::DataType T>
-bool Query::Predicate<T>::match(const std::pair<value_type, value_type>& v) const
+template <typename T> bool Query::Result<T>::has_value() const
 {
-  auto [min, max] = v;
+  return !failed_ && result_.has_value();
+}
 
-  switch (comp_.first) {
-  case Op::EQ:
-    return (min == comp_.second || max == comp_.second) ||
-           (comp_.second > min && comp_.second < max);
-  case Op::GT:
-    return max > comp_.second;
+/******************************************************************************/
+template <typename T> T Query::Result<T>::value() const { return result_.value(); }
 
-  case Op::LT:
-    return min < comp_.second;
+/******************************************************************************/
+template <typename T> bool Query::Result<T>::is(T t) const
+{
+  if (failed_) return false;
+  return has_value() && value() == t;
+}
 
-  case Op::GE:
-    return max >= comp_.second;
+/******************************************************************************/
+template <typename T>
+template <typename U>
+Query::Result<U> Query::Result<T>::to(U u) const
+{
+  std::optional<U> r;
+  if (has_value()) r = u;
+  return Result<U>(failed_, r);
+}
 
-  case Op::LE:
-    return min >= comp_.second;
-  }
+/******************************************************************************/
+template <typename T>
+Query::Result<T> Query::Result<T>::operator&&(const Query::Result<T>& other)
+{
+  if (failed_) return *this;
+  if (other.failed_) return other;
+  if (!result_.has_value()) return *this;
+  if (!other.result_.has_value()) return other;
+  return Result(result_.value() && other.result_.value());
+}
 
-  return false;
+/******************************************************************************/
+template <typename T>
+Query::Result<T> Query::Result<T>::operator||(const Query::Result<T>& other)
+{
+  if (failed_) return *this;
+  if (other.failed_) return other;
+  if (!result_.has_value()) return other;
+  if (!other.result_.has_value()) return *this;
+  return Result(result_.value() || other.result_.value());
+}
+
+/******************************************************************************/
+template <typename T> Query::Result<T> Query::Result<T>::operator!()
+{
+  Result r = *this;
+  r.result_ = r.result_.and_then([](auto& v) -> std::optional<T> { return !v; });
+  return r;
 }
 
 } // namespace MzPeak

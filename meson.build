@@ -24,6 +24,7 @@ lib_sources = [
   'src/spectrum.cpp',
   'src/util/arrow.cpp',
   'src/util/parquet.cpp',
+  'src/util/planner.cpp',
   'src/util/struct.cpp',
   'src/zip.cpp',
 ]
@@ -54,6 +55,7 @@ install_headers([
   'include/mzpeak/util/enumerable_proxy.h',
   'include/mzpeak/util/parquet.h',
   'include/mzpeak/util/parquet_types.h',
+  'include/mzpeak/util/planner.h',
   'include/mzpeak/util/struct.h',
   'include/mzpeak/zip.h',
 ], subdir : 'mzpeak')
@@ -101,6 +103,7 @@ test_names = [
     'directory',
     'index',
     'parquet',
+    'planner',
     'query',
     'spectra',
     'struct',
