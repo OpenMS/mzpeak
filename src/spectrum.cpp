@@ -28,7 +28,7 @@ inline std::vector<Spectrum::intensity_type>
 decode_intensity(const Schema::ArrayIndex& index, Util::array_map_type& map)
 {
   // FIXME: Remove raw intensity values.
-  Util::Encoding<Schema::PSI::DataType::Int32> enc(map, index);
+  Util::Encoding<Schema::PSI::DataType::Float32> enc(map, index);
   return enc.decode_array(Schema::PSI::ArrayType::Intensity);
 }
 

@@ -49,3 +49,18 @@ BOOST_AUTO_TEST_CASE(reads_profile_arrays_beyond_first_spectrum)
   BOOST_TEST(s7.size() == 10329);
   BOOST_TEST(s7.back() == 1832.2386, boost::test_tools::tolerance(0.001));
 }
+
+/******************************************************************************/
+// Regression: intensity was decoded as Int32 while the array is float32, so
+// the FloatArray bytes were reinterpreted as integers (garbage).  Spectrum 0
+// reads correctly regardless of the slice bug, isolating the type fix.
+BOOST_AUTO_TEST_CASE(decodes_intensity_as_float32)
+{
+  auto mzpeak = MzPeak::open("../test/files/small.mzpeak");
+  auto spectra = mzpeak.spectra();
+
+  auto inten = spectra[0].intensity();
+  BOOST_TEST(inten.size() == 13589);
+  BOOST_TEST(inten[1] == 1938.1174f, boost::test_tools::tolerance(0.01f));
+  BOOST_TEST(inten[2] == 2572.8389f, boost::test_tools::tolerance(0.01f));
+}

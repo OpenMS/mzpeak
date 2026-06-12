@@ -29,7 +29,7 @@ public:
 
   /// Ensure types stay in sync.
   using intensity_type =
-      Schema::PSI::data_type_traits<Schema::PSI::DataType::Int32>::value_type;
+      Schema::PSI::data_type_traits<Schema::PSI::DataType::Float32>::value_type;
 
   /// Destructor.
   ~Spectrum() = default;
