@@ -35,3 +35,41 @@ BOOST_AUTO_TEST_CASE(can_find_spectrum)
   BOOST_TEST(indices.size() == 1);
   BOOST_TEST((indices[0] == 0));
 }
+
+/******************************************************************************/
+// Regression: Op::LE evaluated `v >= bound` (greater-equal logic) in BOTH the
+// scalar matcher (query.h match(value_type)) and the range matcher
+// (match(pair)).  Both paths are exercised here.
+BOOST_AUTO_TEST_CASE(less_equal_predicate_matches_correctly)
+{
+  using namespace MzPeak;
+  using DataType = Schema::PSI::DataType;
+
+  auto index = MzPeak::open("../test/files/small.mzpeak");
+  auto entry = std::ranges::find(index.files(), Schema::EntityType::Spectrum,
+                                 &Schema::File::entity_type);
+  auto parquet = index.parquet(*entry);
+  auto column = parquet->array_index().columns()[0];
+
+  auto value = [](long long x) {
+    return [x](const Schema::ArrayIndex::Column&) -> std::optional<Query::value_t> {
+      return Query::value_t{static_cast<Query::p_int64_t>(x)};
+    };
+  };
+  auto range = [](long long lo, long long hi) {
+    return [lo, hi](const Schema::ArrayIndex::Column&) -> std::optional<Query::range_t> {
+      return Query::range_t{std::pair<Query::p_int64_t, Query::p_int64_t>{lo, hi}};
+    };
+  };
+
+  Query le = Query::Predicate<DataType::Int64>::less_equal(column, 5);
+
+  // Scalar matcher.
+  BOOST_TEST(le.eval(value(3)) == true);  // 3 <= 5
+  BOOST_TEST(le.eval(value(5)) == true);  // boundary inclusive
+  BOOST_TEST(le.eval(value(9)) == false); // 9 <= 5 is false
+
+  // Range matcher: a [min,max] range can satisfy "<= 5" iff min <= 5.
+  BOOST_TEST(le.eval(range(3, 4)) == true);  // min 3 <= 5
+  BOOST_TEST(le.eval(range(6, 9)) == false); // min 6 <= 5 is false
+}

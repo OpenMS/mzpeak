@@ -219,7 +219,7 @@ bool Query::Predicate<T>::match(value_type v) const
     return v >= comp_.second;
 
   case Op::LE:
-    return v >= comp_.second;
+    return v <= comp_.second;
   }
 
   return false;
@@ -247,7 +247,7 @@ bool Query::Predicate<T>::match(const std::pair<value_type, value_type>& v) cons
     return max >= comp_.second;
 
   case Op::LE:
-    return min >= comp_.second;
+    return min <= comp_.second;
   }
 
   return false;
