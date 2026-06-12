@@ -155,9 +155,11 @@ template <typename Fn, typename V> bool EvalHelper<Fn, V>::eval(Fn fn) const
     if (child_->rhs_.has_value()) {
       switch (child_->oper_) {
       case Query::Oper::AND:
-        return res && std::any_cast<Query>(child_->rhs_).eval(fn);
+        res = res && std::any_cast<Query>(child_->rhs_).eval(fn);
+        break;
       case Query::Oper::OR:
-        return res || std::any_cast<Query>(child_->rhs_).eval(fn);
+        res = res || std::any_cast<Query>(child_->rhs_).eval(fn);
+        break;
       }
     }
   }

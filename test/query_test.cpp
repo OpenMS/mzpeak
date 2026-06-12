@@ -73,3 +73,39 @@ BOOST_AUTO_TEST_CASE(less_equal_predicate_matches_correctly)
   BOOST_TEST(le.eval(range(3, 4)) == true);  // min 3 <= 5
   BOOST_TEST(le.eval(range(6, 9)) == false); // min 6 <= 5 is false
 }
+
+/******************************************************************************/
+// Regression: negating a compound query was ignored because the AND/OR switch
+// returned before the not_ handling ran.  Both the AND and OR branches changed,
+// so both are exercised here.
+BOOST_AUTO_TEST_CASE(negation_applies_to_compound_queries)
+{
+  using namespace MzPeak;
+  using DataType = Schema::PSI::DataType;
+
+  auto index = MzPeak::open("../test/files/small.mzpeak");
+  auto entry = std::ranges::find(index.files(), Schema::EntityType::Spectrum,
+                                 &Schema::File::entity_type);
+  auto parquet = index.parquet(*entry);
+  auto column = parquet->array_index().columns()[0];
+
+  auto value = [](long long x) {
+    return [x](const Schema::ArrayIndex::Column&) -> std::optional<Query::value_t> {
+      return Query::value_t{static_cast<Query::p_int64_t>(x)};
+    };
+  };
+
+  // AND branch.
+  Query both = Query::Predicate<DataType::Int64>::equal_to(column, 3) &&
+               Query::Predicate<DataType::Int64>::greater_equal(column, 1);
+  BOOST_TEST(both.eval(value(3)) == true);     // 3 == 3 && 3 >= 1
+  BOOST_TEST((!both).eval(value(3)) == false); // negation must invert the AND
+  BOOST_TEST((!both).eval(value(7)) == true);  // 7 != 3 -> AND false -> negated true
+
+  // OR branch.
+  Query either = Query::Predicate<DataType::Int64>::equal_to(column, 3) ||
+                 Query::Predicate<DataType::Int64>::equal_to(column, 5);
+  BOOST_TEST(either.eval(value(3)) == true);      // 3 == 3
+  BOOST_TEST((!either).eval(value(3)) == false);  // negation must invert the OR
+  BOOST_TEST((!either).eval(value(7)) == true);   // 7 in neither -> OR false -> negated true
+}
