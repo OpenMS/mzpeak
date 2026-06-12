@@ -183,14 +183,10 @@ void Batch::query_batch(const Query& query)
       }
     }
 
-    if (backward.i_ == slice_offset_) {
-      // No matches.
-      slice_offset_ = 0;
-      slice_length_ = 0;
-      return;
-    } else {
-      slice_length_ = backward.i_ + 1;
-    }
+    // The forward pass already proved slice_offset_ matches, so the last
+    // matching row is at backward.i_ >= slice_offset_.  slice_length_ is a
+    // row count, not an end index: length = last - first + 1.
+    slice_length_ = backward.i_ + 1 - slice_offset_;
   }
 }
 
