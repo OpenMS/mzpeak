@@ -31,9 +31,13 @@ int main(int argc, char* argv[])
 
   for (auto index = 0;
        const auto& spectrum : spectra | std::views::take(to_review)) {
+    const auto& mz = spectrum.mz();
     std::print("| {:5d} | ", index);
-    std::print("{:9.2f} | ", spectrum.mz().front());
-    std::print("{:8.2f} | ", spectrum.mz().back());
+    if (mz.empty()) {
+      std::print("{:>9} | {:>8} |", "n/a", "n/a");
+    } else {
+      std::print("{:9.2f} | {:8.2f} |", mz.front(), mz.back());
+    }
     std::println();
 
     ++index; // std::views::enumerate isn't available on macOS :-(
