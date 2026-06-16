@@ -47,4 +47,10 @@ BOOST_AUTO_TEST_CASE(can_find_spectrum)
 
   auto raw = slice.raw(*mz_field);
   BOOST_TEST((raw != nullptr));
+
+  // Decode, dropping null values.
+  std::vector<double> mz = slice.array<Util::Slice::DecodeScalar<double>>(*mz_field);
+  BOOST_TEST(mz.size() == 15063);
+  BOOST_TEST(mz[0] == 200.09, boost::test_tools::tolerance(0.001));
+  BOOST_TEST(mz[mz.size() - 1] == 1999.81, boost::test_tools::tolerance(0.001));
 }

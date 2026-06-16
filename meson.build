@@ -55,6 +55,7 @@ install_headers([
   'include/mzpeak/spectrum.h',
   'include/mzpeak/util/algorithm.h',
   'include/mzpeak/util/arrow.h',
+  'include/mzpeak/util/compat.h',
   'include/mzpeak/util/enumerable_proxy.h',
   'include/mzpeak/util/executor.h',
   'include/mzpeak/util/parquet.h',
