@@ -15,6 +15,7 @@ directory of this repository.
 #include "mzpeak/query.h"
 #include "mzpeak/schema/array_index.h"
 #include "mzpeak/schema/file.h"
+#include "mzpeak/util/executor.h"
 #include "mzpeak/util/struct.h"
 
 namespace MzPeak::Util {
@@ -70,6 +71,16 @@ public:
    * while this Parquet object exists.
    */
   parquet::arrow::FileReader& reader() const;
+
+  /**
+   * Return a planner for the given query.
+   */
+  Planner planner(const Query&);
+
+  /**
+   * Return an executor that will capture the requested fields.
+   */
+  Executor executor(const Executor::Projection&);
 
   /**
    * Execute a query and return the row groups that matched.

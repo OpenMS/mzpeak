@@ -37,13 +37,13 @@ BOOST_AUTO_TEST_CASE(can_locate_correct_rows)
   };
 
   for (auto& query : queries) {
-    Util::Planner planner(parquet->reader(), query);
-    auto ranges = planner.plan();
+    Util::Planner planner = parquet->planner(query);
+    auto plan = planner.plan();
 
     // Ug, this file is too small to exercise the planner.
-    BOOST_TEST(ranges.size() == 1ul);
+    BOOST_TEST(plan.ranges.size() == 1ul);
 
-    auto first = ranges[0];
+    auto first = plan.ranges[0];
     BOOST_TEST(first.row_group == 0);
     BOOST_TEST(first.offset == 0);
     BOOST_TEST(first.length == 217710);
@@ -72,13 +72,13 @@ BOOST_AUTO_TEST_CASE(can_use_two_columns)
   auto query = Query::Builder(*index_field).eq<int64_t>(3) &&
                Query::Builder(*start_time_field).gt<float>(0);
 
-  Util::Planner planner(parquet->reader(), query);
+  Util::Planner planner = parquet->planner(query);
 
-  auto ranges = planner.plan();
-  BOOST_TEST(ranges.size() == 1ul);
+  auto plan = planner.plan();
+  BOOST_TEST(plan.ranges.size() == 1ul);
 
   // Ug, this file is too small to exercise the planner.
-  auto first = ranges[0];
+  auto first = plan.ranges[0];
   BOOST_TEST(first.row_group == 0);
   BOOST_TEST(first.offset == 0);
   BOOST_TEST(first.length == 48);
@@ -106,13 +106,13 @@ BOOST_AUTO_TEST_CASE(can_access_multiple_structs)
   auto query = Query::Builder(*index_field).eq<int64_t>(30) &&
                Query::Builder(*level_field).ge(1);
 
-  Util::Planner planner(parquet->reader(), query);
+  Util::Planner planner = parquet->planner(query);
 
-  auto ranges = planner.plan();
-  BOOST_TEST(ranges.size() == 1ul);
+  auto plan = planner.plan();
+  BOOST_TEST(plan.ranges.size() == 1ul);
 
   // Ug, this file is too small to exercise the planner.
-  auto first = ranges[0];
+  auto first = plan.ranges[0];
   BOOST_TEST(first.row_group == 0);
   BOOST_TEST(first.offset == 0);
   BOOST_TEST(first.length == 48);

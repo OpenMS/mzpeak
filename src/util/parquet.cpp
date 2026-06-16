@@ -101,13 +101,15 @@ struct Parquet::Impl {
       throw ParquetError(msg + status.ToString());
     }
 
-    status = reader_builder.Build(&reader_);
+    std::unique_ptr<parquet::arrow::FileReader> reader;
+    status = reader_builder.Build(&reader);
 
     if (!status.ok()) {
       std::string msg("while reading file: " + file.file_name + ": ");
       throw ParquetError(msg + status.ToString());
     }
 
+    reader_ = std::move(reader);
     parse_schema();
   }
 
@@ -139,7 +141,7 @@ struct Parquet::Impl {
 
   Schema::File file_;
   std::unique_ptr<Arrow> arrow_;
-  std::unique_ptr<parquet::arrow::FileReader> reader_;
+  std::shared_ptr<parquet::arrow::FileReader> reader_;
   struct_map_t structs_;
 };
 
@@ -321,6 +323,15 @@ Schema::ArrayIndex Parquet::array_index() const
 
 /******************************************************************************/
 parquet::arrow::FileReader& Parquet::reader() const { return *impl_->reader_; }
+
+/******************************************************************************/
+Planner Parquet::planner(const Query& q) { return Planner(*impl_->reader_, q); }
+
+/******************************************************************************/
+Executor Parquet::executor(const Executor::Projection& p)
+{
+  return Executor(impl_->reader_, p);
+}
 
 /******************************************************************************/
 std::vector<int> Parquet::find_row_groups(const Query& query)

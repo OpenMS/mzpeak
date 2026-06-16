@@ -74,8 +74,8 @@ field_type_from_parquet(const std::shared_ptr<parquet::schema::GroupNode>& node)
 
 /******************************************************************************/
 Struct::Field::Field(const std::string_view& column_name,
-                     int32_t rel_index,
-                     int32_t abs_index)
+                     index_type rel_index,
+                     index_type abs_index)
     : rel_index_(rel_index)
     , abs_index_(abs_index)
     , schema_name_(column_name)
@@ -110,10 +110,10 @@ Struct::Field::Field(const std::string_view& column_name,
 }
 
 /******************************************************************************/
-int32_t Struct::Field::relative_index() const { return rel_index_; }
+Struct::index_type Struct::Field::relative_index() const { return rel_index_; }
 
 /******************************************************************************/
-int32_t Struct::Field::absolute_index() const { return abs_index_; }
+Struct::index_type Struct::Field::absolute_index() const { return abs_index_; }
 
 /******************************************************************************/
 const std::string& Struct::Field::name() const { return clean_name_; }
@@ -134,11 +134,13 @@ const std::optional<Schema::PSI::DataType>& Struct::Field::data_type() const
 }
 
 /******************************************************************************/
-Struct::Struct(const parquet::schema::GroupNode& node, int32_t index, int32_t offset)
+Struct::Struct(const parquet::schema::GroupNode& node,
+               index_type index,
+               index_type offset)
     : name_(node.name())
     , index_(index)
 {
-  for (int32_t i : std::views::iota(0, node.field_count())) {
+  for (index_type i : std::views::iota(0, node.field_count())) {
     auto child = node.field(i);
 
     std::shared_ptr<Field> field =
@@ -168,7 +170,7 @@ Struct::Struct(const parquet::schema::GroupNode& node, int32_t index, int32_t of
 const std::string& Struct::name() const { return name_; }
 
 /******************************************************************************/
-int32_t Struct::index() const { return index_; }
+Struct::index_type Struct::index() const { return index_; }
 
 /******************************************************************************/
 std::optional<std::shared_ptr<const Struct::Field>>
