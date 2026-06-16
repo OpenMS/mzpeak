@@ -19,8 +19,11 @@ class FileReader;
 
 namespace MzPeak::Util {
 
+class Parquet;
+
 /**
- * FIXME: Write documentation!
+ * Create a plan for the most efficient way to execute a query against
+ * a Parquet file.
  */
 class Planner final {
 public:
@@ -31,8 +34,11 @@ public:
     int64_t length;    /// The number of rows to read.
   };
 
-  /// Constructor.
-  Planner(parquet::arrow::FileReader&, const Query&);
+  /// Information about how to carry out a query.
+  struct Plan {
+    Query query;
+    std::vector<Range> ranges;
+  };
 
   /// Destructor.
   ~Planner();
@@ -40,9 +46,14 @@ public:
   /**
    * Construct a query plan.
    */
-  const std::vector<Range>& plan() const;
+  const Plan& plan() const;
 
 private:
+  friend class Parquet;
+
+  /// Constructor.
+  Planner(parquet::arrow::FileReader&, const Query&);
+
   class Impl;
   std::unique_ptr<Impl> impl_;
 };

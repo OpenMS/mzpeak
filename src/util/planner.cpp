@@ -8,7 +8,6 @@ top-level directory of this repository.
 
 #include <arrow/array.h>
 #include <arrow/record_batch.h>
-#include <iterator>
 #include <memory>
 #include <parquet/api/reader.h>
 #include <parquet/arrow/reader.h>
@@ -18,6 +17,7 @@ top-level directory of this repository.
 #include <ranges>
 
 #include "mzpeak/schema/psi/data_type.h"
+#include "mzpeak/util/algorithm.h"
 #include "mzpeak/util/parquet_types.h"
 #include "mzpeak/util/planner.h"
 
@@ -192,18 +192,7 @@ public:
                        int32_t row_group,
                        value_type major_index)
   {
-    auto i = std::ranges::find(pages.begin(), pages.end(), true);
-    auto j = pages.end();
-
-    for (; i != pages.end(); i = std::ranges::find(j, pages.end(), true)) {
-      j = std::ranges::find(i + 1, pages.end(), false);
-
-      std::size_t first_page =
-          static_cast<std::size_t>(std::distance(pages.begin(), i));
-
-      std::size_t last_page =
-          static_cast<int64_t>(std::distance(pages.begin(), j - 1));
-
+    auto on_span = [&](std::size_t first_page, std::size_t last_page) -> void {
       auto page_map = major_index->off_index->page_locations();
 
       int64_t first_row_index = page_map[first_page].first_row_index;
@@ -218,7 +207,9 @@ public:
 
       ranges.push_back(
           {row_group, first_row_index, last_row_index - first_row_index + 1});
-    }
+    };
+
+    Algorithm::spans(pages, on_span);
   }
 
 private:
@@ -324,12 +315,12 @@ public:
   Impl(parquet::ParquetFileReader& reader, const Query& query)
       : metadata_(reader.metadata())
       , page_index_reader_(reader.GetPageIndexReader())
-      , query_(query)
+      , plan_({query, {}})
   {
   }
 
   /// Do the actual planning.
-  const std::vector<Planner::Range>& plan();
+  const Planner::Plan& plan();
 
 private:
   /**
@@ -363,8 +354,7 @@ private:
 
   std::shared_ptr<parquet::FileMetaData> metadata_;
   std::shared_ptr<parquet::PageIndexReader> page_index_reader_;
-  Query query_;
-  std::vector<Planner::Range> ranges_;
+  Planner::Plan plan_;
 };
 
 /******************************************************************************/
@@ -386,7 +376,7 @@ Query::Result<bool> Planner::Impl::with_column_stats(
     }
   };
 
-  return query_.eval(via_stats);
+  return plan_.query.eval(via_stats);
 }
 
 /******************************************************************************/
@@ -423,7 +413,7 @@ Query::Result<bool> Planner::Impl::with_page_index(
 
   // We need to loop once for each page in the page index.  But we
   // don't know how many pages there are yet.
-  Query::Result<bool> qres = query_.eval(via_page_index);
+  Query::Result<bool> qres = plan_.query.eval(via_page_index);
   if (qres.failed()) return qres;
 
   auto major_index = index_cache.max_page_count();
@@ -439,12 +429,12 @@ Query::Result<bool> Planner::Impl::with_page_index(
   page_results[0] = !qres.is(false);
 
   for (std::size_t page = 1; !qres.failed() && page < page_count; ++page) {
-    qres = query_.eval(via_page_index);
+    qres = plan_.query.eval(via_page_index);
     page_results[page] = !qres.is(false);
   }
 
   // Record the page results.
-  index_cache.generate_ranges(page_results, ranges_, row_group_index,
+  index_cache.generate_ranges(page_results, plan_.ranges, row_group_index,
                               major_index.value());
   return qres.to(true);
 }
@@ -479,13 +469,13 @@ void Planner::Impl::plan_row_group(int32_t row_group_index)
       return;
     }
 
-    std::size_t before_count = ranges_.size();
+    std::size_t before_count = plan_.ranges.size();
     auto page_res = with_page_index(rg, row_index_reader, row_group_index);
 
     // The page index code should have already created the necessary
     // range record even if it failed.  This is a "just in case"
     // check.
-    if (!page_res.has_value() && ranges_.size() == before_count) {
+    if (!page_res.has_value() && plan_.ranges.size() == before_count) {
       full_scan(*rg, row_group_index);
     }
   }
@@ -498,17 +488,18 @@ void Planner::Impl::full_scan(const parquet::RowGroupMetaData& rg,
   // FIXME: we should emit some sort of warning.
   std::println(stderr, "no page index and no stats for rg {}, full scan needed",
                row_group_index);
-  ranges_.push_back({row_group_index, 0, rg.num_rows()});
+  plan_.ranges.push_back({row_group_index, 0, rg.num_rows()});
 }
 
 /******************************************************************************/
-const std::vector<Planner::Range>& Planner::Impl::plan()
+const Planner::Plan& Planner::Impl::plan()
 {
   for (int32_t i : std::views::iota(0, metadata_->num_row_groups())) {
     plan_row_group(i);
   }
 
-  return ranges_;
+  std::ranges::sort(plan_.ranges, {}, &Range::row_group);
+  return plan_;
 }
 
 /******************************************************************************/
@@ -521,6 +512,6 @@ Planner::Planner(parquet::arrow::FileReader& reader, const Query& query)
 Planner::~Planner() = default;
 
 /******************************************************************************/
-const std::vector<Planner::Range>& Planner::plan() const { return impl_->plan(); }
+const Planner::Plan& Planner::plan() const { return impl_->plan(); }
 
 } // namespace MzPeak::Util

@@ -30,6 +30,9 @@ namespace MzPeak::Util {
  */
 class Struct final {
 public:
+  /// Type used to store column indexes.
+  using index_type = int32_t;
+
   /**
    * A possibly non-scalar field.
    */
@@ -51,8 +54,8 @@ public:
 
     /// Constructor from an encoded column name.
     explicit Field(const std::string_view& column_name,
-                   int32_t rel_index,
-                   int32_t abs_index);
+                   index_type rel_index,
+                   index_type abs_index);
 
     /// Destructor.
     ~Field() = default;
@@ -60,12 +63,12 @@ public:
     /**
      * Column index inside the parent struct.
      */
-    int32_t relative_index() const;
+    index_type relative_index() const;
 
     /**
      * Column index inside the parquet file.
      */
-    int32_t absolute_index() const;
+    index_type absolute_index() const;
 
     /**
      * The name of this field using underscores to replace spaces and
@@ -96,8 +99,8 @@ public:
   private:
     friend class Struct;
 
-    int32_t rel_index_;
-    int32_t abs_index_;
+    index_type rel_index_;
+    index_type abs_index_;
     std::string schema_name_;
     std::string clean_name_;
     std::optional<std::string> cv_type_;
@@ -111,7 +114,9 @@ public:
   using field_map_t = std::map<std::string, std::shared_ptr<Field>>;
 
   /// Constructor from a parquet schema descriptor.
-  explicit Struct(const parquet::schema::GroupNode&, int32_t index, int32_t offset);
+  explicit Struct(const parquet::schema::GroupNode&,
+                  index_type index,
+                  index_type offset);
 
   /// Destructor.
   ~Struct() = default;
@@ -124,7 +129,7 @@ public:
   /**
    * Return the schema column index of this struct.
    */
-  int32_t index() const;
+  index_type index() const;
 
   /**
    * Find a field given it's name.
@@ -141,7 +146,7 @@ public:
 
 private:
   std::string name_;
-  int32_t index_;
+  index_type index_;
   field_map_t fields_;
 };
 
