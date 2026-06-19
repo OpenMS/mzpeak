@@ -88,8 +88,15 @@ int main(int argc, char* argv[])
 
   for (const auto& [index, spectrum] : enumerated_spectra) {
     std::print("| {:5d} | ", index);
-    std::print("{:9.2f} | ", spectrum->mz().front());
-    std::print("{:8.2f} | ", spectrum->mz().back());
+
+    if (spectrum.mz().size() > 0) {
+      std::print("{:9.2f} | ", spectrum.mz().front());
+      std::print("{:8.2f} | ", spectrum.mz().back());
+    } else {
+      std::print("{:>9} | ", "-");
+      std::print("{:>8} | ", "-");
+    }
+
     std::println();
   }
 
@@ -107,8 +114,8 @@ Reviewing the first 5 spectra.
 | Index | First m/z | Last m/z |
 |-------|-----------|----------|
 |     0 |    202.61 |  1999.84 |
-|     1 |    200.09 |  1347.76 |
-|     2 |    231.39 |  1911.64 |
-|     3 |    236.05 |   368.35 |
-|     4 |    203.22 |   396.97 |
+|     1 |    200.09 |  1999.82 |
+|     2 |         - |        - |
+|     3 |         - |        - |
+|     4 |         - |        - |
 ```

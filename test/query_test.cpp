@@ -8,31 +8,45 @@ in the LICENSE file found in the top-level directory of this project.
 #define BOOST_TEST_MODULE Query
 #include <boost/test/included/unit_test.hpp>
 
-#include "mzpeak/open.h"
 #include "mzpeak/query.h"
-#include "mzpeak/util/parquet.h"
+#include "mzpeak/schema/psi/data_type.h"
+#include "mzpeak/util/types.h"
+#include <memory>
+#include <ranges>
 
 /******************************************************************************/
 BOOST_AUTO_TEST_CASE(can_find_spectrum)
 {
-  // FIXME: Use proper field access.
-
   using namespace MzPeak;
-  auto index = MzPeak::open("../test/files/small.mzpeak");
 
-  auto entry = std::ranges::find(index.files(), Schema::EntityType::Spectrum,
-                                 &Schema::File::entity_type);
+  // This makes me want to make the query class a template class.
+  Util::Struct::Field field("fake", 0, 0);
+  field.data_type(Schema::PSI::DataType::Int32);
 
-  BOOST_TEST((entry != index.files().end()));
+  Util::Column column =
+      std::make_pair(nullptr, std::make_shared<Util::Struct::Field>(field));
 
-  auto parquet = index.parquet(*entry);
-  auto index_field = parquet->field("point", "spectrum_index");
+  std::vector<int32_t> data = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 
-  BOOST_TEST(index_field.has_value());
+  auto get = [data](std::size_t index,
+                    const Util::Column&) -> Query::Result<Query::value_t> {
+    return Query::Result<Query::value_t>(data[index]);
+  };
 
-  auto query = Query::Builder(*index_field).eq<int64_t>(1);
-  auto indices = parquet->find_row_groups(query);
+  auto run = [&data, &get](const Query& q) -> std::vector<bool> {
+    std::vector<bool> results(data.size(), false);
 
-  BOOST_TEST(indices.size() == 1ul);
-  BOOST_TEST((indices[0] == 0));
+    for (std::size_t i : std::views::iota(0ul, data.size())) {
+      auto r = q.eval(std::bind(get, i, std::placeholders::_1));
+      results[i] = r.is(true);
+    }
+
+    return results;
+  };
+
+  {
+    auto results = run(Query::Builder(column).eq<int32_t>(1));
+    BOOST_TEST(std::ranges::count(results, true) == 1);
+    BOOST_TEST(results[1] == true);
+  }
 }

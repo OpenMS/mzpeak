@@ -8,6 +8,7 @@ project('MZPeak C++ Library', 'cpp',
 lib_sources = [
   'src/data/arrays.cpp',
   'src/data/metadata.cpp',
+  'src/data/slice.cpp',
   'src/directory.cpp',
   'src/file.cpp',
   'src/index.cpp',
@@ -26,7 +27,6 @@ lib_sources = [
   'src/util/executor.cpp',
   'src/util/parquet.cpp',
   'src/util/planner.cpp',
-  'src/util/slice.cpp',
   'src/util/struct.cpp',
   'src/zip.cpp',
 ]
@@ -38,6 +38,7 @@ install_headers([
   'include/mzpeak/data/arrays.h',
   'include/mzpeak/data/encoding.h',
   'include/mzpeak/data/metadata.h',
+  'include/mzpeak/data/slice.h',
   'include/mzpeak/directory.h',
   'include/mzpeak/exception.h',
   'include/mzpeak/file.h',
@@ -61,8 +62,8 @@ install_headers([
   'include/mzpeak/util/parquet.h',
   'include/mzpeak/util/parquet_types.h',
   'include/mzpeak/util/planner.h',
-  'include/mzpeak/util/slice.h',
   'include/mzpeak/util/struct.h',
+  'include/mzpeak/util/types.h',
   'include/mzpeak/zip.h',
 ], subdir : 'mzpeak')
 

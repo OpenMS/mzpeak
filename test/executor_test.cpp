@@ -43,13 +43,14 @@ BOOST_AUTO_TEST_CASE(can_find_spectrum)
 
   Util::Executor executor = parquet->executor(projection);
   const auto& slice = executor.execute(plan);
-  BOOST_TEST((slice.fields() == projection));
+  BOOST_TEST((slice->fields() == projection));
 
-  auto raw = slice.raw(*mz_field);
+  auto raw = slice->raw(*mz_field);
   BOOST_TEST((raw != nullptr));
 
   // Decode, dropping null values.
-  std::vector<double> mz = slice.array<Util::Slice::DecodeScalar<double>>(*mz_field);
+  std::vector<double> mz;
+  slice->array<Data::Slice::DecodeScalar<double>>(*mz_field, mz);
   BOOST_TEST(mz.size() == 15063);
   BOOST_TEST(mz[0] == 200.09, boost::test_tools::tolerance(0.001));
   BOOST_TEST(mz[mz.size() - 1] == 1999.81, boost::test_tools::tolerance(0.001));

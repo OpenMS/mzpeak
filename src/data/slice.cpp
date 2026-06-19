@@ -6,31 +6,33 @@ top-level directory of this repository.
 
 */
 
-#include "mzpeak/util/slice.h"
+#include "mzpeak/data/slice.h"
 #include <memory>
 
-namespace MzPeak::Util {
+namespace MzPeak::Data {
+
+using Struct = MzPeak::Util::Struct;
 
 /******************************************************************************/
 struct Slice::Impl {
 public:
-  Impl(const std::vector<Query::destination_t>& fields)
+  Impl(const std::vector<Column>& fields)
       : fields_(fields)
   {
   }
 
   /// Get the array key for the given field.
-  Struct::index_type key(const Query::destination_t& field) const
+  Struct::index_type key(const Column& field) const
   {
     return field.second->absolute_index();
   }
 
-  std::vector<Query::destination_t> fields_;
+  std::vector<Column> fields_;
   std::map<Struct::index_type, std::shared_ptr<Slice::Raw>> arrays_;
 };
 
 /******************************************************************************/
-Slice::Slice(const std::vector<Query::destination_t>& fields)
+Slice::Slice(const std::vector<Column>& fields)
     : impl_(std::make_unique<Impl>(fields))
 {
 }
@@ -39,13 +41,16 @@ Slice::Slice(const std::vector<Query::destination_t>& fields)
 Slice::~Slice() = default;
 
 /******************************************************************************/
-const std::vector<Query::destination_t> Slice::fields() const
+const std::vector<Column>& Slice::fields() const { return impl_->fields_; }
+
+/******************************************************************************/
+bool Slice::has_column(const Column& column) const
 {
-  return impl_->fields_;
+  return impl_->arrays_.contains(impl_->key(column));
 }
 
 /******************************************************************************/
-std::shared_ptr<Slice::Raw> Slice::raw(const Query::destination_t& field) const
+std::shared_ptr<Slice::Raw> Slice::raw(const Column& field) const
 {
   auto it = impl_->arrays_.find(impl_->key(field));
 
@@ -57,8 +62,7 @@ std::shared_ptr<Slice::Raw> Slice::raw(const Query::destination_t& field) const
 }
 
 /******************************************************************************/
-void Slice::append(const Query::destination_t& field,
-                   std::shared_ptr<arrow::Array> array)
+void Slice::append(const Column& field, std::shared_ptr<arrow::Array> array)
 {
   auto it = impl_->arrays_.find(impl_->key(field));
 
@@ -71,4 +75,4 @@ void Slice::append(const Query::destination_t& field,
   }
 }
 
-} // namespace MzPeak::Util
+} // namespace MzPeak::Data

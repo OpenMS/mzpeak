@@ -39,7 +39,9 @@ class Query final {
 public:
   using Struct = Util::Struct;
   using Field = Util::Struct::Field;
+
   struct Predicate;
+  enum class Op { EQ, GT, LT, GE, LE };
 
   // How to specify what field you want to query.
   using destination_t =
@@ -74,7 +76,7 @@ public:
      */
     template <query_comparable T> Query eq(T val) const
     {
-      return validate({dest_, Predicate::Op::EQ, val});
+      return validate({dest_, Op::EQ, val});
     }
 
     /**
@@ -82,7 +84,7 @@ public:
      */
     template <query_comparable T> Query gt(T val) const
     {
-      return validate({dest_, Predicate::Op::GT, val});
+      return validate({dest_, Op::GT, val});
     }
 
     /**
@@ -90,7 +92,7 @@ public:
      */
     template <query_comparable T> Query lt(T val) const
     {
-      return validate({dest_, Predicate::Op::LT, val});
+      return validate({dest_, Op::LT, val});
     }
 
     /**
@@ -98,7 +100,7 @@ public:
      */
     template <query_comparable T> Query ge(T val) const
     {
-      return validate({dest_, Predicate::Op::GE, val});
+      return validate({dest_, Op::GE, val});
     }
 
     /**
@@ -106,7 +108,15 @@ public:
      */
     template <query_comparable T> Query le(T val) const
     {
-      return validate({dest_, Predicate::Op::LE, val});
+      return validate({dest_, Op::LE, val});
+    }
+
+    /**
+     * Low-level function for build a query with an operator.
+     */
+    template <query_comparable T> Query via(T val, Op op) const
+    {
+      return validate({dest_, op, val});
     }
 
     /// Destructor.
@@ -131,11 +141,11 @@ public:
   Query operator!() const;
 
   // Internal boolean operator type.
-  enum class Oper { AND, OR };
+  enum class Connective { AND, OR };
 
   // Internal type for recursion.
   struct child_t {
-    Oper oper_;
+    Connective connective_;
     std::any lhs_;
     std::any rhs_;
   };
@@ -231,7 +241,6 @@ public:
 
   // Internal predicate details.
   struct Predicate {
-    enum class Op { EQ, GT, LT, GE, LE };
     destination_t dest;
     Op op;
     value_t val;
@@ -246,7 +255,7 @@ private:
 
   Query(Predicate pred);
   explicit Query(const child_t&);
-  Query join(const Query& other, Oper oper) const;
+  Query join(const Query& other, Connective conn) const;
 };
 
 /******************************************************************************/
