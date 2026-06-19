@@ -7,12 +7,44 @@ top-level directory of this repository.
 */
 
 #include <cassert>
+#include <functional>
+#include <variant>
 
 #include "mzpeak/exception.h"
 #include "mzpeak/query.h"
 #include "mzpeak/schema/psi/data_type.h"
+#include "mzpeak/util/compat.h" // IWYU pragma: keep
 
 namespace MzPeak {
+
+/**
+ * Classic trampoline to turn recursive algorithms into iteration.
+ */
+template <typename T> struct Trampoline {
+  using thunk_t = std::move_only_function<Trampoline<T>()>;
+
+  Trampoline(T&& v)
+      : value_(std::move(v))
+  {
+  }
+
+  Trampoline(thunk_t&& t)
+      : value_(std::move(t))
+  {
+  }
+
+  std::variant<T, thunk_t> value_;
+};
+
+/******************************************************************************/
+template <typename T> inline T trampoline(Trampoline<T> t)
+{
+  while (!std::holds_alternative<T>(t.value_)) {
+    t = std::invoke(std::get<typename Trampoline<T>::thunk_t>(t.value_));
+  }
+
+  return std::get<T>(t.value_);
+}
 
 /******************************************************************************/
 // Helper to produce useful messages with static_assert.
@@ -28,57 +60,6 @@ std::pair<Query::value_t, Query::value_t> decode_range_type(const Query::range_t
         return std::make_pair(first, second);
       },
       rt);
-}
-
-/******************************************************************************/
-bool match(const Query::Predicate& p, Query::value_t v)
-{
-  assert(v.index() == p.val.index());
-
-  switch (p.op) {
-  case Query::Op::EQ:
-    return v == p.val;
-
-  case Query::Op::GT:
-    return v > p.val;
-
-  case Query::Op::LT:
-    return v < p.val;
-
-  case Query::Op::GE:
-    return v >= p.val;
-
-  case Query::Op::LE:
-    return v >= p.val;
-  }
-
-  return false;
-}
-
-/******************************************************************************/
-bool match(const Query::Predicate& p, Query::range_t v)
-{
-  auto [min, max] = decode_range_type(v);
-  assert(min.index() == max.index() && min.index() == p.val.index());
-
-  switch (p.op) {
-  case Query::Op::EQ:
-    return (min == p.val || max == p.val) || (p.val > min && p.val < max);
-
-  case Query::Op::GT:
-    return max > p.val;
-
-  case Query::Op::LT:
-    return min < p.val;
-
-  case Query::Op::GE:
-    return max >= p.val;
-
-  case Query::Op::LE:
-    return min >= p.val;
-  }
-
-  return false;
 }
 
 /******************************************************************************/
@@ -108,13 +89,24 @@ Query Query::Builder::validate(Query::Predicate&& p) const
       },
       p.val);
 
-  return Query(p);
+  return Query(std::move(p));
 }
 
 /******************************************************************************/
 template <typename Fn, typename V> struct EvalHelper {
+  using result_t = Query::Result<bool>;
+
   // Eval a query using the given function for fetching values.
-  Query::Result<bool> eval(Fn fn) const;
+  Trampoline<Query::Result<bool>> eval(const Query& query, Fn fn) const;
+
+  // Eval a query node.
+  Trampoline<Query::Result<bool>> eval_node(const Query::Node& node, Fn fn) const;
+
+  // Match a predicate against a single value.
+  bool match(const Query::Predicate&, Query::value_t) const;
+
+  // Match a predicate against a min/max range.
+  bool match(const Query::Predicate& p, Query::range_t) const;
 
   // Dispatch on the type of the given predicate.
   Query::Result<bool> dispatch_dest_type(const Query::Predicate& pred, Fn fn) const;
@@ -122,22 +114,17 @@ template <typename Fn, typename V> struct EvalHelper {
   // Dispatch on the type of the predicate's value.
   template <Schema::PSI::DataType T>
   Query::Result<bool> dispatch_value(const Query::Predicate& p, Fn fn) const;
-
-  // From the query being evaluated:
-  const std::optional<Query::Predicate>& self_;
-  const std::optional<Query::child_t>& child_;
-  bool not_;
 };
 
 /******************************************************************************/
-Query::Query(Predicate p)
-    : self_(p)
+Query::Query(Predicate&& p)
+    : tree_({std::move(p)})
 {
 }
 
 /******************************************************************************/
-Query::Query(const child_t& c)
-    : child_(c)
+Query::Query(Node&& c)
+    : tree_({std::move(c)})
 {
 }
 
@@ -155,30 +142,86 @@ Query::~Query() = default;
 /******************************************************************************/
 Query Query::operator&&(const Query& rhs) const
 {
-  return join(rhs, Connective::AND);
+  return join(rhs, Node::Connective::AND);
 }
 
 /******************************************************************************/
-Query Query::operator||(const Query& rhs) const { return join(rhs, Connective::OR); }
+Query Query::operator||(const Query& rhs) const
+{
+  return join(rhs, Node::Connective::OR);
+}
 
 /******************************************************************************/
-Query Query::join(const Query& other, Connective oper) const
+Query Query::join(const Query& other, Node::Connective oper) const
 {
-  return Query(child_t{oper, *this, other});
+  return Query(Node{oper, *this, other});
 }
 
 /******************************************************************************/
 Query::Result<bool> Query::eval(eval_callback_t fn) const
 {
-  EvalHelper<eval_callback_t, value_t> eh{self_, child_, not_};
-  return eh.eval(fn);
+  EvalHelper<eval_callback_t, value_t> eh;
+  return trampoline(eh.eval(*this, fn));
 }
 
 /******************************************************************************/
 Query::Result<bool> Query::eval(eval_range_callback_t fn) const
 {
-  EvalHelper<eval_range_callback_t, range_t> eh{self_, child_, not_};
-  return eh.eval(fn);
+  EvalHelper<eval_range_callback_t, range_t> eh;
+  return trampoline(eh.eval(*this, fn));
+}
+
+/******************************************************************************/
+template <typename Fn, typename V>
+bool EvalHelper<Fn, V>::match(const Query::Predicate& p, Query::value_t v) const
+{
+  assert(v.index() == p.val.index());
+
+  switch (p.op) {
+  case Query::Op::EQ:
+    return v == p.val;
+
+  case Query::Op::GT:
+    return v > p.val;
+
+  case Query::Op::LT:
+    return v < p.val;
+
+  case Query::Op::GE:
+    return v >= p.val;
+
+  case Query::Op::LE:
+    return v <= p.val;
+  }
+
+  return false;
+}
+
+/******************************************************************************/
+template <typename Fn, typename V>
+bool EvalHelper<Fn, V>::match(const Query::Predicate& p, Query::range_t v) const
+{
+  auto [min, max] = decode_range_type(v);
+  assert(min.index() == max.index() && min.index() == p.val.index());
+
+  switch (p.op) {
+  case Query::Op::EQ:
+    return (min == p.val || max == p.val) || (p.val > min && p.val < max);
+
+  case Query::Op::GT:
+    return max > p.val;
+
+  case Query::Op::LT:
+    return min < p.val;
+
+  case Query::Op::GE:
+    return max >= p.val;
+
+  case Query::Op::LE:
+    return min <= p.val;
+  }
+
+  return false;
 }
 
 /******************************************************************************/
@@ -243,45 +286,55 @@ EvalHelper<Fn, V>::dispatch_dest_type(const Query::Predicate& pred, Fn fn) const
 
 /******************************************************************************/
 template <typename Fn, typename V>
-Query::Result<bool> EvalHelper<Fn, V>::eval(Fn fn) const
+Trampoline<Query::Result<bool>> EvalHelper<Fn, V>::eval(const Query& query,
+                                                        Fn fn) const
 {
-  Query::Result<bool> res(true);
+  result_t result = std::visit(
+      [&](auto& tree) -> result_t {
+        using T = std::decay_t<decltype(tree)>;
 
-  // FIXME: convert this to a loop.
-  if (self_.has_value()) {
-    res = dispatch_dest_type(*self_, fn);
-    if (!res.has_value()) return res;
+        if constexpr (std::is_same_v<T, Query::Predicate>) {
+          return dispatch_dest_type(tree, fn);
+        } else if constexpr (std::is_same_v<T, Query::Node>) {
+          return trampoline(eval_node(tree, fn));
+        } else {
+          static_assert(false, "unhanded variant");
+        }
+      },
+      query.tree_);
+
+  if (query.not_) {
+    return !result;
+  } else {
+    return result;
+  }
+}
+
+/******************************************************************************/
+template <typename Fn, typename V>
+Trampoline<Query::Result<bool>> EvalHelper<Fn, V>::eval_node(const Query::Node& node,
+                                                             Fn fn) const
+{
+  result_t result = true;
+
+  if (node.lhs_.has_value()) {
+    result = trampoline(eval(std::any_cast<Query>(node.lhs_), fn));
   }
 
-  if (child_.has_value()) {
-    if (child_->lhs_.has_value() && res.has_value() && res.value()) {
-      Query::Result<bool> from_child = std::any_cast<Query>(child_->lhs_).eval(fn);
-      res = res && from_child;
-    }
-
-    if (child_->rhs_.has_value()) {
-      switch (child_->connective_) {
-      case Query::Connective::AND:
-        if (res.has_value() && res.value()) {
-          return res && std::any_cast<Query>(child_->rhs_).eval(fn);
-        } else {
-          return res;
-        }
-      case Query::Connective::OR:
-        if (res.has_value() && res.value()) {
-          return res;
-        } else {
-          return res || std::any_cast<Query>(child_->rhs_).eval(fn);
-        }
+  if (node.rhs_.has_value()) {
+    switch (node.connective_) {
+    case Query::Node::Connective::AND:
+      if (result.is(true)) {
+        return Trampoline(trampoline(eval(std::any_cast<Query>(node.rhs_), fn)));
+      }
+    case Query::Node::Connective::OR:
+      if (result.is(false)) {
+        return Trampoline(trampoline(eval(std::any_cast<Query>(node.rhs_), fn)));
       }
     }
   }
 
-  if (not_) {
-    return !res;
-  } else {
-    return res;
-  }
+  return result;
 }
 
 } // namespace MzPeak

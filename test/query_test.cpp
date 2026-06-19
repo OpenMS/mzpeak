@@ -10,12 +10,14 @@ in the LICENSE file found in the top-level directory of this project.
 
 #include "mzpeak/query.h"
 #include "mzpeak/schema/psi/data_type.h"
+#include "mzpeak/util/compat.h" // IWYU pragma: keep
 #include "mzpeak/util/types.h"
+#include <functional>
 #include <memory>
 #include <ranges>
 
 /******************************************************************************/
-BOOST_AUTO_TEST_CASE(can_find_spectrum)
+BOOST_AUTO_TEST_CASE(valid_query_logic)
 {
   using namespace MzPeak;
 
@@ -33,6 +35,17 @@ BOOST_AUTO_TEST_CASE(can_find_spectrum)
     return Query::Result<Query::value_t>(data[index]);
   };
 
+  auto expect =
+      [data](std::move_only_function<bool(int32_t)>&& f) -> std::vector<bool> {
+    std::vector<bool> res(data.size(), false);
+
+    for (std::size_t i : std::views::iota(0ul, data.size())) {
+      res[i] = f(data[i]);
+    }
+
+    return res;
+  };
+
   auto run = [&data, &get](const Query& q) -> std::vector<bool> {
     std::vector<bool> results(data.size(), false);
 
@@ -44,9 +57,67 @@ BOOST_AUTO_TEST_CASE(can_find_spectrum)
     return results;
   };
 
-  {
-    auto results = run(Query::Builder(column).eq<int32_t>(1));
-    BOOST_TEST(std::ranges::count(results, true) == 1);
-    BOOST_TEST(results[1] == true);
+  { // EQ
+    auto e = expect([](auto n) { return n == 1; });
+    auto r = run(Query::Builder(column).eq<int32_t>(1));
+    BOOST_TEST(r == e, "eq");
+  }
+
+  { // GT
+    auto e = expect([](auto n) { return n > 5; });
+    auto r = run(Query::Builder(column).gt<int32_t>(5));
+    BOOST_TEST(r == e, "gt");
+  }
+
+  { // LT
+    auto e = expect([](auto n) { return n < 5; });
+    auto r = run(Query::Builder(column).lt<int32_t>(5));
+    BOOST_TEST(r == e, "lt");
+  }
+
+  { // GE
+    auto e = expect([](auto n) { return n >= 5; });
+    auto r = run(Query::Builder(column).ge<int32_t>(5));
+    BOOST_TEST(r == e, "ge");
+  }
+
+  { // LE
+    auto e = expect([](auto n) { return n <= 5; });
+    auto r = run(Query::Builder(column).le<int32_t>(5));
+    BOOST_TEST(r == e, "le");
+  }
+
+  { // Compound AND
+    auto q = Query::Builder(column).le<int32_t>(3) &&
+             Query::Builder(column).eq<int32_t>(1);
+
+    auto e = expect([](auto n) { return n <= 3 && n == 1; });
+    auto r = run(q);
+    BOOST_TEST(r == e, "&&");
+  }
+
+  { // Compound OR
+    auto q = Query::Builder(column).le<int32_t>(3) ||
+             Query::Builder(column).gt<int32_t>(5);
+
+    auto e = expect([](auto n) { return n <= 3 || n > 5; });
+    auto r = run(q);
+    BOOST_TEST(r == e, "||");
+  }
+
+  { // Simple negation.
+    auto q = !Query::Builder(column).gt<int32_t>(3);
+    auto e = expect([](auto n) { return !(n > 3); });
+    auto r = run(q);
+    BOOST_TEST(r == e, "!");
+  }
+
+  { // Negated compound
+    auto q = !(Query::Builder(column).lt<int32_t>(3) ||
+               Query::Builder(column).gt<int32_t>(5));
+
+    auto e = expect([](auto n) { return !(n < 3 || n > 5); });
+    auto r = run(q);
+    BOOST_TEST(r == e, "! ||");
   }
 }
