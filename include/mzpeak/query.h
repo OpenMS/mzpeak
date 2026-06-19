@@ -17,6 +17,7 @@ top-level directory of this repository.
 
 namespace MzPeak {
 
+/// Types that can be used with a query.
 template <typename T>
 concept query_comparable = std::same_as<std::remove_cvref_t<T>, int32_t> ||
                            std::same_as<std::remove_cvref_t<T>, int64_t> ||
@@ -31,22 +32,22 @@ concept query_comparable = std::same_as<std::remove_cvref_t<T>, int32_t> ||
  * predicate functions.
  *
  * More complex queries can be constructed using the logic operators
- * (`&&`, `||`, and `!`).  NOTE: Keep in mind that complex queries are
- * built and evaluated using recursion so depth should be kept to a
- * minimum.
+ * (`&&`, `||`, and `!`).
  */
 class Query final {
 public:
   using Struct = Util::Struct;
   using Field = Util::Struct::Field;
 
-  struct Predicate;
-  enum class Op { EQ, GT, LT, GE, LE };
-
   // How to specify what field you want to query.
   using destination_t =
       std::pair<std::shared_ptr<const Struct>, std::shared_ptr<const Field>>;
 
+private:
+  struct Predicate;
+  enum class Op { EQ, GT, LT, GE, LE };
+
+public:
   /**
    * This class is used to construct a Query object using two inputs:
    *
@@ -128,35 +129,6 @@ public:
   };
 
 public:
-  /// Destructor.
-  ~Query();
-
-  /// Join two queries together with a logical AND.
-  Query operator&&(const Query&) const;
-
-  /// Join two queries together with a logical OR.
-  Query operator||(const Query&) const;
-
-  /// Negate a query.
-  Query operator!() const;
-
-  // Internal boolean operator type.
-  enum class Connective { AND, OR };
-
-  // Internal type for recursion.
-  struct child_t {
-    Connective connective_;
-    std::any lhs_;
-    std::any rhs_;
-  };
-
-  using value_t = std::variant<int32_t, int64_t, float, double>;
-
-  using range_t = std::variant<std::pair<int32_t, int32_t>,
-                               std::pair<int64_t, int64_t>,
-                               std::pair<float, float>,
-                               std::pair<double, double>>;
-
   /**
    * A class used to return values to the query engine, and also the
    * final result return from query evaluation.
@@ -218,12 +190,36 @@ public:
     std::optional<T> result_;
   };
 
+public:
+  /// Destructor.
+  ~Query();
+
+  /// Join two queries together with a logical AND.
+  Query operator&&(const Query&) const;
+
+  /// Join two queries together with a logical OR.
+  Query operator||(const Query&) const;
+
+  /// Negate a query.
+  Query operator!() const;
+
+  // Column types that can be used in a query.
+  using value_t = std::variant<int32_t, int64_t, float, double>;
+
+  // Like value_t, but instead of a single value this type is used for
+  // evaluating a query on a min/max range.
+  using range_t = std::variant<std::pair<int32_t, int32_t>,
+                               std::pair<int64_t, int64_t>,
+                               std::pair<float, float>,
+                               std::pair<double, double>>;
+
   /// A function that when given an column type, should return a single value.
-  /// If this isn't possible it should return nullopt.
+  /// If this isn't possible it should return `Result<value_t>::skip()`.
   using eval_callback_t = std::function<Result<value_t>(destination_t)>;
 
-  /// A func ion that when given an column type should return a min and
-  /// max.  If this isn't possible it should return nullopt.
+  /// A func ion that when given an column type should return a min
+  /// and max.  If this isn't possible it should return
+  /// `Result<range_t>::skip()`.
   using eval_range_callback_t = std::function<Result<range_t>(destination_t)>;
 
   /**
@@ -239,23 +235,38 @@ public:
    */
   Result<bool> eval(eval_range_callback_t) const;
 
-  // Internal predicate details.
+private:
+  friend class Builder;
+  template <typename Fn, typename V> friend struct EvalHelper;
+
+  // A predicate that can be tested against a value.
   struct Predicate {
     destination_t dest;
     Op op;
     value_t val;
   };
 
-private:
-  friend class Builder;
+  // A logical node with a connective.
+  struct Node {
+    enum class Connective { AND, OR };
+    Connective connective_;
+    std::any lhs_;
+    std::any rhs_;
+  };
 
-  std::optional<Predicate> self_;
-  std::optional<child_t> child_;
+  // A tree is a leaf or a node.
+  using tree_t = std::variant<Predicate, Node>;
+
+  // Private constructors.
+  explicit Query(Predicate&& pred);
+  explicit Query(Node&&);
+
+  // Private helper function.
+  Query join(const Query& other, Node::Connective conn) const;
+
+  // Data members.
+  tree_t tree_;
   bool not_ = false;
-
-  Query(Predicate pred);
-  explicit Query(const child_t&);
-  Query join(const Query& other, Connective conn) const;
 };
 
 /******************************************************************************/
