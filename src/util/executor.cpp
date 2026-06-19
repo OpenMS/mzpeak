@@ -14,10 +14,10 @@ top-level directory of this repository.
 #include <ranges>
 #include <string_view>
 
+#include "mzpeak/data/slice.h"
 #include "mzpeak/util/algorithm.h"
 #include "mzpeak/util/executor.h"
 #include "mzpeak/util/parquet_types.h"
-#include "mzpeak/util/slice.h"
 #include "mzpeak/util/struct.h"
 
 namespace MzPeak::Util {
@@ -28,7 +28,7 @@ namespace psi = Schema::PSI;
 struct Executor::Impl {
   Impl(std::shared_ptr<parquet::arrow::FileReader> reader, const Projection& fields)
       : reader_(reader)
-      , slice_(fields)
+      , projection_(fields)
   {
   }
 
@@ -65,7 +65,8 @@ struct Executor::Impl {
   };
 
   std::shared_ptr<parquet::arrow::FileReader> reader_;
-  Slice slice_;
+  Projection projection_;
+  std::unique_ptr<Slice> slice_;
 };
 
 /******************************************************************************/
@@ -121,8 +122,8 @@ std::vector<bool> Executor::Impl::filter(const Planner::Plan& plan,
 /******************************************************************************/
 void Executor::Impl::project(std::shared_ptr<arrow::RecordBatch>& batch)
 {
-  for (const auto& field : slice_.fields()) {
-    slice_.append(field, array(batch, field));
+  for (const auto& field : slice_->fields()) {
+    slice_->append(field, array(batch, field));
   }
 }
 
@@ -153,8 +154,9 @@ Executor::Executor(std::shared_ptr<parquet::arrow::FileReader> reader,
 Executor::~Executor() = default;
 
 /******************************************************************************/
-const Slice& Executor::execute(const Planner::Plan& plan)
+std::unique_ptr<Data::Slice> Executor::execute(const Planner::Plan& plan)
 {
+  impl_->slice_ = std::unique_ptr<Data::Slice>(new Data::Slice(impl_->projection_));
   std::map<Struct::index_type, std::vector<Planner::Range>> ranges;
 
   for (const auto& range : plan.ranges) {
@@ -209,7 +211,7 @@ const Slice& Executor::execute(const Planner::Plan& plan)
     }
   }
 
-  return impl_->slice_;
+  return std::move(impl_->slice_);
 }
 
 } // namespace MzPeak::Util

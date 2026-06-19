@@ -6,6 +6,8 @@ directory of this repository.
 
 */
 
+#include <algorithm>
+#include <iterator>
 #include <ranges>
 
 #include "mzpeak/schema/array_index.h"
@@ -13,24 +15,6 @@ directory of this repository.
 #include "mzpeak/schema/entity_type.h"
 
 namespace MzPeak::Schema {
-
-/******************************************************************************/
-ArrayIndex::Column make_index(EntityType entity_type, const std::string& prefix)
-{
-  ArrayIndex::Column index;
-
-  index.array_name = entity_type_to_string(entity_type) + "_index";
-  index.buffer_format = BufferFormat::Point;
-  index.context = entity_type;
-  index.path = prefix + "." + index.array_name;
-  index.data_type = PSI::DataType::Int64;
-  index.array_type = PSI::ArrayType::NonStandard;
-  index.unit = "MS:1000774";
-  index.sorting_rank = 0;
-  index.buffer_priority = false;
-
-  return index;
-}
 
 /******************************************************************************/
 ArrayIndex::ArrayIndex(EntityType entity_type, const json::object& obj)
@@ -43,9 +27,6 @@ ArrayIndex::ArrayIndex(EntityType entity_type, const json::object& obj)
     auto entries_ary(entries->value().as_array());
     columns_.reserve(entries_ary.size() + 1);
 
-    // The first column entry is actually the index itself.
-    columns_.push_back(make_index(entity_type, prefix_));
-
     for (const auto& entry : entries_ary) {
       if (entry.is_object()) {
         const auto& eo(entry.as_object());
@@ -55,6 +36,7 @@ ArrayIndex::ArrayIndex(EntityType entity_type, const json::object& obj)
             buffer_format_from_string(eo.at("buffer_format").as_string());
         column.context = entity_type_from_string(eo.at("context").as_string());
         column.path = eo.at("path").as_string();
+        column.name = column.path.substr(prefix_.size() + 1);
         column.data_type =
             PSI::data_type_from_string(eo.at("data_type").as_string());
         column.array_type =
@@ -89,6 +71,8 @@ ArrayIndex::ArrayIndex(EntityType entity_type, const json::object& obj)
       }
     }
   }
+
+  std::ranges::sort(columns_, {}, &Column::array_name);
 }
 
 /******************************************************************************/
@@ -112,6 +96,15 @@ std::vector<ArrayIndex::Column> ArrayIndex::columns(PSI::ArrayType type) const
 }
 
 /******************************************************************************/
+std::vector<ArrayIndex::Column> ArrayIndex::columns(const Data::Dimension& d) const
+{
+  return columns_ | std::views::filter([d](const auto& c) {
+           return c.array_type == d.array_type && c.data_type == d.data_type;
+         }) |
+         std::ranges::to<std::vector>();
+}
+
+/******************************************************************************/
 void ArrayIndex::num_entities(const std::optional<std::size_t>& ne)
 {
   num_entities_ = ne;
@@ -121,21 +114,40 @@ void ArrayIndex::num_entities(const std::optional<std::size_t>& ne)
 std::optional<std::size_t> ArrayIndex::num_entities() const { return num_entities_; }
 
 /******************************************************************************/
-std::optional<int> ArrayIndex::column_index(const Column& column) const
+std::vector<Data::Dimension> ArrayIndex::dimensions() const
 {
-  auto it = column_map_.find(column.path);
 
-  if (it == column_map_.end()) {
-    return {};
-  } else {
-    return it->second;
+  std::vector<Column> cols;
+  cols.reserve(columns_.size()); // Should be small
+
+  std::ranges::unique_copy(columns_.begin(), columns_.end(),
+                           std::back_inserter(cols), [](auto& a, auto& b) {
+                             return a.array_name == b.array_name &&
+                                    a.data_type == b.data_type &&
+                                    a.array_type == b.array_type;
+                           });
+
+  std::vector<Data::Dimension> res;
+  res.reserve(cols.size());
+
+  for (auto& col : cols) {
+    res.push_back({col.array_name, col.data_type, col.array_type});
   }
+
+  return res;
 }
 
 /******************************************************************************/
-void ArrayIndex::column_map(ColumnMap column_map)
+std::optional<Util::Column> ArrayIndex::entry_column(const Util::StructMap& map,
+                                                     const Column& col)
 {
-  column_map_ = std::move(column_map);
+  auto it = map.find(prefix_);
+  if (it == map.end()) return {};
+
+  auto field = it->second->field(col.name);
+  if (!field.has_value()) return {};
+
+  return std::make_pair(it->second, field.value());
 }
 
 } // namespace MzPeak::Schema

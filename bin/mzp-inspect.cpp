@@ -59,7 +59,7 @@ int print_structs(MzPeak::Index& index, const std::string& file)
   if (parquet == nullptr) return 1;
 
   auto structs =
-      parquet->structs() | std::views::values | std::ranges::to<std::vector>();
+      *parquet->structs() | std::views::values | std::ranges::to<std::vector>();
   std::ranges::sort(structs, {}, &MzPeak::Util::Struct::index);
 
   for (const auto& s : structs) {

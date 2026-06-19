@@ -53,7 +53,7 @@ BOOST_AUTO_TEST_CASE(can_load_all_structs)
   auto parquet = mzpeak.parquet(*entry);
 
   auto structs = parquet->structs();
-  BOOST_TEST((structs.size() == 4));
+  BOOST_TEST((structs->size() == 4));
 
   auto spectrum_index = parquet->field("spectrum", "index");
   BOOST_TEST(spectrum_index.has_value());

@@ -96,6 +96,11 @@ public:
      */
     const std::optional<Schema::PSI::DataType>& data_type() const;
 
+    /**
+     * Update the field's data type.
+     */
+    void data_type(Schema::PSI::DataType);
+
   private:
     friend class Struct;
 

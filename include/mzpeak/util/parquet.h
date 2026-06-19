@@ -16,7 +16,7 @@ directory of this repository.
 #include "mzpeak/schema/array_index.h"
 #include "mzpeak/schema/file.h"
 #include "mzpeak/util/executor.h"
-#include "mzpeak/util/struct.h"
+#include "mzpeak/util/types.h"
 
 namespace MzPeak::Util {
 
@@ -26,8 +26,6 @@ namespace MzPeak::Util {
 class Parquet final {
 public:
   using file_metadata_t = std::shared_ptr<parquet::FileMetaData>;
-
-  using struct_map_t = std::map<std::string, std::shared_ptr<Struct>>;
 
   /// Constructor.
   Parquet(std::unique_ptr<MzPeak::File>, Schema::File);
@@ -43,13 +41,13 @@ public:
   /**
    * Return the schema encoded as a map of Struct objects.
    */
-  const struct_map_t& structs() const;
+  const std::shared_ptr<StructMap>& structs() const;
 
   /**
    * Return a Struct and Field matching the given names.
    */
-  std::optional<Query::destination_t> field(const std::string_view&,
-                                            const std::string_view&) const;
+  std::optional<Column> field(const std::string_view&,
+                              const std::string_view&) const;
 
   /**
    * Access the file metadata.
@@ -64,7 +62,7 @@ public:
   /**
    * Parse and return the ArrayIndex.
    */
-  Schema::ArrayIndex array_index() const;
+  std::shared_ptr<Schema::ArrayIndex> array_index() const;
 
   /**
    * Directly access the FileReader.  This reference is only valid
@@ -81,11 +79,6 @@ public:
    * Return an executor that will capture the requested fields.
    */
   Executor executor(const Executor::Projection&);
-
-  /**
-   * Execute a query and return the row groups that matched.
-   */
-  std::vector<int> find_row_groups(const Query&);
 
 private:
   struct Impl;

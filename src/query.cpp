@@ -36,19 +36,19 @@ bool match(const Query::Predicate& p, Query::value_t v)
   assert(v.index() == p.val.index());
 
   switch (p.op) {
-  case Query::Predicate::Op::EQ:
+  case Query::Op::EQ:
     return v == p.val;
 
-  case Query::Predicate::Op::GT:
+  case Query::Op::GT:
     return v > p.val;
 
-  case Query::Predicate::Op::LT:
+  case Query::Op::LT:
     return v < p.val;
 
-  case Query::Predicate::Op::GE:
+  case Query::Op::GE:
     return v >= p.val;
 
-  case Query::Predicate::Op::LE:
+  case Query::Op::LE:
     return v >= p.val;
   }
 
@@ -62,19 +62,19 @@ bool match(const Query::Predicate& p, Query::range_t v)
   assert(min.index() == max.index() && min.index() == p.val.index());
 
   switch (p.op) {
-  case Query::Predicate::Op::EQ:
+  case Query::Op::EQ:
     return (min == p.val || max == p.val) || (p.val > min && p.val < max);
 
-  case Query::Predicate::Op::GT:
+  case Query::Op::GT:
     return max > p.val;
 
-  case Query::Predicate::Op::LT:
+  case Query::Op::LT:
     return min < p.val;
 
-  case Query::Predicate::Op::GE:
+  case Query::Op::GE:
     return max >= p.val;
 
-  case Query::Predicate::Op::LE:
+  case Query::Op::LE:
     return min >= p.val;
   }
 
@@ -153,13 +153,16 @@ Query Query::operator!() const
 Query::~Query() = default;
 
 /******************************************************************************/
-Query Query::operator&&(const Query& rhs) const { return join(rhs, Oper::AND); }
+Query Query::operator&&(const Query& rhs) const
+{
+  return join(rhs, Connective::AND);
+}
 
 /******************************************************************************/
-Query Query::operator||(const Query& rhs) const { return join(rhs, Oper::OR); }
+Query Query::operator||(const Query& rhs) const { return join(rhs, Connective::OR); }
 
 /******************************************************************************/
-Query Query::join(const Query& other, Oper oper) const
+Query Query::join(const Query& other, Connective oper) const
 {
   return Query(child_t{oper, *this, other});
 }
@@ -257,14 +260,14 @@ Query::Result<bool> EvalHelper<Fn, V>::eval(Fn fn) const
     }
 
     if (child_->rhs_.has_value()) {
-      switch (child_->oper_) {
-      case Query::Oper::AND:
+      switch (child_->connective_) {
+      case Query::Connective::AND:
         if (res.has_value() && res.value()) {
           return res && std::any_cast<Query>(child_->rhs_).eval(fn);
         } else {
           return res;
         }
-      case Query::Oper::OR:
+      case Query::Connective::OR:
         if (res.has_value() && res.value()) {
           return res;
         } else {

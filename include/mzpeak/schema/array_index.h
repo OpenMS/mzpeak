@@ -14,10 +14,12 @@ directory of this repository.
 #include <string>
 #include <vector>
 
+#include "mzpeak/data/dimension.h"
 #include "mzpeak/schema/buffer_format.h"
 #include "mzpeak/schema/entity_type.h"
 #include "mzpeak/schema/psi/array_type.h"
 #include "mzpeak/schema/psi/data_type.h"
+#include "mzpeak/util/types.h"
 
 namespace MzPeak::Schema {
 
@@ -51,6 +53,9 @@ public:
     /// The path from the *root* of the Parquet file's schema to this
     /// column.
     std::string path;
+
+    /// The name of the column with the schema prefix removed.
+    std::string name;
 
     /// The data type for this column, denoted using a CURIE from the
     /// PSI-MS controlled vocabulary for a child of MS:1000518 (binary
@@ -119,6 +124,11 @@ public:
   std::vector<Column> columns(PSI::ArrayType) const;
 
   /**
+   * Get a list of columns for the given dimension.
+   */
+  std::vector<Column> columns(const Data::Dimension&) const;
+
+  /**
    * Update the hint as to how many entities are in the data file.
    */
   void num_entities(const std::optional<std::size_t>&);
@@ -129,14 +139,14 @@ public:
   std::optional<std::size_t> num_entities() const;
 
   /**
-   * Return the column index for the given column.
+   * Return a list of all dimensions stored in the data file.
    */
-  std::optional<int> column_index(const Column&) const;
+  std::vector<Data::Dimension> dimensions() const;
 
   /**
-   * Update the column map;
+   * Convert an array index entry into a Struct::Field;
    */
-  void column_map(ColumnMap column_map);
+  std::optional<Util::Column> entry_column(const Util::StructMap&, const Column&);
 
 private:
   // The entity type for the entire Parquet file.

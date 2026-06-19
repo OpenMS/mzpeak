@@ -12,8 +12,8 @@ top-level directory of this repository.
 #include <functional>
 #include <ranges>
 
-#include "mzpeak/query.h"
 #include "mzpeak/util/compat.h" // IWYU pragma: keep
+#include "mzpeak/util/types.h"
 
 /******************************************************************************/
 /**
@@ -27,9 +27,14 @@ concept from_arrow_array = requires(T t,
 };
 
 namespace MzPeak::Util {
-
 // Forward declarations.
 class Executor;
+} // namespace MzPeak::Util
+
+namespace MzPeak::Data {
+
+/******************************************************************************/
+using Column = MzPeak::Util::Column;
 
 /******************************************************************************/
 /**
@@ -92,7 +97,12 @@ public:
   /**
    * Return a list of fields that can be extracted from this slice.
    */
-  const std::vector<Query::destination_t> fields() const;
+  const std::vector<Column>& fields() const;
+
+  /**
+   * Return true if the given column is in the slice.
+   */
+  bool has_column(const Column&) const;
 
   /**
    * Return the raw array for the given field.
@@ -100,7 +110,7 @@ public:
    * NOTE: If you request a field that does not exist in the slice
    * this function will return a nullptr.
    */
-  std::shared_ptr<Raw> raw(const Query::destination_t&) const;
+  std::shared_ptr<Raw> raw(const Column&) const;
 
   /**
    * Exact and decode an array.
@@ -108,8 +118,7 @@ public:
    * Use one of the decoders defined below, or write your own.
    */
   template <from_arrow_array T>
-  std::vector<typename T::value_type> array(const Query::destination_t&,
-                                            T = {}) const;
+  void array(const Column&, std::vector<typename T::value_type>&, T&& = {}) const;
 
   /**
    * A decoder that produces a vector of scalar values.
@@ -157,13 +166,13 @@ public:
   };
 
 private:
-  friend class Executor;
+  friend class MzPeak::Util::Executor;
 
   /// Constructor.
-  Slice(const std::vector<Query::destination_t>&);
+  Slice(const std::vector<Column>&);
 
   /// Add an array chunk.
-  void append(const Query::destination_t&, std::shared_ptr<arrow::Array>);
+  void append(const Column&, std::shared_ptr<arrow::Array>);
 
   struct Impl;
   std::unique_ptr<Impl> impl_;
@@ -171,11 +180,13 @@ private:
 
 /******************************************************************************/
 template <from_arrow_array T>
-std::vector<typename T::value_type> Slice::array(const Query::destination_t& field,
-                                                 T t) const
+void Slice::array(const Column& field,
+                  std::vector<typename T::value_type>& v,
+                  T&& t) const
+
 {
   std::shared_ptr<Raw> chunks = raw(field);
-  if (chunks == nullptr) return {};
+  if (chunks == nullptr) return;
 
   std::size_t size{};
 
@@ -183,14 +194,11 @@ std::vector<typename T::value_type> Slice::array(const Query::destination_t& fie
     size += chunk->length();
   }
 
-  std::vector<typename T::value_type> res;
-  res.reserve(size);
+  v.reserve(v.size() + size);
 
   for (const auto& chunk : *chunks) {
-    t.decode(chunk, res);
+    t.decode(chunk, v);
   }
-
-  return res;
 }
 
 /******************************************************************************/
@@ -234,4 +242,4 @@ void Slice::DecodeList<T>::decode(const std::shared_ptr<arrow::Array>& src,
   }
 }
 
-} // namespace MzPeak::Util
+} // namespace MzPeak::Data

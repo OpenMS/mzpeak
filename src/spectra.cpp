@@ -33,21 +33,16 @@ Spectra::Spectra(std::unique_ptr<Data::Arrays> data,
 /******************************************************************************/
 Spectrum Spectra::fetch(int64_t index)
 {
-  // FIXME: Throw an error if data_ is a nullptr.
-  // FIXME: Write a better way of getting the spectrum index
-  auto array_index(data_->array_index());
+  // These are the dimensions we'll project by default.
+  std::vector<Data::Dimension> dims =
+      data_->array_index()->dimensions() | std::views::filter([](auto& d) {
+        return d.array_type == Schema::PSI::ArrayType::Mz ||
+               d.array_type == Schema::PSI::ArrayType::Intensity;
+      }) |
+      std::ranges::to<std::vector<Data::Dimension>>();
 
-  auto dest = data_->field("spectrum_index");
-
-  if (!dest.has_value()) {
-    throw("missing spectrum_index");
-  }
-
-  Query query = Query::Builder(*dest).eq(index);
-
-  auto map =
-      data_->read_arrays(query, data_->columns_to_fields(array_index.columns()));
-  return Spectrum(array_index, std::move(map));
+  std::unique_ptr<Data::Slice> slice = data_->select(dims, data_->index().eq(index));
+  return Spectrum(*data_, dims, std::move(slice));
 }
 
 } // namespace MzPeak

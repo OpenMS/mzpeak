@@ -134,6 +134,9 @@ const std::optional<Schema::PSI::DataType>& Struct::Field::data_type() const
 }
 
 /******************************************************************************/
+void Struct::Field::data_type(Schema::PSI::DataType dt) { data_type_ = dt; }
+
+/******************************************************************************/
 Struct::Struct(const parquet::schema::GroupNode& node,
                index_type index,
                index_type offset)
