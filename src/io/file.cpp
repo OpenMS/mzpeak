@@ -6,19 +6,19 @@ directory of this repository.
 
 */
 
-#include "mzpeak/io/file.h"
-
 #include <boost/iostreams/concepts.hpp>
 #include <boost/iostreams/stream.hpp>
 #include <iostream>
 #include <parquet/properties.h>
 
+#include "mzpeak/io/file.h"
+
 namespace MzPeak::IO {
 
 /******************************************************************************/
-class source final : public boost::iostreams::source {
+class Source final : public boost::iostreams::source {
 public:
-  source(std::shared_ptr<File> file)
+  Source(std::shared_ptr<File> file)
       : file_(file)
   {
   }
@@ -43,23 +43,24 @@ private:
   std::shared_ptr<File> file_;
 };
 
-class istream : public std::istream {
+/******************************************************************************/
+class Istream : public std::istream {
 public:
-  istream(const source& s)
+  Istream(const Source& s)
       : std::istream(&buf_)
       , buf_(s)
   {
   }
 
 private:
-  boost::iostreams::stream_buffer<source> buf_;
+  boost::iostreams::stream_buffer<Source> buf_;
 };
 
 /******************************************************************************/
 std::unique_ptr<std::istream> to_istream(std::unique_ptr<File> r)
 {
-  source source(std::move(r));
-  return std::make_unique<istream>(source);
+  Source source(std::move(r));
+  return std::make_unique<Istream>(source);
 }
 
 } // namespace MzPeak::IO
