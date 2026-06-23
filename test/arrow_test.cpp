@@ -11,13 +11,13 @@ in the LICENSE file found in the top-level directory of this project.
 #include <arrow/io/api.h>
 #include <parquet/arrow/reader.h>
 
-#include "mzpeak/directory.h"
+#include "mzpeak/io/directory.h"
 #include "mzpeak/util/arrow.h"
 
 /******************************************************************************/
 BOOST_AUTO_TEST_CASE(can_open_parque)
 {
-  MzPeak::Directory dir("../test/files/small.dir");
+  MzPeak::IO::Directory dir("../test/files/small.dir");
   MzPeak::Util::Arrow arrow(dir.read_file("spectra_data.parquet"));
   std::shared_ptr<arrow::io::RandomAccessFile> file(arrow.reader());
 

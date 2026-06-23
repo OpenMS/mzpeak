@@ -6,12 +6,13 @@ top-level directory of this repository.
 
 */
 
-#include "mzpeak/data/slice.h"
+#include "mzpeak/util/slice.h"
+
 #include <memory>
 
-namespace MzPeak::Data {
+namespace MzPeak::Util {
 
-using Struct = MzPeak::Util::Struct;
+using Struct = MzPeak::Schema::Struct;
 
 /******************************************************************************/
 struct Slice::Impl {
@@ -75,4 +76,4 @@ void Slice::append(const Column& field, std::shared_ptr<arrow::Array> array)
   }
 }
 
-} // namespace MzPeak::Data
+} // namespace MzPeak::Util

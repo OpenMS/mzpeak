@@ -11,7 +11,7 @@ directory of this repository.
 #include <memory>
 #include <optional>
 
-namespace MzPeak {
+namespace MzPeak::IO {
 
 /******************************************************************************/
 /**
@@ -76,4 +76,4 @@ private:
  */
 std::unique_ptr<std::istream> to_istream(std::unique_ptr<File>);
 
-} // namespace MzPeak
+} // namespace MzPeak::IO

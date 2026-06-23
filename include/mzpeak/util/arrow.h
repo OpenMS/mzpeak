@@ -10,7 +10,7 @@ directory of this repository.
 
 #include <arrow/io/api.h>
 
-#include "mzpeak/file.h"
+#include "mzpeak/io/file.h"
 
 namespace MzPeak::Util {
 
@@ -22,7 +22,7 @@ public:
   using random_access_t = arrow::io::RandomAccessFile;
 
   /// Constructor.
-  Arrow(std::unique_ptr<File>);
+  Arrow(std::unique_ptr<IO::File>);
 
   /// Destructor.
   ~Arrow();

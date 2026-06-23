@@ -6,6 +6,8 @@ directory of this repository.
 
 */
 
+#include "mzpeak/util/arrow.h"
+
 #include <arrow/buffer.h>
 #include <arrow/io/api.h>
 #include <arrow/io/buffered.h>
@@ -13,7 +15,6 @@ directory of this repository.
 #include <parquet/properties.h>
 
 #include "mzpeak/exception.h"
-#include "mzpeak/util/arrow.h"
 
 namespace MzPeak::Util {
 
@@ -24,7 +25,7 @@ namespace MzPeak::Util {
 class ArrowFile_ final : public arrow::io::RandomAccessFile {
 public:
   /// Constructor.
-  ArrowFile_(std::shared_ptr<File> file)
+  ArrowFile_(std::shared_ptr<IO::File> file)
       : file_(std::move(file))
   {
     arrow::Result<std::unique_ptr<arrow::ResizableBuffer>> res(
@@ -111,24 +112,24 @@ public:
   bool closed() const { return !file_->is_open(); }
 
 private:
-  std::shared_ptr<File> file_;
+  std::shared_ptr<IO::File> file_;
   std::shared_ptr<arrow::ResizableBuffer> buffer_;
 };
 
 /******************************************************************************/
 struct Arrow::Impl {
-  Impl(std::unique_ptr<File> file)
+  Impl(std::unique_ptr<IO::File> file)
       : file_(std::move(file))
       , reader_(std::make_shared<ArrowFile_>(file_))
   {
   }
 
-  std::shared_ptr<File> file_;
+  std::shared_ptr<IO::File> file_;
   std::shared_ptr<ArrowFile_> reader_;
 };
 
 /******************************************************************************/
-Arrow::Arrow(std::unique_ptr<File> file)
+Arrow::Arrow(std::unique_ptr<IO::File> file)
     : impl_(std::make_unique<Impl>(std::move(file)))
 {
 }

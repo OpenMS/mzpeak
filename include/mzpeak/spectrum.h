@@ -10,9 +10,8 @@ top-level directory of this repository.
 
 #include <memory>
 
-#include "mzpeak/data/arrays.h"
-#include "mzpeak/data/slice.h"
-#include "mzpeak/schema/psi/data_type.h"
+#include "mzpeak/data/signals.h"
+#include "mzpeak/util/slice.h"
 
 namespace MzPeak {
 
@@ -43,9 +42,9 @@ protected:
   friend class Spectra;
 
   /// Internal constructor.
-  Spectrum(const Data::Arrays&,
+  Spectrum(const Data::Signals&,
            const std::vector<Data::Dimension>&,
-           std::unique_ptr<Data::Slice>);
+           std::unique_ptr<Util::Slice>);
 
 private:
   std::vector<double> mz_;

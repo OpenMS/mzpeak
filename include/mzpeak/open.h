@@ -8,8 +8,9 @@ top-level directory of this repository.
 
 #pragma once
 
-#include "mzpeak/index.h"
 #include <filesystem>
+
+#include "mzpeak/index.h"
 
 namespace MzPeak {
 

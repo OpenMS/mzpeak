@@ -6,13 +6,14 @@ directory of this repository.
 
 */
 
-#include "mzpeak/archive.h"
-#include "mzpeak/data/arrays.h"
-#include "mzpeak/data/metadata.h"
-#include "mzpeak/exception.h"
 #include "mzpeak/index.h"
 
 #include <memory>
+
+#include "mzpeak/data/metadata.h"
+#include "mzpeak/data/signals.h"
+#include "mzpeak/exception.h"
+#include "mzpeak/io/archive.h"
 
 /*
  * Boost JSON:
@@ -30,7 +31,7 @@ namespace json = boost::json;
 struct Index::Impl {
 
   /// Constructor.
-  Impl(std::unique_ptr<MzPeak::Archive> archive)
+  Impl(std::unique_ptr<MzPeak::IO::Archive> archive)
       : archive_(std::move(archive))
   {
     parse_index();
@@ -40,7 +41,7 @@ struct Index::Impl {
   void parse_index();
 
   // The archive we are reading files out of.
-  std::unique_ptr<MzPeak::Archive> archive_;
+  std::unique_ptr<MzPeak::IO::Archive> archive_;
 
   // Parsed file entries.
   std::vector<Schema::File> files_;
@@ -53,7 +54,7 @@ struct Index::Impl {
 };
 
 /******************************************************************************/
-Index::Index(std::unique_ptr<MzPeak::Archive> archive)
+Index::Index(std::unique_ptr<MzPeak::IO::Archive> archive)
     : impl_(std::make_unique<Impl>(std::move(archive)))
 {
 }
@@ -111,8 +112,8 @@ Spectra Index::spectra() const
     return Spectra();
   }
 
-  std::unique_ptr<Data::Arrays> data =
-      std::make_unique<Data::Arrays>(parquet(*data_it));
+  std::unique_ptr<Data::Signals> data =
+      std::make_unique<Data::Signals>(parquet(*data_it));
   std::unique_ptr<Data::Metadata> meta = nullptr;
 
   if (meta_it != impl_->files_.end()) {
@@ -125,7 +126,7 @@ Spectra Index::spectra() const
 /******************************************************************************/
 std::unique_ptr<Util::Parquet> Index::parquet(const Schema::File& file) const
 {
-  std::unique_ptr<File> data(impl_->archive_->read_file(file.file_name));
+  std::unique_ptr<IO::File> data(impl_->archive_->read_file(file.file_name));
   return std::make_unique<Util::Parquet>(std::move(data), file);
 }
 

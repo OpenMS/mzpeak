@@ -9,10 +9,10 @@ in the LICENSE file found in the top-level directory of this project.
 #include <boost/test/included/unit_test.hpp>
 
 #include "mzpeak/open.h"
-#include "mzpeak/query.h"
 #include "mzpeak/util/executor.h"
 #include "mzpeak/util/parquet.h"
 #include "mzpeak/util/planner.h"
+#include "mzpeak/util/query.h"
 
 /******************************************************************************/
 BOOST_AUTO_TEST_CASE(can_find_spectrum)
@@ -33,13 +33,13 @@ BOOST_AUTO_TEST_CASE(can_find_spectrum)
   auto mz_field = parquet->field("point", "mz");
   BOOST_TEST(mz_field.has_value());
 
-  auto query = Query::Builder(*index_field).eq<int64_t>(1);
+  auto query = Util::Query::Builder(*index_field).eq<int64_t>(1);
 
   Util::Planner planner = parquet->planner(query);
   auto plan = planner.plan();
   BOOST_TEST(plan.ranges.size() == 1ul);
 
-  std::vector<Query::destination_t> projection = {*mz_field};
+  std::vector<Schema::Column> projection = {*mz_field};
 
   Util::Executor executor = parquet->executor(projection);
   const auto& slice = executor.execute(plan);
@@ -50,7 +50,7 @@ BOOST_AUTO_TEST_CASE(can_find_spectrum)
 
   // Decode, dropping null values.
   std::vector<double> mz;
-  slice->array<Data::Slice::DecodeScalar<double>>(*mz_field, mz);
+  slice->array<Util::Slice::DecodeScalar<double>>(*mz_field, mz);
   BOOST_TEST(mz.size() == 15063);
   BOOST_TEST(mz[0] == 200.09, boost::test_tools::tolerance(0.001));
   BOOST_TEST(mz[mz.size() - 1] == 1999.81, boost::test_tools::tolerance(0.001));

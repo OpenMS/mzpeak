@@ -13,4 +13,12 @@ IndentAccessModifiers: false
 IndentCaseBlocks: false
 BreakConstructorInitializers: BeforeComma
 BinPackParameters: OnePerLine
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex: '^<boost/test/.*>$'
+    Priority: 1
+  - Regex: '^<.*>$'
+    Priority: 2
+  - Regex: '^"mzpeak(\.h|/.*)"$'
+    Priority: 3
 ...

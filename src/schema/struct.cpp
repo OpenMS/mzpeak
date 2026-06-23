@@ -6,14 +6,15 @@ top-level directory of this repository.
 
 */
 
+#include "mzpeak/schema/struct.h"
+
 #include <memory>
+#include <parquet/schema.h>
 #include <ranges>
 
 #include "mzpeak/schema/psi/data_type.h"
-#include "mzpeak/util/struct.h"
-#include "parquet/schema.h"
 
-namespace MzPeak::Util {
+namespace MzPeak::Schema {
 
 /******************************************************************************/
 // clang doesn't support views::join yet :(
@@ -52,7 +53,7 @@ find_homogeneous_primitive(std::shared_ptr<parquet::schema::Node> node)
 }
 
 /******************************************************************************/
-std::pair<Struct::Field::Kind, std::optional<Schema::PSI::DataType>>
+std::pair<Struct::Field::Kind, std::optional<PSI::DataType>>
 field_type_from_parquet(const std::shared_ptr<parquet::schema::GroupNode>& node)
 {
   switch (node->logical_type()->type()) {
@@ -61,9 +62,8 @@ field_type_from_parquet(const std::shared_ptr<parquet::schema::GroupNode>& node)
     if (auto prim = find_homogeneous_primitive(
             std::static_pointer_cast<parquet::schema::Node>(node));
         prim != nullptr) {
-      return std::make_pair(
-          Struct::Field::Kind::List,
-          Schema::PSI::data_type_from_parquet(prim->physical_type()));
+      return std::make_pair(Struct::Field::Kind::List,
+                            PSI::data_type_from_parquet(prim->physical_type()));
     } else {
       return std::make_pair(Struct::Field::Kind::List, std::nullopt);
     }
@@ -128,13 +128,13 @@ std::optional<std::string> Struct::Field::cv_type() const { return cv_type_; }
 std::optional<std::string> Struct::Field::cv_unit() const { return cv_unit_; }
 
 /******************************************************************************/
-const std::optional<Schema::PSI::DataType>& Struct::Field::data_type() const
+const std::optional<PSI::DataType>& Struct::Field::data_type() const
 {
   return data_type_;
 }
 
 /******************************************************************************/
-void Struct::Field::data_type(Schema::PSI::DataType dt) { data_type_ = dt; }
+void Struct::Field::data_type(PSI::DataType dt) { data_type_ = dt; }
 
 /******************************************************************************/
 Struct::Struct(const parquet::schema::GroupNode& node,
@@ -152,7 +152,7 @@ Struct::Struct(const parquet::schema::GroupNode& node,
     if (child->is_primitive()) {
       auto prim = std::static_pointer_cast<parquet::schema::PrimitiveNode>(child);
       field->kind_ = Field::Kind::Scalar;
-      field->data_type_ = Schema::PSI::data_type_from_parquet(prim->physical_type());
+      field->data_type_ = PSI::data_type_from_parquet(prim->physical_type());
     } else {
       auto grp = std::static_pointer_cast<parquet::schema::GroupNode>(child);
 
@@ -191,4 +191,4 @@ Struct::field(const std::string_view& name) const
 /******************************************************************************/
 const Struct::field_map_t& Struct::fields() const { return fields_; }
 
-} // namespace MzPeak::Util
+} // namespace MzPeak::Schema

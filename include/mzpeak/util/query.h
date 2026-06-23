@@ -13,9 +13,9 @@ top-level directory of this repository.
 #include <type_traits>
 #include <variant>
 
-#include "mzpeak/util/struct.h"
+#include "mzpeak/schema/struct.h"
 
-namespace MzPeak {
+namespace MzPeak::Util {
 
 /// Types that can be used with a query.
 template <typename T>
@@ -35,14 +35,6 @@ concept query_comparable = std::same_as<std::remove_cvref_t<T>, int32_t> ||
  * (`&&`, `||`, and `!`).
  */
 class Query final {
-public:
-  using Struct = Util::Struct;
-  using Field = Util::Struct::Field;
-
-  // How to specify what field you want to query.
-  using destination_t =
-      std::pair<std::shared_ptr<const Struct>, std::shared_ptr<const Field>>;
-
 private:
   struct Predicate;
   enum class Op { EQ, GT, LT, GE, LE };
@@ -51,7 +43,7 @@ public:
   /**
    * This class is used to construct a Query object using two inputs:
    *
-   * 1. A Parquet struct and field to compare to (`destination_t`)
+   * 1. A Parquet struct and field to compare to (`Schema::Column`)
    *
    * 2. A predicate function with a comparison value.
    *
@@ -67,7 +59,7 @@ public:
   class Builder final {
   public:
     /// Constructor.
-    Builder(destination_t destination)
+    Builder(Schema::Column destination)
         : dest_(destination)
     {
     }
@@ -125,7 +117,7 @@ public:
 
   private:
     Query validate(Predicate&& p) const;
-    destination_t dest_;
+    Schema::Column dest_;
   };
 
 public:
@@ -215,12 +207,12 @@ public:
 
   /// A function that when given an column type, should return a single value.
   /// If this isn't possible it should return `Result<value_t>::skip()`.
-  using eval_callback_t = std::function<Result<value_t>(destination_t)>;
+  using eval_callback_t = std::function<Result<value_t>(Schema::Column)>;
 
   /// A func ion that when given an column type should return a min
   /// and max.  If this isn't possible it should return
   /// `Result<range_t>::skip()`.
-  using eval_range_callback_t = std::function<Result<range_t>(destination_t)>;
+  using eval_range_callback_t = std::function<Result<range_t>(Schema::Column)>;
 
   /**
    * Evaluate a query.
@@ -241,7 +233,7 @@ private:
 
   // A predicate that can be tested against a value.
   struct Predicate {
-    destination_t dest;
+    Schema::Column dest;
     Op op;
     value_t val;
   };
@@ -333,4 +325,4 @@ template <typename T> Query::Result<T> Query::Result<T>::operator!()
   return r;
 }
 
-} // namespace MzPeak
+} // namespace MzPeak::Util

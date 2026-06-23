@@ -6,17 +6,17 @@ directory of this repository.
 
 */
 
+#include "mzpeak/io/zip.h"
+
 #include <zip.h>
 
-#include "mzpeak/zip.h"
-
-namespace MzPeak {
+namespace MzPeak::IO {
 
 /******************************************************************************/
 /**
  * A streaming source for files in a zip archive.
  */
-class ZipFile_ final : public MzPeak::File {
+class ZipFile_ final : public MzPeak::IO::File {
 public:
   ZipFile_(zip_file_t* file, std::size_t size, fs::path path)
       : impl_(std::make_shared<Impl>(file, size, path))
@@ -177,7 +177,7 @@ std::vector<fs::path> Zip::list()
 }
 
 /******************************************************************************/
-std::unique_ptr<MzPeak::File> Zip::read_file(const fs::path& path)
+std::unique_ptr<MzPeak::IO::File> Zip::read_file(const fs::path& path)
 {
   zip_stat_t stat;
   int errnum = zip_stat(impl_->archive, path.c_str(), ZIP_FL_UNCHANGED, &stat);
@@ -197,4 +197,4 @@ std::unique_ptr<MzPeak::File> Zip::read_file(const fs::path& path)
   return std::make_unique<ZipFile_>(file, stat.size, path);
 }
 
-} // namespace MzPeak
+} // namespace MzPeak::IO

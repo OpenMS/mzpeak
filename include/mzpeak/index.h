@@ -8,7 +8,7 @@ directory of this repository.
 
 #pragma once
 
-#include "mzpeak/archive.h"
+#include "mzpeak/io/archive.h"
 #include "mzpeak/schema/file.h"
 #include "mzpeak/spectra.h"
 #include "mzpeak/util/parquet.h"
@@ -23,7 +23,7 @@ namespace MzPeak {
 class Index {
 public:
   /// Constructor.
-  Index(std::unique_ptr<MzPeak::Archive>);
+  Index(std::unique_ptr<MzPeak::IO::Archive>);
 
   /// Destructor.
   ~Index();

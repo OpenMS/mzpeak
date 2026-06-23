@@ -10,13 +10,13 @@ top-level directory of this repository.
 #include <boost/test/included/unit_test.hpp>
 
 #include "mzpeak/open.h"
+#include "mzpeak/schema/struct.h"
 #include "mzpeak/util/parquet.h"
-#include "mzpeak/util/struct.h"
 
 /******************************************************************************/
 BOOST_AUTO_TEST_CASE(can_parse_column_names)
 {
-  using namespace MzPeak::Util;
+  using namespace MzPeak::Schema;
 
   // All components.
   Struct::Field a("MS_1000528_lowest_observed_mz_unit_MS_1000040", 0, 2);

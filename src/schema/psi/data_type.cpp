@@ -6,9 +6,9 @@ directory of this repository.
 
 */
 
-#include <parquet/types.h>
-
 #include "mzpeak/schema/psi/data_type.h"
+
+#include <parquet/types.h>
 
 namespace MzPeak::Schema::PSI {
 

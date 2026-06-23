@@ -11,11 +11,11 @@ top-level directory of this repository.
 #include <arrow/array.h>
 #include <vector>
 
+#include "mzpeak/data/array_index.h"
 #include "mzpeak/data/dimension.h"
-#include "mzpeak/data/slice.h"
-#include "mzpeak/schema/array_index.h"
 #include "mzpeak/schema/psi/data_type.h"
-#include "mzpeak/util/types.h"
+#include "mzpeak/schema/struct.h"
+#include "mzpeak/util/slice.h"
 
 namespace MzPeak::Data {
 
@@ -28,9 +28,9 @@ public:
   using value_type = typename Schema::PSI::data_type_traits<T>::value_type;
 
   /// Constructor.
-  Encoding(std::shared_ptr<Schema::ArrayIndex> array_index,
-           std::shared_ptr<Util::StructMap> struct_map,
-           std::shared_ptr<Data::Slice> slice)
+  Encoding(std::shared_ptr<ArrayIndex> array_index,
+           std::shared_ptr<Schema::StructMap> struct_map,
+           std::shared_ptr<Util::Slice> slice)
       : array_index_(std::move(array_index))
       , struct_map_(std::move(struct_map))
       , slice_(std::move(slice))
@@ -50,7 +50,7 @@ public:
    *
    * You probably want to use `decode_dimension` instead.
    */
-  void decode_point(const Util::Column&, std::vector<value_type>&) const;
+  void decode_point(const Schema::Column&, std::vector<value_type>&) const;
 
   /**
    * Decode a dimension using the "chunked" encoding.
@@ -61,9 +61,9 @@ public:
   // decode_chunked(const std::vector<Schema::ArrayIndex::Array>&) const;
 
 private:
-  std::shared_ptr<Schema::ArrayIndex> array_index_;
-  std::shared_ptr<Util::StructMap> struct_map_;
-  std::shared_ptr<Data::Slice> slice_;
+  std::shared_ptr<ArrayIndex> array_index_;
+  std::shared_ptr<Schema::StructMap> struct_map_;
+  std::shared_ptr<Util::Slice> slice_;
 };
 
 /******************************************************************************/
@@ -71,7 +71,7 @@ template <Schema::PSI::DataType T>
 void Encoding<T>::decode_dimension(
     const Dimension& dim, std::vector<typename Encoding<T>::value_type>& v) const
 {
-  auto columns = array_index_->columns(dim);
+  auto columns = array_index_->entries(dim);
 
   if (columns.empty()) {
     std::string msg("unable to decode dimension, wrong encoding: ");
@@ -94,7 +94,8 @@ void Encoding<T>::decode_dimension(
 /******************************************************************************/
 template <Schema::PSI::DataType T>
 void Encoding<T>::decode_point(
-    const Util::Column& col, std::vector<typename Encoding<T>::value_type>& v) const
+    const Schema::Column& col,
+    std::vector<typename Encoding<T>::value_type>& v) const
 {
   // FIXME: use null mark decoding for the main axis and zeros for
   // other dimensions.
@@ -102,7 +103,7 @@ void Encoding<T>::decode_point(
     return 0;
   };
 
-  slice_->array(col, v, Slice::DecodeScalar<value_type>(on_null));
+  slice_->array(col, v, Util::Slice::DecodeScalar<value_type>(on_null));
 }
 
 } // namespace MzPeak::Data

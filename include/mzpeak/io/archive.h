@@ -11,9 +11,9 @@ directory of this repository.
 #include <filesystem>
 #include <vector>
 
-#include "mzpeak/file.h"
+#include "mzpeak/io/file.h"
 
-namespace MzPeak {
+namespace MzPeak::IO {
 
 namespace fs = std::filesystem;
 
@@ -39,4 +39,4 @@ protected:
   Archive() = default;
 };
 
-} // namespace MzPeak
+} // namespace MzPeak::IO

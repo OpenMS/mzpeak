@@ -6,6 +6,8 @@ top-level directory of this repository.
 
 */
 
+#include "mzpeak/util/executor.h"
+
 #include <arrow/array.h>
 #include <arrow/record_batch.h>
 #include <arrow/result.h>
@@ -14,11 +16,8 @@ top-level directory of this repository.
 #include <ranges>
 #include <string_view>
 
-#include "mzpeak/data/slice.h"
 #include "mzpeak/util/algorithm.h"
-#include "mzpeak/util/executor.h"
 #include "mzpeak/util/parquet_types.h"
-#include "mzpeak/util/struct.h"
 
 namespace MzPeak::Util {
 
@@ -53,13 +52,13 @@ struct Executor::Impl {
 
   /// Return the array associated with the given field.
   std::shared_ptr<arrow::Array> array(std::shared_ptr<arrow::RecordBatch>& batch,
-                                      const Query::destination_t& field);
+                                      const Schema::Column& field);
 
   /// Helper to extract a single value from an array.
   struct ArrayValueHelper {
     template <psi::DataType T> Query::Result<Query::value_t> operator()();
     Executor::Impl& impl_;
-    const Query::destination_t& field_;
+    const Schema::Column& field_;
     std::shared_ptr<arrow::RecordBatch>& batch_;
     int64_t row_index_;
   };
@@ -101,7 +100,7 @@ std::vector<bool> Executor::Impl::filter(const Planner::Plan& plan,
 
   auto get_value =
       [&](int64_t row_index,
-          const Query::destination_t& field) -> Query::Result<Query::value_t> {
+          const Schema::Column& field) -> Query::Result<Query::value_t> {
     if (field.second->data_type().has_value()) {
       return psi::dispatch(field.second->data_type().value(),
                            ArrayValueHelper{*this, field, batch, row_index});
@@ -130,7 +129,7 @@ void Executor::Impl::project(std::shared_ptr<arrow::RecordBatch>& batch)
 /******************************************************************************/
 std::shared_ptr<arrow::Array>
 Executor::Impl::array(std::shared_ptr<arrow::RecordBatch>& batch,
-                      const Query::destination_t& field)
+                      const Schema::Column& field)
 {
   std::shared_ptr<arrow::Array> col(batch->column(field.first->index()));
 
@@ -154,10 +153,10 @@ Executor::Executor(std::shared_ptr<parquet::arrow::FileReader> reader,
 Executor::~Executor() = default;
 
 /******************************************************************************/
-std::unique_ptr<Data::Slice> Executor::execute(const Planner::Plan& plan)
+std::unique_ptr<Executor::Slice> Executor::execute(const Planner::Plan& plan)
 {
-  impl_->slice_ = std::unique_ptr<Data::Slice>(new Data::Slice(impl_->projection_));
-  std::map<Struct::index_type, std::vector<Planner::Range>> ranges;
+  impl_->slice_ = std::unique_ptr<Slice>(new Slice(impl_->projection_));
+  std::map<Schema::Struct::index_type, std::vector<Planner::Range>> ranges;
 
   for (const auto& range : plan.ranges) {
     auto it = ranges.find(range.row_group);

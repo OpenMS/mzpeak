@@ -11,12 +11,11 @@ directory of this repository.
 #include <parquet/metadata.h>
 #include <parquet/statistics.h>
 
-#include "mzpeak/file.h"
-#include "mzpeak/query.h"
-#include "mzpeak/schema/array_index.h"
+#include "mzpeak/io/file.h"
 #include "mzpeak/schema/file.h"
+#include "mzpeak/schema/struct.h"
 #include "mzpeak/util/executor.h"
-#include "mzpeak/util/types.h"
+#include "mzpeak/util/query.h"
 
 namespace MzPeak::Util {
 
@@ -28,7 +27,7 @@ public:
   using file_metadata_t = std::shared_ptr<parquet::FileMetaData>;
 
   /// Constructor.
-  Parquet(std::unique_ptr<MzPeak::File>, Schema::File);
+  Parquet(std::unique_ptr<MzPeak::IO::File>, Schema::File);
 
   /// Destructor.
   ~Parquet();
@@ -41,13 +40,13 @@ public:
   /**
    * Return the schema encoded as a map of Struct objects.
    */
-  const std::shared_ptr<StructMap>& structs() const;
+  const std::shared_ptr<Schema::StructMap>& structs() const;
 
   /**
    * Return a Struct and Field matching the given names.
    */
-  std::optional<Column> field(const std::string_view&,
-                              const std::string_view&) const;
+  std::optional<Schema::Column> field(const std::string_view&,
+                                      const std::string_view&) const;
 
   /**
    * Access the file metadata.
@@ -55,14 +54,16 @@ public:
   file_metadata_t file_metadata() const;
 
   /**
-   * Return the raw array index JSON.
+   * Fetch a string value from the metadata key-value store.
    */
-  std::string array_index_json() const;
+  std::optional<std::string> kv_string(const file_metadata_t&,
+                                       const std::string_view&) const;
 
   /**
-   * Parse and return the ArrayIndex.
+   * Fetch a std::size_t value from the metadata key-value store.
    */
-  std::shared_ptr<Schema::ArrayIndex> array_index() const;
+  std::optional<std::size_t> kv_size_t(const file_metadata_t&,
+                                       const std::string_view&) const;
 
   /**
    * Directly access the FileReader.  This reference is only valid

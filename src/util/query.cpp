@@ -6,16 +6,17 @@ top-level directory of this repository.
 
 */
 
+#include "mzpeak/util/query.h"
+
 #include <cassert>
 #include <functional>
 #include <variant>
 
 #include "mzpeak/exception.h"
-#include "mzpeak/query.h"
 #include "mzpeak/schema/psi/data_type.h"
 #include "mzpeak/util/compat.h" // IWYU pragma: keep
 
-namespace MzPeak {
+namespace MzPeak::Util {
 
 /**
  * Classic trampoline to turn recursive algorithms into iteration.
@@ -337,4 +338,4 @@ Trampoline<Query::Result<bool>> EvalHelper<Fn, V>::eval_node(const Query::Node& 
   return result;
 }
 
-} // namespace MzPeak
+} // namespace MzPeak::Util

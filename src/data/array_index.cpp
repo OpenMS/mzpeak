@@ -6,15 +6,16 @@ directory of this repository.
 
 */
 
+#include "mzpeak/data/array_index.h"
+
 #include <algorithm>
 #include <iterator>
 #include <ranges>
 
-#include "mzpeak/schema/array_index.h"
 #include "mzpeak/schema/buffer_format.h"
 #include "mzpeak/schema/entity_type.h"
 
-namespace MzPeak::Schema {
+namespace MzPeak::Data {
 
 /******************************************************************************/
 ArrayIndex::ArrayIndex(EntityType entity_type, const json::object& obj)
@@ -25,54 +26,53 @@ ArrayIndex::ArrayIndex(EntityType entity_type, const json::object& obj)
 
   if (entries != obj.end() && entries->value().is_array()) {
     auto entries_ary(entries->value().as_array());
-    columns_.reserve(entries_ary.size() + 1);
+    entries_.reserve(entries_ary.size() + 1);
 
     for (const auto& entry : entries_ary) {
       if (entry.is_object()) {
         const auto& eo(entry.as_object());
-        Column column;
-        column.array_name = eo.at("array_name").as_string();
-        column.buffer_format =
+        Entry entry;
+        entry.array_name = eo.at("array_name").as_string();
+        entry.buffer_format =
             buffer_format_from_string(eo.at("buffer_format").as_string());
-        column.context = entity_type_from_string(eo.at("context").as_string());
-        column.path = eo.at("path").as_string();
-        column.name = column.path.substr(prefix_.size() + 1);
-        column.data_type =
-            PSI::data_type_from_string(eo.at("data_type").as_string());
-        column.array_type =
+        entry.context = entity_type_from_string(eo.at("context").as_string());
+        entry.path = eo.at("path").as_string();
+        entry.name = entry.path.substr(prefix_.size() + 1);
+        entry.data_type = PSI::data_type_from_string(eo.at("data_type").as_string());
+        entry.array_type =
             PSI::array_type_from_string(eo.at("array_type").as_string());
-        column.unit = eo.at("unit").as_string();
+        entry.unit = eo.at("unit").as_string();
 
         if (auto bp = eo.find("buffer_priority");
             bp != eo.end() && bp->value().is_string()) {
-          column.buffer_priority = bp->value().as_string() == "primary";
+          entry.buffer_priority = bp->value().as_string() == "primary";
         }
 
         if (auto sr = eo.find("sorting_rank");
             sr != eo.end() && sr->value().is_number()) {
           if (sr->value().is_int64()) {
-            column.sorting_rank = sr->value().as_int64();
+            entry.sorting_rank = sr->value().as_int64();
           } else {
-            column.sorting_rank = sr->value().as_uint64();
+            entry.sorting_rank = sr->value().as_uint64();
           }
         }
 
         if (auto dpi = eo.find("data_processing_id");
             dpi != eo.end() && dpi->value().is_string()) {
-          column.data_processing_id = dpi->value().as_string();
+          entry.data_processing_id = dpi->value().as_string();
         }
 
         if (auto tr = eo.find("transform");
             tr != eo.end() && tr->value().is_string()) {
-          column.transform = tr->value().as_string();
+          entry.transform = tr->value().as_string();
         }
 
-        columns_.push_back(std::move(column));
+        entries_.push_back(std::move(entry));
       }
     }
   }
 
-  std::ranges::sort(columns_, {}, &Column::array_name);
+  std::ranges::sort(entries_, {}, &Entry::array_name);
 }
 
 /******************************************************************************/
@@ -82,23 +82,23 @@ EntityType ArrayIndex::entity_type() const { return entity_type_; }
 const std::string& ArrayIndex::prefix() const { return prefix_; }
 
 /******************************************************************************/
-const std::vector<ArrayIndex::Column>& ArrayIndex::columns() const
+const std::vector<ArrayIndex::Entry>& ArrayIndex::entries() const
 {
-  return columns_;
+  return entries_;
 }
 
 /******************************************************************************/
-std::vector<ArrayIndex::Column> ArrayIndex::columns(PSI::ArrayType type) const
+std::vector<ArrayIndex::Entry> ArrayIndex::entries(PSI::ArrayType type) const
 {
-  return columns_ |
+  return entries_ |
          std::views::filter([type](const auto& c) { return c.array_type == type; }) |
          std::ranges::to<std::vector>();
 }
 
 /******************************************************************************/
-std::vector<ArrayIndex::Column> ArrayIndex::columns(const Data::Dimension& d) const
+std::vector<ArrayIndex::Entry> ArrayIndex::entries(const Data::Dimension& d) const
 {
-  return columns_ | std::views::filter([d](const auto& c) {
+  return entries_ | std::views::filter([d](const auto& c) {
            return c.array_type == d.array_type && c.data_type == d.data_type;
          }) |
          std::ranges::to<std::vector>();
@@ -117,10 +117,10 @@ std::optional<std::size_t> ArrayIndex::num_entities() const { return num_entitie
 std::vector<Data::Dimension> ArrayIndex::dimensions() const
 {
 
-  std::vector<Column> cols;
-  cols.reserve(columns_.size()); // Should be small
+  std::vector<Entry> cols;
+  cols.reserve(entries_.size()); // Should be small
 
-  std::ranges::unique_copy(columns_.begin(), columns_.end(),
+  std::ranges::unique_copy(entries_.begin(), entries_.end(),
                            std::back_inserter(cols), [](auto& a, auto& b) {
                              return a.array_name == b.array_name &&
                                     a.data_type == b.data_type &&
@@ -138,8 +138,8 @@ std::vector<Data::Dimension> ArrayIndex::dimensions() const
 }
 
 /******************************************************************************/
-std::optional<Util::Column> ArrayIndex::entry_column(const Util::StructMap& map,
-                                                     const Column& col)
+std::optional<Schema::Column> ArrayIndex::entry_column(const Schema::StructMap& map,
+                                                       const Entry& col)
 {
   auto it = map.find(prefix_);
   if (it == map.end()) return {};
@@ -150,4 +150,4 @@ std::optional<Util::Column> ArrayIndex::entry_column(const Util::StructMap& map,
   return std::make_pair(it->second, field.value());
 }
 
-} // namespace MzPeak::Schema
+} // namespace MzPeak::Data
