@@ -11,7 +11,7 @@ top-level directory of this repository.
 #include <cstdint>
 #include <memory>
 
-#include "mzpeak/query.h"
+#include "mzpeak/util/query.h"
 
 namespace parquet::arrow {
 class FileReader;

@@ -6,6 +6,8 @@ top-level directory of this repository.
 
 */
 
+#include "mzpeak/util/planner.h"
+
 #include <arrow/array.h>
 #include <arrow/record_batch.h>
 #include <memory>
@@ -19,7 +21,6 @@ top-level directory of this repository.
 #include "mzpeak/schema/psi/data_type.h"
 #include "mzpeak/util/algorithm.h"
 #include "mzpeak/util/parquet_types.h"
-#include "mzpeak/util/planner.h"
 
 namespace MzPeak::Util {
 
@@ -44,14 +45,14 @@ struct StatsCache {
   std::map<key_type, value_type> cache_;
 
   // Construct a key for the given struct/field.
-  key_type key(const Query::destination_t& dest) const
+  key_type key(const Schema::Column& dest) const
   {
     return dest.second->absolute_index();
   }
 
   // Attempt to fetch column statistics.
   std::optional<value_type> get(const std::shared_ptr<parquet::RowGroupMetaData>& rg,
-                                const Query::destination_t& dest)
+                                const Schema::Column& dest)
   {
     key_type k(key(dest));
     auto it = cache_.find(k);
@@ -136,13 +137,13 @@ public:
   // Construct a key for the given struct/field.
   //
   // FIXME: Should probably move this into the destination code.
-  key_type key(const Query::destination_t& dest) const
+  key_type key(const Schema::Column& dest) const
   {
     return dest.second->absolute_index();
   }
 
   // Return an item from the cache, or compute it.
-  std::optional<value_type> get(const Query::destination_t& dest)
+  std::optional<value_type> get(const Schema::Column& dest)
   {
     key_type k(key(dest));
     auto it = cache_.find(k);
@@ -364,9 +365,8 @@ Query::Result<bool> Planner::Impl::with_column_stats(
   StatsCache stats_cache;
 
   // Evaluation callback that tries to use column statistics.
-  auto via_stats =
-      [&stats_cache,
-       &rg](const Query::destination_t& dest) -> Query::Result<Query::range_t> {
+  auto via_stats = [&stats_cache, &rg](
+                       const Schema::Column& dest) -> Query::Result<Query::range_t> {
     auto stats = stats_cache.get(rg, dest);
     if (stats.has_value() && dest.second->data_type().has_value()) {
       return psi::dispatch(dest.second->data_type().value(),
@@ -388,7 +388,7 @@ Query::Result<bool> Planner::Impl::with_page_index(
   IndexCache index_cache(rg, ri);
 
   auto via_page_index =
-      [&](const Query::destination_t& dest) -> Query::Result<Query::range_t> {
+      [&](const Schema::Column& dest) -> Query::Result<Query::range_t> {
     if (!dest.second->data_type().has_value())
       return Query::Result<Query::range_t>::fail();
 

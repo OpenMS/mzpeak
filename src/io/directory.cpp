@@ -6,16 +6,16 @@ directory of this repository.
 
 */
 
+#include "mzpeak/io/directory.h"
+
 #include <fstream>
 #include <memory>
 
-#include "mzpeak/directory.h"
-
-namespace MzPeak {
+namespace MzPeak::IO {
 
 /******************************************************************************/
 // Thin wrapper around `std::fstream`.
-class DirFile_ final : public MzPeak::File {
+class DirFile_ final : public MzPeak::IO::File {
 public:
   DirFile_(const fs::path& path)
       : path_(path)
@@ -76,10 +76,10 @@ std::vector<fs::path> Directory::list()
 }
 
 /******************************************************************************/
-std::unique_ptr<MzPeak::File> Directory::read_file(const fs::path& name)
+std::unique_ptr<MzPeak::IO::File> Directory::read_file(const fs::path& name)
 {
   fs::path path(path_ / name.lexically_normal());
   return std::make_unique<DirFile_>(path.string());
 }
 
-} // namespace MzPeak
+} // namespace MzPeak::IO

@@ -9,7 +9,6 @@ directory of this repository.
 #pragma once
 
 #include <boost/json.hpp>
-#include <map>
 #include <optional>
 #include <string>
 #include <vector>
@@ -19,24 +18,22 @@ directory of this repository.
 #include "mzpeak/schema/entity_type.h"
 #include "mzpeak/schema/psi/array_type.h"
 #include "mzpeak/schema/psi/data_type.h"
-#include "mzpeak/util/types.h"
+#include "mzpeak/schema/struct.h"
 
-namespace MzPeak::Schema {
+namespace MzPeak::Data {
 
 namespace json = boost::json;
+using namespace MzPeak::Schema;
 
 /**
  * Description of the data found in a data file.
  */
 class ArrayIndex final {
 public:
-  /// Mapping from column path in the schema to the column index.
-  using ColumnMap = std::map<std::string, int>;
-
   /**
    * A type to describe each entry in the index.
    */
-  struct Column {
+  struct Entry {
     /// The name of the array being described. If this is an
     /// MS:1000786|non-standard array, this should be the descriptive
     /// name for the array, otherwise it should be the human-readable
@@ -113,20 +110,20 @@ public:
   const std::string& prefix() const;
 
   /**
-   * Get a list of column definitions.
+   * Get a list of entry definitions.
    */
-  const std::vector<Column>& columns() const;
+  const std::vector<Entry>& entries() const;
 
   /**
-   * Get a list of column definitions that are for the given array
+   * Get a list of entry definitions that are for the given array
    * type.
    */
-  std::vector<Column> columns(PSI::ArrayType) const;
+  std::vector<Entry> entries(PSI::ArrayType) const;
 
   /**
-   * Get a list of columns for the given dimension.
+   * Get a list of entries for the given dimension.
    */
-  std::vector<Column> columns(const Data::Dimension&) const;
+  std::vector<Entry> entries(const Data::Dimension&) const;
 
   /**
    * Update the hint as to how many entities are in the data file.
@@ -146,7 +143,7 @@ public:
   /**
    * Convert an array index entry into a Struct::Field;
    */
-  std::optional<Util::Column> entry_column(const Util::StructMap&, const Column&);
+  std::optional<Schema::Column> entry_column(const Schema::StructMap&, const Entry&);
 
 private:
   // The entity type for the entire Parquet file.
@@ -156,13 +153,10 @@ private:
   std::string prefix_ = "point";
 
   // Entries;
-  std::vector<Column> columns_;
+  std::vector<Entry> entries_;
 
   // We might know how many entities are in the table.
   std::optional<std::size_t> num_entities_;
-
-  // Column -> column index.
-  ColumnMap column_map_;
 };
 
-} // namespace MzPeak::Schema
+} // namespace MzPeak::Data

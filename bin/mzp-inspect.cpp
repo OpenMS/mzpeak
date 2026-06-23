@@ -6,13 +6,14 @@ top-level directory of this repository.
 
 */
 
-#include "arrow/util/key_value_metadata.h"
-#include "mzpeak/util/struct.h"
+#include <arrow/util/key_value_metadata.h>
 #include <boost/program_options.hpp>
 #include <iostream>
 #include <memory>
-#include <mzpeak.h>
 #include <print>
+
+#include "mzpeak.h"
+#include "mzpeak/schema/struct.h"
 
 /******************************************************************************/
 namespace po = boost::program_options;
@@ -37,7 +38,17 @@ int print_array_index(MzPeak::Index& index, const std::string& file)
   auto parquet = open_parquet_file(index, file);
   if (parquet == nullptr) return 1;
 
-  std::print("{}", parquet->array_index_json());
+  auto fmd = parquet->file_metadata();
+  auto et = parquet->index_file().entity_type;
+  auto key = MzPeak::Schema::entity_type_to_string(et) + "_array_index";
+  auto json = parquet->kv_string(fmd, key);
+
+  if (!json.has_value()) {
+    std::println(stderr, "file has no array_index");
+    return 1;
+  }
+
+  std::print("{}", json.value());
   return 0;
 }
 
@@ -60,20 +71,20 @@ int print_structs(MzPeak::Index& index, const std::string& file)
 
   auto structs =
       *parquet->structs() | std::views::values | std::ranges::to<std::vector>();
-  std::ranges::sort(structs, {}, &MzPeak::Util::Struct::index);
+  std::ranges::sort(structs, {}, &MzPeak::Schema::Struct::index);
 
   for (const auto& s : structs) {
     std::println("{} [index:{}, fields:{}]", s->name(), s->index(),
                  s->fields().size());
 
     auto fields = s->fields() | std::views::values | std::ranges::to<std::vector>();
-    std::ranges::sort(fields, {}, &MzPeak::Util::Struct::Field::relative_index);
+    std::ranges::sort(fields, {}, &MzPeak::Schema::Struct::Field::relative_index);
 
     for (const auto& field : fields) {
       std::string kind("?");
       std::string type("?");
 
-      using enum MzPeak::Util::Struct::Field::Kind;
+      using enum MzPeak::Schema::Struct::Field::Kind;
       switch (field->kind()) {
       case Scalar:
         kind = "scalar";

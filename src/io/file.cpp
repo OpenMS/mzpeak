@@ -6,14 +6,14 @@ directory of this repository.
 
 */
 
+#include "mzpeak/io/file.h"
+
 #include <boost/iostreams/concepts.hpp>
 #include <boost/iostreams/stream.hpp>
 #include <iostream>
 #include <parquet/properties.h>
 
-#include "mzpeak/file.h"
-
-namespace MzPeak {
+namespace MzPeak::IO {
 
 /******************************************************************************/
 class source final : public boost::iostreams::source {
@@ -62,4 +62,4 @@ std::unique_ptr<std::istream> to_istream(std::unique_ptr<File> r)
   return std::make_unique<istream>(source);
 }
 
-} // namespace MzPeak
+} // namespace MzPeak::IO

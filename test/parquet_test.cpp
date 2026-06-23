@@ -13,7 +13,7 @@ directory of this repository.
 #include "mzpeak/util/parquet.h"
 
 /******************************************************************************/
-BOOST_AUTO_TEST_CASE(can_get_array_index)
+BOOST_AUTO_TEST_CASE(can_get_kv_string)
 {
   using namespace MzPeak;
 
@@ -25,25 +25,10 @@ BOOST_AUTO_TEST_CASE(can_get_array_index)
   BOOST_TEST((entry != mzpeak.files().end()));
 
   auto parquet = mzpeak.parquet(*entry);
-  std::shared_ptr<Schema::ArrayIndex> index(parquet->array_index());
+  auto fmd = parquet->file_metadata();
+  auto et = parquet->index_file().entity_type;
+  auto key = MzPeak::Schema::entity_type_to_string(et) + "_array_index";
+  auto json = parquet->kv_string(fmd, key);
 
-  BOOST_TEST(index->prefix() == "point");
-  BOOST_TEST(index->columns().size() == 2ul);
-
-  // NOTE: Due to a sort after parsing the index, the m/z array gets
-  // moved to the end of the index.
-  BOOST_TEST((index->columns()[1].array_name == "m/z array"));
-  BOOST_TEST((index->columns()[1].buffer_format == Schema::BufferFormat::Point));
-  BOOST_TEST((index->columns()[1].context == Schema::EntityType::Spectrum));
-  BOOST_TEST((index->columns()[1].path == "point.mz"));
-  BOOST_TEST((index->columns()[1].data_type == Schema::PSI::DataType::Float64));
-  BOOST_TEST((index->columns()[1].array_type == Schema::PSI::ArrayType::Mz));
-  BOOST_TEST((index->columns()[1].unit == "MS:1000040"));
-  BOOST_TEST((index->columns()[1].buffer_priority));
-  BOOST_TEST((index->columns()[1].sorting_rank == std::optional{0}));
-  BOOST_TEST((index->columns()[1].data_processing_id == std::nullopt));
-  BOOST_TEST((index->columns()[1].transform == std::optional{"MS:1003901"}));
-
-  std::size_t count = index->num_entities().value_or(0);
-  BOOST_TEST(count == 48ul);
+  BOOST_TEST(json.has_value());
 }

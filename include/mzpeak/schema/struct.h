@@ -20,7 +20,7 @@ namespace parquet::schema {
 class GroupNode;
 } // namespace parquet::schema
 
-namespace MzPeak::Util {
+namespace MzPeak::Schema {
 
 /**
  * Internal representation of a parquet schema `Group` with fields.
@@ -94,12 +94,12 @@ public:
     /**
      * The data type for values in this field.
      */
-    const std::optional<Schema::PSI::DataType>& data_type() const;
+    const std::optional<PSI::DataType>& data_type() const;
 
     /**
      * Update the field's data type.
      */
-    void data_type(Schema::PSI::DataType);
+    void data_type(PSI::DataType);
 
   private:
     friend class Struct;
@@ -110,7 +110,7 @@ public:
     std::string clean_name_;
     std::optional<std::string> cv_type_;
     std::optional<std::string> cv_unit_;
-    std::optional<Schema::PSI::DataType> data_type_;
+    std::optional<PSI::DataType> data_type_;
     Kind kind_ = Kind::Scalar;
   };
 
@@ -155,4 +155,16 @@ private:
   field_map_t fields_;
 };
 
-} // namespace MzPeak::Util
+/**
+ * Mapping from struct name to a Struct.
+ */
+using StructMap = std::map<std::string, std::shared_ptr<Struct>>;
+
+/**
+ * A parquet column can be uniquely identified using its parent struct
+ * and field.
+ */
+using Column =
+    std::pair<std::shared_ptr<const Struct>, std::shared_ptr<const Struct::Field>>;
+
+} // namespace MzPeak::Schema

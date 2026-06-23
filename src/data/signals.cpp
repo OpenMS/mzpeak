@@ -6,46 +6,76 @@ top-level directory of this repository.
 
 */
 
+#include "mzpeak/data/signals.h"
+
 #include <arrow/record_batch.h>
 #include <memory>
 #include <parquet/arrow/reader.h>
 
-#include "mzpeak/data/arrays.h"
-#include "mzpeak/schema/array_index.h"
+#include "mzpeak/data/array_index.h"
 #include "mzpeak/util/executor.h"
 #include "mzpeak/util/planner.h"
 
 namespace MzPeak::Data {
 
 /******************************************************************************/
-struct Arrays::Impl {
+struct Signals::Impl {
   Impl(std::unique_ptr<Util::Parquet> parquet)
       : parquet_(std::move(parquet))
-      , array_index_(parquet_->array_index())
   {
+    array_index_ = parse_array_index();
   }
 
+  std::shared_ptr<ArrayIndex> parse_array_index() const;
+
   std::unique_ptr<Util::Parquet> parquet_;
-  std::shared_ptr<Schema::ArrayIndex> array_index_;
+  std::shared_ptr<ArrayIndex> array_index_;
 };
 
 /******************************************************************************/
-Arrays::Arrays(std::unique_ptr<Util::Parquet> parquet)
+std::shared_ptr<ArrayIndex> Signals::Impl::parse_array_index() const
+{
+  Util::Parquet::file_metadata_t fmd(parquet_->file_metadata());
+  EntityType entity_type = parquet_->index_file().entity_type;
+
+  std::string num_key(Schema::entity_type_to_string(entity_type) + "_count");
+  std::optional<std::size_t> num_entities(parquet_->kv_size_t(fmd, num_key));
+
+  std::string index_key(Schema::entity_type_to_string(entity_type) + "_array_index");
+  auto index_str(parquet_->kv_string(fmd, index_key));
+  if (!index_str.has_value()) throw ParquetError("missing array_index");
+
+  namespace json = boost::json;
+  boost::system::error_code ec;
+  json::value v(json::parse(index_str.value()));
+  if (ec) throw MzPeak::JsonError(ec.message());
+
+  if (v.is_object()) {
+    auto ai = std::make_shared<ArrayIndex>(entity_type, v.as_object());
+    ai->num_entities(num_entities);
+    return ai;
+  } else {
+    throw JsonError("array_index should be a JSON object");
+  }
+}
+
+/******************************************************************************/
+Signals::Signals(std::unique_ptr<Util::Parquet> parquet)
     : impl_(std::make_unique<Impl>(std::move(parquet)))
 {
 }
 
 /******************************************************************************/
-Arrays::~Arrays() = default;
+Signals::~Signals() = default;
 
 /******************************************************************************/
-const std::shared_ptr<Schema::ArrayIndex>& Arrays::array_index() const
+const std::shared_ptr<ArrayIndex>& Signals::array_index() const
 {
   return impl_->array_index_;
 }
 
 /******************************************************************************/
-std::size_t Arrays::record_count() const
+std::size_t Signals::record_count() const
 {
   auto ne(impl_->array_index_->num_entities());
   if (ne.has_value()) return *ne;
@@ -72,19 +102,19 @@ std::size_t Arrays::record_count() const
 }
 
 /******************************************************************************/
-std::optional<Query::destination_t> Arrays::field(const std::string_view& name) const
+std::optional<Schema::Column> Signals::field(const std::string_view& name) const
 {
   return impl_->parquet_->field(impl_->array_index_->prefix(), name);
 }
 
 /******************************************************************************/
-const std::shared_ptr<Util::StructMap>& Arrays::structs() const
+const std::shared_ptr<Schema::StructMap>& Signals::structs() const
 {
   return impl_->parquet_->structs();
 }
 
 /******************************************************************************/
-Query::Builder Arrays::index() const
+Util::Query::Builder Signals::index() const
 {
   auto entity_type = impl_->array_index_->entity_type();
   auto field_name = Schema::entity_type_to_string(entity_type) + "_index";
@@ -94,17 +124,17 @@ Query::Builder Arrays::index() const
     throw ParquetError("parquet file is missing the index column: " + field_name);
   }
 
-  return Query::Builder(index_field.value());
+  return Util::Query::Builder(index_field.value());
 }
 
 /******************************************************************************/
-std::unique_ptr<Slice> Arrays::select(const std::vector<Dimension>& projection,
-                                      const Query& query)
+std::unique_ptr<Util::Slice>
+Signals::select(const std::vector<Dimension>& projection, const Util::Query& query)
 {
-  std::vector<Util::Column> columns;
+  std::vector<Schema::Column> columns;
 
   for (auto& dim : projection) {
-    auto entries = impl_->array_index_->columns(dim);
+    auto entries = impl_->array_index_->entries(dim);
 
     for (auto& entry : entries) {
       auto field =

@@ -12,8 +12,8 @@ top-level directory of this repository.
 #include <functional>
 #include <ranges>
 
+#include "mzpeak/schema/struct.h"
 #include "mzpeak/util/compat.h" // IWYU pragma: keep
-#include "mzpeak/util/types.h"
 
 /******************************************************************************/
 /**
@@ -27,14 +27,12 @@ concept from_arrow_array = requires(T t,
 };
 
 namespace MzPeak::Util {
+
 // Forward declarations.
 class Executor;
-} // namespace MzPeak::Util
-
-namespace MzPeak::Data {
 
 /******************************************************************************/
-using Column = MzPeak::Util::Column;
+using Column = MzPeak::Schema::Column;
 
 /******************************************************************************/
 /**
@@ -242,4 +240,4 @@ void Slice::DecodeList<T>::decode(const std::shared_ptr<arrow::Array>& src,
   }
 }
 
-} // namespace MzPeak::Data
+} // namespace MzPeak::Util

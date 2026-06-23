@@ -6,26 +6,27 @@ top-level directory of this repository.
 
 */
 
+#include "mzpeak/open.h"
+
 #include <filesystem>
 #include <memory>
 #include <stdexcept>
 
-#include "mzpeak/directory.h"
-#include "mzpeak/open.h"
-#include "mzpeak/zip.h"
+#include "mzpeak/io/directory.h"
+#include "mzpeak/io/zip.h"
 
 namespace MzPeak {
 
 /******************************************************************************/
 MzPeak::Index open(const fs::path& path)
 {
-  std::unique_ptr<MzPeak::Archive> archive;
+  std::unique_ptr<MzPeak::IO::Archive> archive;
 
   if (fs::exists(path)) {
     if (fs::is_directory(path)) {
-      archive = std::make_unique<MzPeak::Directory>(path);
+      archive = std::make_unique<MzPeak::IO::Directory>(path);
     } else {
-      archive = std::make_unique<MzPeak::Zip>(path);
+      archive = std::make_unique<MzPeak::IO::Zip>(path);
     }
   } else {
     // FIXME:

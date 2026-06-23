@@ -8,8 +8,9 @@ top-level directory of this repository.
 
 #pragma once
 
-#include "mzpeak/data/slice.h"
+#include "mzpeak/schema/struct.h"
 #include "mzpeak/util/planner.h"
+#include "mzpeak/util/slice.h"
 
 namespace parquet::arrow {
 class FileReader;
@@ -25,10 +26,10 @@ class Parquet;
 class Executor final {
 public:
   /// Clean up signatures.
-  using Slice = MzPeak::Data::Slice;
+  using Slice = MzPeak::Util::Slice;
 
   /// Which fields should be extracted.
-  using Projection = std::vector<Query::destination_t>;
+  using Projection = std::vector<Schema::Column>;
 
   /// Destructor.
   ~Executor();

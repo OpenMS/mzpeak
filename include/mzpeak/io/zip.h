@@ -8,9 +8,9 @@ directory of this repository.
 
 #pragma once
 
-#include "mzpeak/archive.h"
+#include "mzpeak/io/archive.h"
 
-namespace MzPeak {
+namespace MzPeak::IO {
 
 /**
  * Access files stored in a ZIP archive.
@@ -45,4 +45,4 @@ private:
   std::unique_ptr<Impl> impl_;
 };
 
-} // namespace MzPeak
+} // namespace MzPeak::IO

@@ -6,6 +6,8 @@ directory of this repository.
 
 */
 
+#include "mzpeak/util/parquet.h"
+
 #include <arrow/array.h>
 #include <arrow/record_batch.h>
 #include <arrow/util/key_value_metadata.h>
@@ -17,16 +19,13 @@ directory of this repository.
 #include <ranges>
 
 #include "mzpeak/exception.h"
-#include "mzpeak/schema/array_index.h"
-#include "mzpeak/schema/entity_type.h"
 #include "mzpeak/util/arrow.h"
-#include "mzpeak/util/parquet.h"
 
 namespace MzPeak::Util {
 
 /******************************************************************************/
-std::optional<std::string> get_kv_string(Parquet::file_metadata_t& fmd,
-                                         const std::string& key)
+std::optional<std::string> get_kv_string(const Parquet::file_metadata_t& fmd,
+                                         const std::string_view& key)
 {
   auto result(fmd->key_value_metadata()->Get(key));
 
@@ -38,8 +37,8 @@ std::optional<std::string> get_kv_string(Parquet::file_metadata_t& fmd,
 }
 
 /******************************************************************************/
-std::optional<std::size_t> get_kv_uint(Parquet::file_metadata_t& fmd,
-                                       const std::string& key)
+std::optional<std::size_t> get_kv_uint(const Parquet::file_metadata_t& fmd,
+                                       const std::string_view& key)
 {
   return get_kv_string(fmd, key).and_then(
       [](const std::string& s) -> std::optional<std::size_t> {
@@ -55,28 +54,11 @@ std::optional<std::size_t> get_kv_uint(Parquet::file_metadata_t& fmd,
 }
 
 /******************************************************************************/
-std::shared_ptr<Schema::ArrayIndex> parse_array_index(const std::string& str,
-                                                      Schema::EntityType entity_type)
-{
-  namespace json = boost::json;
-
-  boost::system::error_code ec;
-  json::value v(json::parse(str));
-  if (ec) throw MzPeak::JsonError(ec.message());
-
-  if (v.is_object()) {
-    return std::make_shared<Schema::ArrayIndex>(entity_type, v.as_object());
-  } else {
-    throw JsonError("array_index should be a JSON object");
-  }
-}
-
-/******************************************************************************/
 struct Parquet::Impl {
-  Impl(std::unique_ptr<File> data, Schema::File file)
+  Impl(std::unique_ptr<IO::File> data, Schema::File file)
       : file_(std::move(file))
       , arrow_(std::make_unique<Arrow>(std::move(data)))
-      , structs_(std::make_shared<StructMap>())
+      , structs_(std::make_shared<Schema::StructMap>())
   {
     auto raf = arrow_->reader();
 
@@ -111,13 +93,10 @@ struct Parquet::Impl {
   /// Load the schema.
   void parse_schema();
 
-  // Get the array index JSON and number of entities.
-  std::pair<std::string, std::size_t> array_index(Parquet::file_metadata_t&);
-
   Schema::File file_;
   std::unique_ptr<Arrow> arrow_;
   std::shared_ptr<parquet::arrow::FileReader> reader_;
-  std::shared_ptr<StructMap> structs_;
+  std::shared_ptr<Schema::StructMap> structs_;
 };
 
 /******************************************************************************/
@@ -136,7 +115,8 @@ void Parquet::Impl::parse_schema()
       std::shared_ptr<parquet::schema::GroupNode> group =
           std::static_pointer_cast<parquet::schema::GroupNode>(node);
 
-      std::shared_ptr<Struct> s = std::make_shared<Struct>(*group, i, offset);
+      std::shared_ptr<Schema::Struct> s =
+          std::make_shared<Schema::Struct>(*group, i, offset);
       (*structs_)[s->name()] = s;
       offset += group->field_count();
     }
@@ -144,23 +124,7 @@ void Parquet::Impl::parse_schema()
 }
 
 /******************************************************************************/
-std::pair<std::string, std::size_t>
-Parquet::Impl::array_index(Parquet::file_metadata_t& fmd)
-{
-  Schema::EntityType entity_type(file_.entity_type);
-
-  std::string num_key(Schema::entity_type_to_string(entity_type) + "_count");
-  std::optional<std::size_t> num_entities(get_kv_uint(fmd, num_key));
-
-  std::string index_key(Schema::entity_type_to_string(entity_type) + "_array_index");
-  auto index_str(get_kv_string(fmd, index_key));
-  if (!index_str.has_value()) throw ParquetError("missing array_index");
-
-  return std::make_pair<>(*index_str, num_entities.value_or(0));
-}
-
-/******************************************************************************/
-Parquet::Parquet(std::unique_ptr<File> data, Schema::File file)
+Parquet::Parquet(std::unique_ptr<IO::File> data, Schema::File file)
     : impl_(std::make_unique<Impl>(std::move(data), std::move(file)))
 {
 }
@@ -172,13 +136,13 @@ Parquet::~Parquet() = default;
 const Schema::File& Parquet::index_file() const { return impl_->file_; }
 
 /******************************************************************************/
-const std::shared_ptr<StructMap>& Parquet::structs() const
+const std::shared_ptr<Schema::StructMap>& Parquet::structs() const
 {
   return impl_->structs_;
 }
 
 /******************************************************************************/
-std::optional<Query::destination_t>
+std::optional<Schema::Column>
 Parquet::field(const std::string_view& struct_name,
                const std::string_view& field_name) const
 {
@@ -198,38 +162,17 @@ Parquet::file_metadata_t Parquet::file_metadata() const
 }
 
 /******************************************************************************/
-std::string Parquet::array_index_json() const
+std::optional<std::string> Parquet::kv_string(const file_metadata_t& fmd,
+                                              const std::string_view& key) const
 {
-  file_metadata_t fmd(file_metadata());
-  return impl_->array_index(fmd).first;
+  return get_kv_string(fmd, key);
 }
 
 /******************************************************************************/
-std::shared_ptr<Schema::ArrayIndex> Parquet::array_index() const
+std::optional<std::size_t> Parquet::kv_size_t(const file_metadata_t& fmd,
+                                              const std::string_view& key) const
 {
-  file_metadata_t fmd(file_metadata());
-  auto [index_str, num_entities] = impl_->array_index(fmd);
-
-  std::shared_ptr<Schema::ArrayIndex> ai =
-      parse_array_index(index_str, impl_->file_.entity_type);
-  ai->num_entities(num_entities);
-
-  const parquet::SchemaDescriptor* schema(fmd->schema());
-  Schema::ArrayIndex::ColumnMap index_map;
-
-  for (auto& column : ai->columns()) {
-    int column_index = schema->ColumnIndex(column.path);
-
-    if (column_index < 0) {
-      std::string msg("while reading index from " + impl_->file_.file_name);
-      msg += ": column index out of bounds for column: " + column.path;
-      throw ParquetError(msg);
-    }
-
-    index_map[column.path] = column_index;
-  }
-
-  return ai;
+  return get_kv_uint(fmd, key);
 }
 
 /******************************************************************************/

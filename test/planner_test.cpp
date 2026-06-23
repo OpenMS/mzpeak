@@ -31,9 +31,9 @@ BOOST_AUTO_TEST_CASE(can_locate_correct_rows)
   auto mz_field = parquet->field("point", "mz");
   BOOST_TEST(mz_field.has_value());
 
-  Query queries[] = {
-      Query::Builder(*index_field).eq<int64_t>(20),
-      Query::Builder(*mz_field).gt<double>(0),
+  Util::Query queries[] = {
+      Util::Query::Builder(*index_field).eq<int64_t>(20),
+      Util::Query::Builder(*mz_field).gt<double>(0),
   };
 
   for (auto& query : queries) {
@@ -69,8 +69,8 @@ BOOST_AUTO_TEST_CASE(can_use_two_columns)
   auto start_time_field = parquet->field("scan", "scan_start_time");
   BOOST_TEST(start_time_field.has_value());
 
-  auto query = Query::Builder(*index_field).eq<int64_t>(3) &&
-               Query::Builder(*start_time_field).gt<float>(0);
+  auto query = Util::Query::Builder(*index_field).eq<int64_t>(3) &&
+               Util::Query::Builder(*start_time_field).gt<float>(0);
 
   Util::Planner planner = parquet->planner(query);
 
@@ -103,8 +103,8 @@ BOOST_AUTO_TEST_CASE(can_access_multiple_structs)
   auto level_field = parquet->field("spectrum", "ms_level");
   BOOST_TEST(level_field.has_value());
 
-  auto query = Query::Builder(*index_field).eq<int64_t>(30) &&
-               Query::Builder(*level_field).ge(1);
+  auto query = Util::Query::Builder(*index_field).eq<int64_t>(30) &&
+               Util::Query::Builder(*level_field).ge(1);
 
   Util::Planner planner = parquet->planner(query);
 

@@ -7,10 +7,11 @@ directory of this repository.
 */
 
 #include "mzpeak/data/metadata.h"
-#include "mzpeak/exception.h"
-#include "mzpeak/util/parquet.h"
 
 #include <parquet/api/reader.h>
+
+#include "mzpeak/exception.h"
+#include "mzpeak/util/parquet.h"
 
 namespace MzPeak::Data {
 

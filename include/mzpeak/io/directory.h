@@ -8,9 +8,9 @@ directory of this repository.
 
 #pragma once
 
-#include "mzpeak/archive.h"
+#include "mzpeak/io/archive.h"
 
-namespace MzPeak {
+namespace MzPeak::IO {
 
 /**
  * Access files from a directory.
@@ -44,4 +44,4 @@ private:
   fs::path path_;
 };
 
-} // namespace MzPeak
+} // namespace MzPeak::IO

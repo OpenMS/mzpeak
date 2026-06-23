@@ -6,20 +6,21 @@ top-level directory of this repository.
 
 */
 
+#include "mzpeak/spectrum.h"
+
 #include <memory>
 #include <vector>
 
 #include "mzpeak/data/encoding.h"
 #include "mzpeak/schema/psi/data_type.h"
-#include "mzpeak/spectrum.h"
 
 namespace MzPeak {
 
 /******************************************************************************/
 struct Decode {
-  Decode(const Data::Arrays& data,
+  Decode(const Data::Signals& data,
 
-         std::shared_ptr<Data::Slice> slice)
+         std::shared_ptr<Util::Slice> slice)
       : array_index_(data.array_index())
       , struct_map_(data.structs())
       , slice_(slice)
@@ -34,17 +35,17 @@ struct Decode {
     enc.decode_dimension(dim, v);
   }
 
-  std::shared_ptr<Schema::ArrayIndex> array_index_;
-  std::shared_ptr<Util::StructMap> struct_map_;
-  std::shared_ptr<Data::Slice> slice_;
+  std::shared_ptr<Data::ArrayIndex> array_index_;
+  std::shared_ptr<Schema::StructMap> struct_map_;
+  std::shared_ptr<Util::Slice> slice_;
 };
 
 /******************************************************************************/
-Spectrum::Spectrum(const Data::Arrays& data,
+Spectrum::Spectrum(const Data::Signals& data,
                    const std::vector<Data::Dimension>& dims,
-                   std::unique_ptr<Data::Slice> slice_up)
+                   std::unique_ptr<Util::Slice> slice_up)
 {
-  std::shared_ptr<Data::Slice> slice(std::move(slice_up));
+  std::shared_ptr<Util::Slice> slice(std::move(slice_up));
 
   for (auto& dim : dims) {
     Decode decode(data, slice);
