@@ -6,13 +6,12 @@ top-level directory of this repository.
 
 */
 
-#include "mzpeak/spectrum.h"
-
 #include <memory>
 #include <vector>
 
 #include "mzpeak/data/encoding.h"
 #include "mzpeak/schema/psi/data_type.h"
+#include "mzpeak/spectrum.h"
 
 namespace MzPeak {
 
@@ -56,7 +55,7 @@ Spectrum::Spectrum(const Data::Signals& data,
       decode.decode<Schema::PSI::DataType::Float64>(dim, mz_);
       break;
     case Schema::PSI::ArrayType::Intensity:
-      decode.decode<Schema::PSI::DataType::Int32>(dim, intensity_);
+      decode.decode<Schema::PSI::DataType::Float32>(dim, intensity_);
       break;
     default:
       // FIXME: should we throw an exception here?
@@ -69,6 +68,6 @@ Spectrum::Spectrum(const Data::Signals& data,
 const std::vector<double>& Spectrum::mz() const { return mz_; }
 
 /******************************************************************************/
-const std::vector<int32_t>& Spectrum::intensity() const { return intensity_; }
+const std::vector<float>& Spectrum::intensity() const { return intensity_; }
 
 } // namespace MzPeak

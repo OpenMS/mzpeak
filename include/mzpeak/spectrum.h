@@ -34,7 +34,7 @@ public:
   /**
    * Intensity values.
    */
-  const std::vector<int32_t>& intensity() const;
+  const std::vector<float>& intensity() const;
 
   // FIXME: level?
 
@@ -48,7 +48,7 @@ protected:
 
 private:
   std::vector<double> mz_;
-  std::vector<int32_t> intensity_;
+  std::vector<float> intensity_;
 };
 
 } // namespace MzPeak

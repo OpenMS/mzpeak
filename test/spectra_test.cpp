@@ -29,4 +29,11 @@ BOOST_AUTO_TEST_CASE(can_read_spectra)
   BOOST_TEST((mz.size() == 13589));
   BOOST_TEST(mz[0] == 202.607, boost::test_tools::tolerance(0.001));
   BOOST_TEST(mz[mz.size() - 1] == 1999.840, boost::test_tools::tolerance(0.001));
+
+  auto intensity = spectrum.intensity();
+  BOOST_TEST((intensity.size() == mz.size()));
+  BOOST_TEST(intensity[0] == 0.0, boost::test_tools::tolerance(0.001));
+  BOOST_TEST(intensity[1] == 1938.12, boost::test_tools::tolerance(0.001));
+  BOOST_TEST(intensity[intensity.size() - 1] == 0.0,
+             boost::test_tools::tolerance(0.001));
 }
