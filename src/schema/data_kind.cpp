@@ -17,7 +17,7 @@ std::string data_kind_to_string(DataKind dk)
 
   switch (dk) {
   case DataArray:
-    return "data arrays";
+    return "data_arrays";
   case Peaks:
     return "peaks";
   case Metadata:
@@ -36,7 +36,12 @@ DataKind data_kind_from_string(const std::string_view& s)
 {
   using enum DataKind;
 
-  if (s == "data arrays") {
+  // The two string variants of `DataArray` are for backwards
+  // compatibility. See https://github.com/HUPO-PSI/mzPeak/issues/26
+
+  if (s == "data_arrays") {
+    return DataArray;
+  } else if (s == "data arrays") {
     return DataArray;
   } else if (s == "peaks") {
     return Peaks;
