@@ -6,8 +6,6 @@ top-level directory of this repository.
 
 */
 
-#include "mzpeak/util/query.h"
-
 #include <cassert>
 #include <functional>
 #include <variant>
@@ -15,6 +13,7 @@ top-level directory of this repository.
 #include "mzpeak/exception.h"
 #include "mzpeak/schema/psi/data_type.h"
 #include "mzpeak/util/compat.h" // IWYU pragma: keep
+#include "mzpeak/util/query.h"
 
 namespace MzPeak::Util {
 
@@ -267,10 +266,18 @@ EvalHelper<Fn, V>::dispatch_dest_type(const Query::Predicate& pred, Fn fn) const
   using enum Schema::PSI::DataType;
 
   switch (pred.dest.second->data_type().value()) {
+  case Int8:
+    return dispatch_value<Int8>(pred, fn);
+  case UInt8:
+    return dispatch_value<UInt8>(pred, fn);
   case Int32:
     return dispatch_value<Int32>(pred, fn);
+  case UInt32:
+    return dispatch_value<UInt32>(pred, fn);
   case Int64:
     return dispatch_value<Int64>(pred, fn);
+  case UInt64:
+    return dispatch_value<UInt64>(pred, fn);
   case Float32:
     return dispatch_value<Float32>(pred, fn);
   case Float64:

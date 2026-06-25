@@ -19,8 +19,12 @@ namespace MzPeak::Util {
 
 /// Types that can be used with a query.
 template <typename T>
-concept query_comparable = std::same_as<std::remove_cvref_t<T>, int32_t> ||
+concept query_comparable = std::same_as<std::remove_cvref_t<T>, int8_t> ||
+                           std::same_as<std::remove_cvref_t<T>, uint8_t> ||
+                           std::same_as<std::remove_cvref_t<T>, int32_t> ||
+                           std::same_as<std::remove_cvref_t<T>, uint32_t> ||
                            std::same_as<std::remove_cvref_t<T>, int64_t> ||
+                           std::same_as<std::remove_cvref_t<T>, uint64_t> ||
                            std::same_as<std::remove_cvref_t<T>, float> ||
                            std::same_as<std::remove_cvref_t<T>, double>;
 
@@ -196,12 +200,17 @@ public:
   Query operator!() const;
 
   // Column types that can be used in a query.
-  using value_t = std::variant<int32_t, int64_t, float, double>;
+  using value_t = std::
+      variant<int8_t, uint8_t, int32_t, uint32_t, int64_t, uint64_t, float, double>;
 
   // Like value_t, but instead of a single value this type is used for
   // evaluating a query on a min/max range.
-  using range_t = std::variant<std::pair<int32_t, int32_t>,
+  using range_t = std::variant<std::pair<int8_t, int8_t>,
+                               std::pair<uint8_t, uint8_t>,
+                               std::pair<int32_t, int32_t>,
+                               std::pair<uint32_t, uint32_t>,
                                std::pair<int64_t, int64_t>,
+                               std::pair<uint64_t, uint64_t>,
                                std::pair<float, float>,
                                std::pair<double, double>>;
 

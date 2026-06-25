@@ -6,8 +6,6 @@ top-level directory of this repository.
 
 */
 
-#include "mzpeak/util/planner.h"
-
 #include <arrow/array.h>
 #include <arrow/record_batch.h>
 #include <memory>
@@ -21,6 +19,7 @@ top-level directory of this repository.
 #include "mzpeak/schema/psi/data_type.h"
 #include "mzpeak/util/algorithm.h"
 #include "mzpeak/util/parquet_types.h"
+#include "mzpeak/util/planner.h"
 
 namespace MzPeak::Util {
 
@@ -279,19 +278,21 @@ struct ColMinMax final {
 
   template <psi::DataType T> Query::Result<Query::range_t> operator()() const
   {
-    using V = typename psi_to_parquet_tag<T>::scalar_type;
+    using S = typename psi_to_parquet_tag<T>::scalar_type;
+    using V = typename Schema::PSI::data_type_traits<T>::value_type;
     using R = Query::Result<Query::range_t>;
 
     if (index_ != nullptr) {
-      using Index = parquet::TypedColumnIndex<V>;
+      using Index = parquet::TypedColumnIndex<S>;
       std::shared_ptr<Index> index = std::static_pointer_cast<Index>(index_);
-      return R(std::make_pair(index->min_values()[page_index_],
-                              index->max_values()[page_index_]));
+      return R(std::make_pair(static_cast<V>(index->min_values()[page_index_]),
+                              static_cast<V>(index->max_values()[page_index_])));
     } else if (stats_ != nullptr) {
-      using Stats = parquet::TypedStatistics<V>;
+      using Stats = parquet::TypedStatistics<S>;
       if (!stats_->HasMinMax()) return R::skip();
       std::shared_ptr<Stats> stats = std::static_pointer_cast<Stats>(stats_);
-      return R(std::make_pair(stats->min(), stats->max()));
+      return R(std::make_pair(static_cast<V>(stats->min()),
+                              static_cast<V>(stats->max())));
     } else {
       return R::skip();
     }

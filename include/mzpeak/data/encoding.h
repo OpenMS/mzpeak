@@ -103,7 +103,7 @@ void Encoding<T>::decode_point(
     return 0;
   };
 
-  slice_->array(col, v, Util::Slice::DecodeScalar<value_type>(on_null));
+  slice_->array(col, v, Util::Decoders::Scalar<value_type>(on_null));
 }
 
 } // namespace MzPeak::Data

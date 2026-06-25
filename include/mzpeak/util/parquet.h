@@ -79,7 +79,7 @@ public:
   /**
    * Return an executor that will capture the requested fields.
    */
-  Executor executor(const Executor::Projection&);
+  Executor executor(const Projection&);
 
 private:
   struct Impl;

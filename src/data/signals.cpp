@@ -6,15 +6,15 @@ top-level directory of this repository.
 
 */
 
-#include "mzpeak/data/signals.h"
-
 #include <arrow/record_batch.h>
 #include <memory>
 #include <parquet/arrow/reader.h>
 
 #include "mzpeak/data/array_index.h"
+#include "mzpeak/data/signals.h"
 #include "mzpeak/util/executor.h"
 #include "mzpeak/util/planner.h"
+#include "mzpeak/util/projection.h"
 
 namespace MzPeak::Data {
 
@@ -131,7 +131,7 @@ Util::Query::Builder Signals::index() const
 std::unique_ptr<Util::Slice>
 Signals::select(const std::vector<Dimension>& projection, const Util::Query& query)
 {
-  std::vector<Schema::Column> columns;
+  Util::Projection columns;
 
   for (auto& dim : projection) {
     auto entries = impl_->array_index_->entries(dim);
@@ -142,7 +142,7 @@ Signals::select(const std::vector<Dimension>& projection, const Util::Query& que
       if (!field.has_value()) {
         throw ParquetError("array entry not present in schema: " + entry.name);
       } else {
-        columns.push_back(field.value());
+        columns.project(field.value());
       }
     }
   }

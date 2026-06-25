@@ -6,13 +6,13 @@ top-level directory of this repository.
 
 */
 
-#include "mzpeak/schema/struct.h"
-
 #include <memory>
 #include <parquet/schema.h>
+#include <parquet/types.h>
 #include <ranges>
 
 #include "mzpeak/schema/psi/data_type.h"
+#include "mzpeak/schema/struct.h"
 
 namespace MzPeak::Schema {
 
@@ -63,7 +63,7 @@ field_type_from_parquet(const std::shared_ptr<parquet::schema::GroupNode>& node)
             std::static_pointer_cast<parquet::schema::Node>(node));
         prim != nullptr) {
       return std::make_pair(Struct::Field::Kind::List,
-                            PSI::data_type_from_parquet(prim->physical_type()));
+                            PSI::data_type_from_parquet(*prim));
     } else {
       return std::make_pair(Struct::Field::Kind::List, std::nullopt);
     }
@@ -94,7 +94,7 @@ Struct::Field::Field(const std::string_view& column_name,
   auto name_end = tokens.end();
 
   if (*name_begin == "MS" || *name_begin == "UO") {
-    cv_type_ = *name_begin + ":" + *(name_begin + 1);
+    cv_type_ = CVType(*name_begin, *(name_begin + 1));
     name_begin += 2;
   }
 
@@ -102,7 +102,7 @@ Struct::Field::Field(const std::string_view& column_name,
 
   if (unit.begin() != name_begin && unit.begin() != name_end &&
       std::ranges::distance(unit.begin(), name_end) == 3) {
-    cv_unit_ = *(unit.begin() + 1) + ":" + *(unit.begin() + 2);
+    cv_unit_ = CVUnit(*(unit.begin() + 1), *(unit.begin() + 2));
     name_end = unit.begin();
   }
 
@@ -119,13 +119,22 @@ Struct::index_type Struct::Field::absolute_index() const { return abs_index_; }
 const std::string& Struct::Field::name() const { return clean_name_; }
 
 /******************************************************************************/
+const std::string& Struct::Field::schema_name() const { return schema_name_; }
+
+/******************************************************************************/
 Struct::Field::Kind Struct::Field::kind() const { return kind_; }
 
 /******************************************************************************/
-std::optional<std::string> Struct::Field::cv_type() const { return cv_type_; }
+const std::optional<Struct::CVType>& Struct::Field::cv_type() const
+{
+  return cv_type_;
+}
 
 /******************************************************************************/
-std::optional<std::string> Struct::Field::cv_unit() const { return cv_unit_; }
+const std::optional<Struct::CVUnit>& Struct::Field::cv_unit() const
+{
+  return cv_unit_;
+}
 
 /******************************************************************************/
 const std::optional<PSI::DataType>& Struct::Field::data_type() const
@@ -152,7 +161,7 @@ Struct::Struct(const parquet::schema::GroupNode& node,
     if (child->is_primitive()) {
       auto prim = std::static_pointer_cast<parquet::schema::PrimitiveNode>(child);
       field->kind_ = Field::Kind::Scalar;
-      field->data_type_ = PSI::data_type_from_parquet(prim->physical_type());
+      field->data_type_ = PSI::data_type_from_parquet(*prim);
     } else {
       auto grp = std::static_pointer_cast<parquet::schema::GroupNode>(child);
 
@@ -177,7 +186,7 @@ Struct::index_type Struct::index() const { return index_; }
 
 /******************************************************************************/
 std::optional<std::shared_ptr<const Struct::Field>>
-Struct::field(const std::string_view& name) const
+Struct::field(const std::string_view&& name) const
 {
   auto it = fields_.find(std::string{name});
 
@@ -185,6 +194,24 @@ Struct::field(const std::string_view& name) const
     return it->second;
   } else {
     return {};
+  }
+}
+
+/******************************************************************************/
+std::optional<std::shared_ptr<const Struct::Field>>
+Struct::field(const CVType&& cvt) const
+{
+  const auto fields = fields_ | std::views::values;
+
+  auto it =
+      std::ranges::find_if(fields, [cvt](const std::shared_ptr<Field>& f) -> bool {
+        return f->cv_type().has_value() && (f->cv_type().value() == cvt);
+      });
+
+  if (it == std::ranges::end(fields)) {
+    return {};
+  } else {
+    return *it;
   }
 }
 

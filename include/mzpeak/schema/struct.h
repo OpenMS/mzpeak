@@ -13,6 +13,7 @@ top-level directory of this repository.
 #include <optional>
 #include <string>
 
+#include "mzpeak/schema/cv.h"
 #include "mzpeak/schema/psi/data_type.h"
 
 // Forward declarations.
@@ -32,6 +33,22 @@ class Struct final {
 public:
   /// Type used to store column indexes.
   using index_type = int32_t;
+
+  // Type-safe wrapper for field CV types.
+  struct CVType : CV {
+    CVType(std::string code, std::string accession)
+        : CV(std::move(code), std::move(accession))
+    {
+    }
+  };
+
+  // Type-safe wrapper for field CV units.
+  struct CVUnit : CV {
+    CVUnit(std::string code, std::string accession)
+        : CV(std::move(code), std::move(accession))
+    {
+    }
+  };
 
   /**
    * A possibly non-scalar field.
@@ -77,6 +94,11 @@ public:
     const std::string& name() const;
 
     /**
+     * The name of this field as recognized by parquet.
+     */
+    const std::string& schema_name() const;
+
+    /**
      * The structural type this field represents.
      */
     Kind kind() const;
@@ -84,12 +106,12 @@ public:
     /**
      * Controlled vocabulary code and accession for the field type.
      */
-    std::optional<std::string> cv_type() const;
+    const std::optional<CVType>& cv_type() const;
 
     /**
      * Controlled vocabulary code and accession for the field unit.
      */
-    std::optional<std::string> cv_unit() const;
+    const std::optional<CVUnit>& cv_unit() const;
 
     /**
      * The data type for values in this field.
@@ -108,8 +130,8 @@ public:
     index_type abs_index_;
     std::string schema_name_;
     std::string clean_name_;
-    std::optional<std::string> cv_type_;
-    std::optional<std::string> cv_unit_;
+    std::optional<CVType> cv_type_;
+    std::optional<CVUnit> cv_unit_;
     std::optional<PSI::DataType> data_type_;
     Kind kind_ = Kind::Scalar;
   };
@@ -137,12 +159,17 @@ public:
   index_type index() const;
 
   /**
-   * Find a field given it's name.
+   * Find a field given its name.
    *
    * NOTE: For metadata structs this is the cleaned name, not the raw
    * schema node name.
    */
-  std::optional<std::shared_ptr<const Field>> field(const std::string_view&) const;
+  std::optional<std::shared_ptr<const Field>> field(const std::string_view&&) const;
+
+  /**
+   * Find a field given its CV type.
+   */
+  std::optional<std::shared_ptr<const Field>> field(const CVType&&) const;
 
   /**
    * Return a map of all fields.

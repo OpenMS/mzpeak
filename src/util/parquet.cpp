@@ -6,8 +6,6 @@ directory of this repository.
 
 */
 
-#include "mzpeak/util/parquet.h"
-
 #include <arrow/array.h>
 #include <arrow/record_batch.h>
 #include <arrow/util/key_value_metadata.h>
@@ -20,6 +18,7 @@ directory of this repository.
 
 #include "mzpeak/exception.h"
 #include "mzpeak/util/arrow.h"
+#include "mzpeak/util/parquet.h"
 
 namespace MzPeak::Util {
 
@@ -149,7 +148,7 @@ Parquet::field(const std::string_view& struct_name,
   auto struct_ptr = impl_->structs_->find(std::string{struct_name});
   if (struct_ptr == impl_->structs_->end()) return {};
 
-  auto field_ptr = struct_ptr->second->field(field_name);
+  auto field_ptr = struct_ptr->second->field(std::move(field_name));
   if (!field_ptr.has_value()) return {};
 
   return std::make_pair(struct_ptr->second, field_ptr.value());
@@ -182,7 +181,7 @@ parquet::arrow::FileReader& Parquet::reader() const { return *impl_->reader_; }
 Planner Parquet::planner(const Query& q) { return Planner(*impl_->reader_, q); }
 
 /******************************************************************************/
-Executor Parquet::executor(const Executor::Projection& p)
+Executor Parquet::executor(const Projection& p)
 {
   return Executor(impl_->reader_, p);
 }

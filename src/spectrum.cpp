@@ -17,9 +17,7 @@ namespace MzPeak {
 
 /******************************************************************************/
 struct Decode {
-  Decode(const Data::Signals& data,
-
-         std::shared_ptr<Util::Slice> slice)
+  Decode(const Data::Signals& data, std::shared_ptr<Util::Slice> slice)
       : array_index_(data.array_index())
       , struct_map_(data.structs())
       , slice_(slice)
@@ -40,9 +38,14 @@ struct Decode {
 };
 
 /******************************************************************************/
-Spectrum::Spectrum(const Data::Signals& data,
+Spectrum::Spectrum(uint64_t index,
+                   const Data::Signals& data,
                    const std::vector<Data::Dimension>& dims,
-                   std::unique_ptr<Util::Slice> slice_up)
+                   std::unique_ptr<Util::Slice> slice_up,
+                   std::shared_ptr<Metadata::Table> metadata)
+    : index_(index)
+    , md_table_(std::move(metadata))
+    , md_spec_(md_table_, index_)
 {
   std::shared_ptr<Util::Slice> slice(std::move(slice_up));
 
@@ -69,5 +72,8 @@ const std::vector<double>& Spectrum::mz() const { return mz_; }
 
 /******************************************************************************/
 const std::vector<float>& Spectrum::intensity() const { return intensity_; }
+
+/******************************************************************************/
+uint8_t Spectrum::ms_level() const { return md_spec_.ms_level().value_or(0u); }
 
 } // namespace MzPeak

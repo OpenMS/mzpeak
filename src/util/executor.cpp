@@ -6,8 +6,6 @@ top-level directory of this repository.
 
 */
 
-#include "mzpeak/util/executor.h"
-
 #include <arrow/array.h>
 #include <arrow/record_batch.h>
 #include <arrow/result.h>
@@ -17,6 +15,7 @@ top-level directory of this repository.
 #include <string_view>
 
 #include "mzpeak/util/algorithm.h"
+#include "mzpeak/util/executor.h"
 #include "mzpeak/util/parquet_types.h"
 
 namespace MzPeak::Util {
@@ -67,8 +66,6 @@ struct Executor::Impl {
   Projection projection_;
   std::unique_ptr<Slice> slice_;
 };
-
-/******************************************************************************/
 
 /******************************************************************************/
 template <psi::DataType T>
@@ -155,7 +152,7 @@ Executor::~Executor() = default;
 /******************************************************************************/
 std::unique_ptr<Executor::Slice> Executor::execute(const Planner::Plan& plan)
 {
-  impl_->slice_ = std::unique_ptr<Slice>(new Slice(impl_->projection_));
+  impl_->slice_ = std::unique_ptr<Slice>(new Slice(impl_->projection_.get()));
   std::map<Schema::Struct::index_type, std::vector<Planner::Range>> ranges;
 
   for (const auto& range : plan.ranges) {

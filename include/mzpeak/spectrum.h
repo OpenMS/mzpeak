@@ -11,6 +11,8 @@ top-level directory of this repository.
 #include <memory>
 
 #include "mzpeak/data/signals.h"
+#include "mzpeak/metadata/spectrum.h"
+#include "mzpeak/metadata/table.h"
 #include "mzpeak/util/slice.h"
 
 namespace MzPeak {
@@ -36,17 +38,26 @@ public:
    */
   const std::vector<float>& intensity() const;
 
-  // FIXME: level?
+  /**
+   * Stage number achieved in a multi stage mass spectrometry
+   * acquisition.
+   */
+  uint8_t ms_level() const;
 
 protected:
   friend class Spectra;
 
   /// Internal constructor.
-  Spectrum(const Data::Signals&,
+  Spectrum(uint64_t index,
+           const Data::Signals&,
            const std::vector<Data::Dimension>&,
-           std::unique_ptr<Util::Slice>);
+           std::unique_ptr<Util::Slice>,
+           std::shared_ptr<Metadata::Table>);
 
 private:
+  uint64_t index_;
+  std::shared_ptr<Metadata::Table> md_table_;
+  Metadata::Spectrum md_spec_;
   std::vector<double> mz_;
   std::vector<float> intensity_;
 };
