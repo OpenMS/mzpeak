@@ -26,14 +26,24 @@ namespace PSI = MzPeak::Schema::PSI;
 /// types.
 template <PSI::DataType T> struct psi_to_parquet_tag;
 
+template <> struct psi_to_parquet_tag<PSI::DataType::Int8> {
+  using scalar_type = parquet::Int32Type;
+  using array_type = arrow::Int8Array;
+};
+
+template <> struct psi_to_parquet_tag<PSI::DataType::UInt8> {
+  using scalar_type = parquet::Int32Type;
+  using array_type = arrow::UInt8Array;
+};
+
 template <> struct psi_to_parquet_tag<PSI::DataType::Int32> {
   using scalar_type = parquet::Int32Type;
   using array_type = arrow::Int32Array;
 };
 
-template <> struct psi_to_parquet_tag<PSI::DataType::Float32> {
-  using scalar_type = parquet::FloatType;
-  using array_type = arrow::FloatArray;
+template <> struct psi_to_parquet_tag<PSI::DataType::UInt32> {
+  using scalar_type = parquet::Int32Type;
+  using array_type = arrow::UInt32Array;
 };
 
 template <> struct psi_to_parquet_tag<PSI::DataType::Int64> {
@@ -41,6 +51,15 @@ template <> struct psi_to_parquet_tag<PSI::DataType::Int64> {
   using array_type = arrow::Int64Array;
 };
 
+template <> struct psi_to_parquet_tag<PSI::DataType::UInt64> {
+  using scalar_type = parquet::Int64Type;
+  using array_type = arrow::UInt64Array;
+};
+
+template <> struct psi_to_parquet_tag<PSI::DataType::Float32> {
+  using scalar_type = parquet::FloatType;
+  using array_type = arrow::FloatArray;
+};
 template <> struct psi_to_parquet_tag<PSI::DataType::Float64> {
   using scalar_type = parquet::DoubleType;
   using array_type = arrow::DoubleArray;

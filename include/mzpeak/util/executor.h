@@ -10,6 +10,7 @@ top-level directory of this repository.
 
 #include "mzpeak/schema/struct.h"
 #include "mzpeak/util/planner.h"
+#include "mzpeak/util/projection.h"
 #include "mzpeak/util/slice.h"
 
 namespace parquet::arrow {
@@ -27,9 +28,6 @@ class Executor final {
 public:
   /// Clean up signatures.
   using Slice = MzPeak::Util::Slice;
-
-  /// Which fields should be extracted.
-  using Projection = std::vector<Schema::Column>;
 
   /// Destructor.
   ~Executor();

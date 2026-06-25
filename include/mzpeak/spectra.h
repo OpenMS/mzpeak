@@ -14,8 +14,11 @@ top-level directory of this repository.
 // Forward declarations:
 namespace MzPeak::Data {
 class Signals;
-class Metadata;
 } // namespace MzPeak::Data
+
+namespace MzPeak::Metadata {
+class Table;
+}
 
 namespace MzPeak {
 
@@ -32,15 +35,15 @@ public:
 
 public:
   /// Low-level constructor from a Parquet file.
-  explicit Spectra(std::unique_ptr<Data::Signals>, std::unique_ptr<Data::Metadata>);
+  explicit Spectra(std::unique_ptr<Data::Signals>, std::unique_ptr<Metadata::Table>);
 
 private:
   // Internal data access.
   std::shared_ptr<Data::Signals> data_;
-  std::shared_ptr<Data::Metadata> meta_;
+  std::shared_ptr<Metadata::Table> meta_;
 
   // Function to fetch a specific spectrum.
-  Spectrum fetch(int64_t);
+  Spectrum fetch(uint64_t);
 };
 
 } // namespace MzPeak

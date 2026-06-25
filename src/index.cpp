@@ -6,14 +6,13 @@ directory of this repository.
 
 */
 
-#include "mzpeak/index.h"
-
 #include <memory>
 
-#include "mzpeak/data/metadata.h"
 #include "mzpeak/data/signals.h"
 #include "mzpeak/exception.h"
+#include "mzpeak/index.h"
 #include "mzpeak/io/archive.h"
+#include "mzpeak/metadata/table.h"
 
 /*
  * Boost JSON:
@@ -114,10 +113,10 @@ Spectra Index::spectra() const
 
   std::unique_ptr<Data::Signals> data =
       std::make_unique<Data::Signals>(parquet(*data_it));
-  std::unique_ptr<Data::Metadata> meta = nullptr;
+  std::unique_ptr<Metadata::Table> meta = nullptr;
 
   if (meta_it != impl_->files_.end()) {
-    meta = std::make_unique<Data::Metadata>(parquet(*meta_it));
+    meta = std::make_unique<Metadata::Table>(parquet(*meta_it));
   }
 
   return Spectra(std::move(data), std::move(meta));

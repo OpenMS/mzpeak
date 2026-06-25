@@ -36,4 +36,6 @@ BOOST_AUTO_TEST_CASE(can_read_spectra)
   BOOST_TEST(intensity[1] == 1938.12, boost::test_tools::tolerance(0.001));
   BOOST_TEST(intensity[intensity.size() - 1] == 0.0,
              boost::test_tools::tolerance(0.001));
+
+  BOOST_TEST(spectrum.ms_level() == 1u);
 }

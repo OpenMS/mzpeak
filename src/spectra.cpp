@@ -6,12 +6,11 @@ top-level directory of this repository.
 
 */
 
-#include "mzpeak/spectra.h"
-
 #include <memory>
 
-#include "mzpeak/data/metadata.h"
 #include "mzpeak/data/signals.h"
+#include "mzpeak/metadata/table.h"
+#include "mzpeak/spectra.h"
 #include "mzpeak/spectrum.h"
 #include "mzpeak/util/enumerable_proxy.h"
 
@@ -22,7 +21,7 @@ Spectra::Spectra() {}
 
 /******************************************************************************/
 Spectra::Spectra(std::unique_ptr<Data::Signals> data,
-                 std::unique_ptr<Data::Metadata> meta)
+                 std::unique_ptr<Metadata::Table> meta)
     : EnumerableProxy(
           0, std::bind(std::mem_fn(&Spectra::fetch), this, std::placeholders::_1))
     , data_(std::move(data))
@@ -33,7 +32,7 @@ Spectra::Spectra(std::unique_ptr<Data::Signals> data,
 }
 
 /******************************************************************************/
-Spectrum Spectra::fetch(int64_t index)
+Spectrum Spectra::fetch(uint64_t index)
 {
   // These are the dimensions we'll project by default.
   std::vector<Data::Dimension> dims =
@@ -44,7 +43,7 @@ Spectrum Spectra::fetch(int64_t index)
       std::ranges::to<std::vector<Data::Dimension>>();
 
   std::unique_ptr<Util::Slice> slice = data_->select(dims, data_->index().eq(index));
-  return Spectrum(*data_, dims, std::move(slice));
+  return Spectrum(index, *data_, dims, std::move(slice), meta_);
 }
 
 } // namespace MzPeak
