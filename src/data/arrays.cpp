@@ -169,14 +169,9 @@ void Batch::query_batch(const Query& query)
       }
     }
 
-    if (backward.i_ == slice_offset_) {
-      // No matches.
-      slice_offset_ = 0;
-      slice_length_ = 0;
-      return;
-    } else {
-      slice_length_ = backward.i_ + 1;
-    }
+    // When backward.i_ == slice_offset_ the only match is the row found
+    // by the forward scan; that is still one valid match, not zero.
+    slice_length_ = backward.i_ + 1;
   }
 }
 
