@@ -198,25 +198,34 @@ std::size_t Arrays::record_count() const
   auto ne(impl_->array_index_.num_entities());
   if (ne.has_value()) return *ne;
 
-  // The first column should be the index.
-  //
-  // FIXME: Is there a better way to do this?
-  // const Schema::ArrayIndex::Column& index(impl_->array_index_.columns()[0]);
-  // std::optional<int> col_idx(impl_->array_index_.column_index(index));
-  // if (!col_idx.has_value()) throw ParquetError("missing column: " + index.path);
-  //
-  // std::optional<Util::Parquet::Stats> stats(
-  //     impl_->parquet_->statistics(-1, *col_idx));
-  //
-  // if (stats.has_value()) {
-  //   auto tptr(Util::parquet_statistics_cast<Schema::PSI::DataType::Int64>(
-  //       *stats->column, *stats->stats));
-  //
-  //   return tptr->max();
-  // }
+  // Fall back to scanning row-group statistics on the spectrum_index column.
+  // The index is 0-based and contiguous, so COUNT = max_index + 1.
+  const std::string prefix = impl_->array_index_.prefix();
+  auto dest = impl_->parquet_->field(prefix, "spectrum_index");
+  if (!dest.has_value()) {
+    throw ParquetError("record_count: missing " + prefix + ".spectrum_index column");
+  }
+  const int col = dest->second->absolute_index();
 
-  // FIXME: Should we scan the file at this point?
-  throw ParquetError("no num_entities cache and no column statistics!");
+  auto fmd = impl_->parquet_->file_metadata();
+  if (fmd->num_row_groups() == 0) return 0;
+
+  int64_t max_index = -1;
+  for (int g = 0; g < fmd->num_row_groups(); ++g) {
+    auto chunk = fmd->RowGroup(g)->ColumnChunk(col);
+    if (!chunk->is_stats_set()) continue;
+    auto stats = chunk->statistics();
+    if (!stats || !stats->HasMinMax()) continue;
+    auto typed = std::dynamic_pointer_cast<parquet::Int64Statistics>(stats);
+    if (!typed) continue;
+    max_index = std::max(max_index, typed->max());
+  }
+
+  if (max_index < 0) {
+    throw ParquetError("record_count: no statistics for " + prefix +
+                       ".spectrum_index");
+  }
+  return static_cast<std::size_t>(max_index) + 1;
 }
 
 /******************************************************************************/
