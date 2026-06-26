@@ -10,7 +10,7 @@ directory of this repository.
 
 #include <memory>
 
-#include "mzpeak/schema/struct.h"
+#include "mzpeak/schema/group.h"
 #include "mzpeak/util/parquet.h"
 #include "mzpeak/util/projection.h"
 
@@ -28,19 +28,19 @@ public:
   ~Table();
 
   /**
-   * Return a struct with the given name.  If the struct does not
+   * Return a group with the given name.  If the group does not
    * exist in the schema return `nullptr`.
    */
-  std::shared_ptr<Schema::Struct> group(const std::string_view&) const;
+  std::shared_ptr<Schema::Group> group(const std::string_view&) const;
 
   /**
-   * Read all rows from the given struct where the index column
+   * Read all rows from the given group where the index column
    * matches the given value.
    *
    * Returns a slice with the given column projection.
    */
   std::unique_ptr<Util::Slice> indexed(uint64_t,
-                                       const std::shared_ptr<Schema::Struct>&,
+                                       const std::shared_ptr<Schema::Group>&,
                                        const Util::Projection&) const;
 
 private:

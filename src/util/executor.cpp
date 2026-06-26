@@ -153,7 +153,7 @@ Executor::~Executor() = default;
 std::unique_ptr<Executor::Slice> Executor::execute(const Planner::Plan& plan)
 {
   impl_->slice_ = std::unique_ptr<Slice>(new Slice(impl_->projection_.get()));
-  std::map<Schema::Struct::index_type, std::vector<Planner::Range>> ranges;
+  std::map<Schema::Group::index_type, std::vector<Planner::Range>> ranges;
 
   for (const auto& range : plan.ranges) {
     auto it = ranges.find(range.row_group);

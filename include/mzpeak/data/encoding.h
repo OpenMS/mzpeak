@@ -13,8 +13,8 @@ top-level directory of this repository.
 
 #include "mzpeak/data/array_index.h"
 #include "mzpeak/data/dimension.h"
+#include "mzpeak/schema/group.h"
 #include "mzpeak/schema/psi/data_type.h"
-#include "mzpeak/schema/struct.h"
 #include "mzpeak/util/slice.h"
 
 namespace MzPeak::Data {
@@ -29,10 +29,10 @@ public:
 
   /// Constructor.
   Encoding(std::shared_ptr<ArrayIndex> array_index,
-           std::shared_ptr<Schema::StructMap> struct_map,
+           std::shared_ptr<Schema::GroupMap> group_map,
            std::shared_ptr<Util::Slice> slice)
       : array_index_(std::move(array_index))
-      , struct_map_(std::move(struct_map))
+      , group_map_(std::move(group_map))
       , slice_(std::move(slice))
   {
   }
@@ -62,7 +62,7 @@ public:
 
 private:
   std::shared_ptr<ArrayIndex> array_index_;
-  std::shared_ptr<Schema::StructMap> struct_map_;
+  std::shared_ptr<Schema::GroupMap> group_map_;
   std::shared_ptr<Util::Slice> slice_;
 };
 
@@ -78,7 +78,7 @@ void Encoding<T>::decode_dimension(
     throw ParquetError(msg + dim.name);
   } else if (columns.size() == 1 &&
              columns[0].buffer_format == Schema::BufferFormat::Point) {
-    auto field = array_index_->entry_column(*struct_map_, columns[0]);
+    auto field = array_index_->entry_column(*group_map_, columns[0]);
 
     if (!field.has_value()) {
       throw ParquetError("unable to decode dimension, not in schema: " + dim.name);

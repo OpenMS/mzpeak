@@ -13,7 +13,7 @@ top-level directory of this repository.
 #include <print>
 
 #include "mzpeak.h"
-#include "mzpeak/schema/struct.h"
+#include "mzpeak/schema/group.h"
 
 /******************************************************************************/
 namespace po = boost::program_options;
@@ -64,27 +64,27 @@ int print_schema(MzPeak::Index& index, const std::string& file)
 }
 
 /******************************************************************************/
-int print_structs(MzPeak::Index& index, const std::string& file)
+int print_groups(MzPeak::Index& index, const std::string& file)
 {
   auto parquet = open_parquet_file(index, file);
   if (parquet == nullptr) return 1;
 
-  auto structs =
-      *parquet->structs() | std::views::values | std::ranges::to<std::vector>();
-  std::ranges::sort(structs, {}, &MzPeak::Schema::Struct::index);
+  auto groups =
+      *parquet->groups() | std::views::values | std::ranges::to<std::vector>();
+  std::ranges::sort(groups, {}, &MzPeak::Schema::Group::index);
 
-  for (const auto& s : structs) {
+  for (const auto& s : groups) {
     std::println("{} [index:{}, fields:{}]", s->name(), s->index(),
                  s->fields().size());
 
     auto fields = s->fields() | std::views::values | std::ranges::to<std::vector>();
-    std::ranges::sort(fields, {}, &MzPeak::Schema::Struct::Field::relative_index);
+    std::ranges::sort(fields, {}, &MzPeak::Schema::Group::Field::relative_index);
 
     for (const auto& field : fields) {
       std::string kind("?");
       std::string type("?");
 
-      using enum MzPeak::Schema::Struct::Field::Kind;
+      using enum MzPeak::Schema::Group::Field::Kind;
       switch (field->kind()) {
       case Scalar:
         kind = "scalar";
@@ -156,8 +156,8 @@ int main(int argc, char* argv[])
 
     desc.add_options()("schema", po::value<std::string>(), "Print schema details");
 
-    desc.add_options()("structs", po::value<std::string>(),
-                       "Print struct information");
+    desc.add_options()("groups", po::value<std::string>(),
+                       "Print group information");
 
     desc.add_options()("fmdkv", po::value<std::string>(),
                        "Dump the file meta data kv store");
@@ -190,8 +190,8 @@ int main(int argc, char* argv[])
       return print_array_index(index, vmap["array-index"].as<std::string>());
     } else if (vmap.count("schema")) {
       return print_schema(index, vmap["schema"].as<std::string>());
-    } else if (vmap.count("structs")) {
-      return print_structs(index, vmap["structs"].as<std::string>());
+    } else if (vmap.count("groups")) {
+      return print_groups(index, vmap["groups"].as<std::string>());
     } else if (vmap.count("fmdkv")) {
       std::optional<std::string> key;
 

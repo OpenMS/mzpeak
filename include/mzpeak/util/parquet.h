@@ -13,7 +13,7 @@ directory of this repository.
 
 #include "mzpeak/io/file.h"
 #include "mzpeak/schema/file.h"
-#include "mzpeak/schema/struct.h"
+#include "mzpeak/schema/group.h"
 #include "mzpeak/util/executor.h"
 #include "mzpeak/util/query.h"
 
@@ -38,12 +38,12 @@ public:
   const Schema::File& index_file() const;
 
   /**
-   * Return the schema encoded as a map of Struct objects.
+   * Return the schema encoded as a map of Group objects.
    */
-  const std::shared_ptr<Schema::StructMap>& structs() const;
+  const std::shared_ptr<Schema::GroupMap>& groups() const;
 
   /**
-   * Return a Struct and Field matching the given names.
+   * Return a Group and Field matching the given names.
    */
   std::optional<Schema::Column> field(const std::string_view&,
                                       const std::string_view&) const;

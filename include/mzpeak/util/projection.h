@@ -11,7 +11,7 @@ top-level directory of this repository.
 #include <string_view>
 #include <vector>
 
-#include "mzpeak/schema/struct.h"
+#include "mzpeak/schema/group.h"
 
 namespace MzPeak::Util {
 
@@ -37,21 +37,21 @@ public:
   /**
    * Project a column if the field exists.
    */
-  Result project(const std::shared_ptr<Schema::Struct>&,
-                 const std::optional<std::shared_ptr<const Schema::Struct::Field>>&);
+  Result project(const std::shared_ptr<Schema::Group>&,
+                 const std::optional<std::shared_ptr<const Schema::Group::Field>>&);
 
   /**
    * Project a column using a field name.
    */
-  Result project(const std::shared_ptr<Schema::Struct>&, const std::string_view&&);
+  Result project(const std::shared_ptr<Schema::Group>&, const std::string_view&&);
 
   /**
    * Look up a CV type and project that.
    */
-  Result project(const std::shared_ptr<Schema::Struct>&, Schema::Struct::CVType&&);
+  Result project(const std::shared_ptr<Schema::Group>&, Schema::Group::CVType&&);
 
   /**
-   * Return the vector or projected columns.
+   * Return the vector of projected columns.
    */
   const std::vector<Schema::Column>& get() const;
 

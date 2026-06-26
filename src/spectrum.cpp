@@ -19,7 +19,7 @@ namespace MzPeak {
 struct Decode {
   Decode(const Data::Signals& data, std::shared_ptr<Util::Slice> slice)
       : array_index_(data.array_index())
-      , struct_map_(data.structs())
+      , group_map_(data.groups())
       , slice_(slice)
   {
   }
@@ -28,12 +28,12 @@ struct Decode {
   void decode(const Data::Dimension& dim,
               std::vector<typename Data::Encoding<T>::value_type>& v)
   {
-    Data::Encoding<T> enc(array_index_, struct_map_, slice_);
+    Data::Encoding<T> enc(array_index_, group_map_, slice_);
     enc.decode_dimension(dim, v);
   }
 
   std::shared_ptr<Data::ArrayIndex> array_index_;
-  std::shared_ptr<Schema::StructMap> struct_map_;
+  std::shared_ptr<Schema::GroupMap> group_map_;
   std::shared_ptr<Util::Slice> slice_;
 };
 

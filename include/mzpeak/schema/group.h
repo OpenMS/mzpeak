@@ -29,7 +29,7 @@ namespace MzPeak::Schema {
  * The goal is to flatten the parquet schema as much as possible given
  * what we know about the mzPeak schema.
  */
-class Struct final {
+class Group final {
 public:
   /// Type used to store column indexes.
   using index_type = int32_t;
@@ -78,7 +78,7 @@ public:
     ~Field() = default;
 
     /**
-     * Column index inside the parent struct.
+     * Column index inside the parent group.
      */
     index_type relative_index() const;
 
@@ -124,7 +124,7 @@ public:
     void data_type(PSI::DataType);
 
   private:
-    friend class Struct;
+    friend class Group;
 
     index_type rel_index_;
     index_type abs_index_;
@@ -141,27 +141,27 @@ public:
   using field_map_t = std::map<std::string, std::shared_ptr<Field>>;
 
   /// Constructor from a parquet schema descriptor.
-  explicit Struct(const parquet::schema::GroupNode&,
-                  index_type index,
-                  index_type offset);
+  explicit Group(const parquet::schema::GroupNode&,
+                 index_type index,
+                 index_type offset);
 
   /// Destructor.
-  ~Struct() = default;
+  ~Group() = default;
 
   /**
-   * The schema name for this struct.
+   * The schema name for this group.
    */
   const std::string& name() const;
 
   /**
-   * Return the schema column index of this struct.
+   * Return the schema column index of this group.
    */
   index_type index() const;
 
   /**
    * Find a field given its name.
    *
-   * NOTE: For metadata structs this is the cleaned name, not the raw
+   * NOTE: For metadata groups this is the cleaned name, not the raw
    * schema node name.
    */
   std::optional<std::shared_ptr<const Field>> field(const std::string_view&&) const;
@@ -183,15 +183,15 @@ private:
 };
 
 /**
- * Mapping from struct name to a Struct.
+ * Mapping from group name to a Group.
  */
-using StructMap = std::map<std::string, std::shared_ptr<Struct>>;
+using GroupMap = std::map<std::string, std::shared_ptr<Group>>;
 
 /**
- * A parquet column can be uniquely identified using its parent struct
+ * A parquet column can be uniquely identified using its parent group
  * and field.
  */
 using Column =
-    std::pair<std::shared_ptr<const Struct>, std::shared_ptr<const Struct::Field>>;
+    std::pair<std::shared_ptr<const Group>, std::shared_ptr<const Group::Field>>;
 
 } // namespace MzPeak::Schema

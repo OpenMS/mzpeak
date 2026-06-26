@@ -13,7 +13,7 @@ top-level directory of this repository.
 #include <type_traits>
 #include <variant>
 
-#include "mzpeak/schema/struct.h"
+#include "mzpeak/schema/group.h"
 
 namespace MzPeak::Util {
 
@@ -47,7 +47,7 @@ public:
   /**
    * This class is used to construct a Query object using two inputs:
    *
-   * 1. A Parquet struct and field to compare to (`Schema::Column`)
+   * 1. A Parquet group and field to compare to (`Schema::Column`)
    *
    * 2. A predicate function with a comparison value.
    *

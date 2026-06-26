@@ -11,8 +11,8 @@ top-level directory of this repository.
 #include <parquet/types.h>
 #include <ranges>
 
+#include "mzpeak/schema/group.h"
 #include "mzpeak/schema/psi/data_type.h"
-#include "mzpeak/schema/struct.h"
 
 namespace MzPeak::Schema {
 
@@ -53,7 +53,7 @@ find_homogeneous_primitive(std::shared_ptr<parquet::schema::Node> node)
 }
 
 /******************************************************************************/
-std::pair<Struct::Field::Kind, std::optional<PSI::DataType>>
+std::pair<Group::Field::Kind, std::optional<PSI::DataType>>
 field_type_from_parquet(const std::shared_ptr<parquet::schema::GroupNode>& node)
 {
   switch (node->logical_type()->type()) {
@@ -62,20 +62,20 @@ field_type_from_parquet(const std::shared_ptr<parquet::schema::GroupNode>& node)
     if (auto prim = find_homogeneous_primitive(
             std::static_pointer_cast<parquet::schema::Node>(node));
         prim != nullptr) {
-      return std::make_pair(Struct::Field::Kind::List,
+      return std::make_pair(Group::Field::Kind::List,
                             PSI::data_type_from_parquet(*prim));
     } else {
-      return std::make_pair(Struct::Field::Kind::List, std::nullopt);
+      return std::make_pair(Group::Field::Kind::List, std::nullopt);
     }
   default:
-    return std::make_pair(Struct::Field::Kind::Unknown, std::nullopt);
+    return std::make_pair(Group::Field::Kind::Unknown, std::nullopt);
   }
 }
 
 /******************************************************************************/
-Struct::Field::Field(const std::string_view& column_name,
-                     index_type rel_index,
-                     index_type abs_index)
+Group::Field::Field(const std::string_view& column_name,
+                    index_type rel_index,
+                    index_type abs_index)
     : rel_index_(rel_index)
     , abs_index_(abs_index)
     , schema_name_(column_name)
@@ -110,45 +110,45 @@ Struct::Field::Field(const std::string_view& column_name,
 }
 
 /******************************************************************************/
-Struct::index_type Struct::Field::relative_index() const { return rel_index_; }
+Group::index_type Group::Field::relative_index() const { return rel_index_; }
 
 /******************************************************************************/
-Struct::index_type Struct::Field::absolute_index() const { return abs_index_; }
+Group::index_type Group::Field::absolute_index() const { return abs_index_; }
 
 /******************************************************************************/
-const std::string& Struct::Field::name() const { return clean_name_; }
+const std::string& Group::Field::name() const { return clean_name_; }
 
 /******************************************************************************/
-const std::string& Struct::Field::schema_name() const { return schema_name_; }
+const std::string& Group::Field::schema_name() const { return schema_name_; }
 
 /******************************************************************************/
-Struct::Field::Kind Struct::Field::kind() const { return kind_; }
+Group::Field::Kind Group::Field::kind() const { return kind_; }
 
 /******************************************************************************/
-const std::optional<Struct::CVType>& Struct::Field::cv_type() const
+const std::optional<Group::CVType>& Group::Field::cv_type() const
 {
   return cv_type_;
 }
 
 /******************************************************************************/
-const std::optional<Struct::CVUnit>& Struct::Field::cv_unit() const
+const std::optional<Group::CVUnit>& Group::Field::cv_unit() const
 {
   return cv_unit_;
 }
 
 /******************************************************************************/
-const std::optional<PSI::DataType>& Struct::Field::data_type() const
+const std::optional<PSI::DataType>& Group::Field::data_type() const
 {
   return data_type_;
 }
 
 /******************************************************************************/
-void Struct::Field::data_type(PSI::DataType dt) { data_type_ = dt; }
+void Group::Field::data_type(PSI::DataType dt) { data_type_ = dt; }
 
 /******************************************************************************/
-Struct::Struct(const parquet::schema::GroupNode& node,
-               index_type index,
-               index_type offset)
+Group::Group(const parquet::schema::GroupNode& node,
+             index_type index,
+             index_type offset)
     : name_(node.name())
     , index_(index)
 {
@@ -166,7 +166,7 @@ Struct::Struct(const parquet::schema::GroupNode& node,
       auto grp = std::static_pointer_cast<parquet::schema::GroupNode>(child);
 
       if (field->name() == "parameters" && grp->logical_type()->is_list()) {
-        field->kind_ = Struct::Field::Kind::Params;
+        field->kind_ = Group::Field::Kind::Params;
       } else {
         auto grp_type = field_type_from_parquet(grp);
         field->kind_ = grp_type.first;
@@ -179,14 +179,14 @@ Struct::Struct(const parquet::schema::GroupNode& node,
 }
 
 /******************************************************************************/
-const std::string& Struct::name() const { return name_; }
+const std::string& Group::name() const { return name_; }
 
 /******************************************************************************/
-Struct::index_type Struct::index() const { return index_; }
+Group::index_type Group::index() const { return index_; }
 
 /******************************************************************************/
-std::optional<std::shared_ptr<const Struct::Field>>
-Struct::field(const std::string_view&& name) const
+std::optional<std::shared_ptr<const Group::Field>>
+Group::field(const std::string_view&& name) const
 {
   auto it = fields_.find(std::string{name});
 
@@ -198,8 +198,8 @@ Struct::field(const std::string_view&& name) const
 }
 
 /******************************************************************************/
-std::optional<std::shared_ptr<const Struct::Field>>
-Struct::field(const CVType&& cvt) const
+std::optional<std::shared_ptr<const Group::Field>>
+Group::field(const CVType&& cvt) const
 {
   const auto fields = fields_ | std::views::values;
 
@@ -216,6 +216,6 @@ Struct::field(const CVType&& cvt) const
 }
 
 /******************************************************************************/
-const Struct::field_map_t& Struct::fields() const { return fields_; }
+const Group::field_map_t& Group::fields() const { return fields_; }
 
 } // namespace MzPeak::Schema

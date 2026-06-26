@@ -10,7 +10,7 @@ directory of this repository.
 
 #include "mzpeak/exception.h"
 #include "mzpeak/metadata/table.h"
-#include "mzpeak/schema/struct.h"
+#include "mzpeak/schema/group.h"
 #include "mzpeak/util/parquet.h"
 
 namespace MzPeak::Metadata {
@@ -49,9 +49,9 @@ Table::Table(std::unique_ptr<Util::Parquet> parquet)
 Table::~Table() = default;
 
 /******************************************************************************/
-std::shared_ptr<Schema::Struct> Table::group(const std::string_view& name) const
+std::shared_ptr<Schema::Group> Table::group(const std::string_view& name) const
 {
-  const std::shared_ptr<Schema::StructMap>& map = impl_->parquet_->structs();
+  const std::shared_ptr<Schema::GroupMap>& map = impl_->parquet_->groups();
   auto it = map->find(std::string(name));
 
   if (it == map->end()) {
@@ -64,7 +64,7 @@ std::shared_ptr<Schema::Struct> Table::group(const std::string_view& name) const
 /******************************************************************************/
 std::unique_ptr<Util::Slice>
 Table::indexed(uint64_t index,
-               const std::shared_ptr<Schema::Struct>& group,
+               const std::shared_ptr<Schema::Group>& group,
                const Util::Projection& projection) const
 {
   auto index_field = group->field("index");

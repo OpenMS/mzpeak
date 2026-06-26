@@ -6,7 +6,7 @@ top-level directory of this repository.
 
 */
 
-#include "mzpeak/schema/struct.h"
+#include "mzpeak/schema/group.h"
 #include "mzpeak/util/projection.h"
 
 namespace MzPeak::Util {
@@ -28,8 +28,8 @@ Projection::Result Projection::project(const Schema::Column& c)
 
 /******************************************************************************/
 Projection::Result Projection::project(
-    const std::shared_ptr<Schema::Struct>& group,
-    const std::optional<std::shared_ptr<const Schema::Struct::Field>>& field)
+    const std::shared_ptr<Schema::Group>& group,
+    const std::optional<std::shared_ptr<const Schema::Group::Field>>& field)
 {
   if (field.has_value()) {
     auto col = std::make_pair(group, field.value());
@@ -41,15 +41,15 @@ Projection::Result Projection::project(
 }
 
 /******************************************************************************/
-Projection::Result Projection::project(const std::shared_ptr<Schema::Struct>& group,
+Projection::Result Projection::project(const std::shared_ptr<Schema::Group>& group,
                                        const std::string_view&& name)
 {
   return project(group, group->field(std::move(name)));
 }
 
 /******************************************************************************/
-Projection::Result Projection::project(const std::shared_ptr<Schema::Struct>& group,
-                                       Schema::Struct::CVType&& cvt)
+Projection::Result Projection::project(const std::shared_ptr<Schema::Group>& group,
+                                       Schema::Group::CVType&& cvt)
 {
   return project(group, group->field(std::move(cvt)));
 }

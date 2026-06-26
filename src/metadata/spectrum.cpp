@@ -11,7 +11,7 @@ top-level directory of this repository.
 #include "mzpeak/exception.h"
 #include "mzpeak/metadata/spectrum.h"
 #include "mzpeak/metadata/table.h"
-#include "mzpeak/schema/struct.h"
+#include "mzpeak/schema/group.h"
 #include "mzpeak/util/projection.h"
 #include "mzpeak/util/slice.h"
 
@@ -31,7 +31,7 @@ Spectrum::Spectrum(std::shared_ptr<Table> table, uint64_t index)
   }
 
   Projection projection;
-  auto level_field = projection.project(group_, Struct::CVType("MS", "1000511"));
+  auto level_field = projection.project(group_, Group::CVType("MS", "1000511"));
   auto delta_field = projection.project(group_, "mz_delta_model");
 
   std::unique_ptr<Slice> slice = table_->indexed(index_, group_, projection);

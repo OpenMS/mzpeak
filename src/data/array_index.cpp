@@ -6,12 +6,11 @@ directory of this repository.
 
 */
 
-#include "mzpeak/data/array_index.h"
-
 #include <algorithm>
 #include <iterator>
 #include <ranges>
 
+#include "mzpeak/data/array_index.h"
 #include "mzpeak/schema/buffer_format.h"
 #include "mzpeak/schema/entity_type.h"
 
@@ -138,7 +137,7 @@ std::vector<Data::Dimension> ArrayIndex::dimensions() const
 }
 
 /******************************************************************************/
-std::optional<Schema::Column> ArrayIndex::entry_column(const Schema::StructMap& map,
+std::optional<Schema::Column> ArrayIndex::entry_column(const Schema::GroupMap& map,
                                                        const Entry& col)
 {
   auto it = map.find(prefix_);

@@ -57,7 +57,7 @@ struct Parquet::Impl {
   Impl(std::unique_ptr<IO::File> data, Schema::File file)
       : file_(std::move(file))
       , arrow_(std::make_unique<Arrow>(std::move(data)))
-      , structs_(std::make_shared<Schema::StructMap>())
+      , groups_(std::make_shared<Schema::GroupMap>())
   {
     auto raf = arrow_->reader();
 
@@ -95,7 +95,7 @@ struct Parquet::Impl {
   Schema::File file_;
   std::unique_ptr<Arrow> arrow_;
   std::shared_ptr<parquet::arrow::FileReader> reader_;
-  std::shared_ptr<Schema::StructMap> structs_;
+  std::shared_ptr<Schema::GroupMap> groups_;
 };
 
 /******************************************************************************/
@@ -114,9 +114,9 @@ void Parquet::Impl::parse_schema()
       std::shared_ptr<parquet::schema::GroupNode> group =
           std::static_pointer_cast<parquet::schema::GroupNode>(node);
 
-      std::shared_ptr<Schema::Struct> s =
-          std::make_shared<Schema::Struct>(*group, i, offset);
-      (*structs_)[s->name()] = s;
+      std::shared_ptr<Schema::Group> s =
+          std::make_shared<Schema::Group>(*group, i, offset);
+      (*groups_)[s->name()] = s;
       offset += group->field_count();
     }
   }
@@ -135,23 +135,23 @@ Parquet::~Parquet() = default;
 const Schema::File& Parquet::index_file() const { return impl_->file_; }
 
 /******************************************************************************/
-const std::shared_ptr<Schema::StructMap>& Parquet::structs() const
+const std::shared_ptr<Schema::GroupMap>& Parquet::groups() const
 {
-  return impl_->structs_;
+  return impl_->groups_;
 }
 
 /******************************************************************************/
 std::optional<Schema::Column>
-Parquet::field(const std::string_view& struct_name,
+Parquet::field(const std::string_view& group_name,
                const std::string_view& field_name) const
 {
-  auto struct_ptr = impl_->structs_->find(std::string{struct_name});
-  if (struct_ptr == impl_->structs_->end()) return {};
+  auto group_ptr = impl_->groups_->find(std::string{group_name});
+  if (group_ptr == impl_->groups_->end()) return {};
 
-  auto field_ptr = struct_ptr->second->field(std::move(field_name));
+  auto field_ptr = group_ptr->second->field(std::move(field_name));
   if (!field_ptr.has_value()) return {};
 
-  return std::make_pair(struct_ptr->second, field_ptr.value());
+  return std::make_pair(group_ptr->second, field_ptr.value());
 }
 
 /******************************************************************************/

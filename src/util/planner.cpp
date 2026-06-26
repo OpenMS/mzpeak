@@ -43,7 +43,7 @@ struct StatsCache {
   // know how many unique columns were requested.
   std::map<key_type, value_type> cache_;
 
-  // Construct a key for the given struct/field.
+  // Construct a key for the given group/field.
   key_type key(const Schema::Column& dest) const
   {
     return dest.second->absolute_index();
@@ -133,7 +133,7 @@ public:
   {
   }
 
-  // Construct a key for the given struct/field.
+  // Construct a key for the given group/field.
   //
   // FIXME: Should probably move this into the destination code.
   key_type key(const Schema::Column& dest) const

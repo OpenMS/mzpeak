@@ -8,7 +8,7 @@ top-level directory of this repository.
 
 #pragma once
 
-#include "mzpeak/schema/struct.h"
+#include "mzpeak/schema/group.h"
 #include "mzpeak/util/planner.h"
 #include "mzpeak/util/projection.h"
 #include "mzpeak/util/slice.h"
