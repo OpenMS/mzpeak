@@ -85,7 +85,7 @@ BOOST_AUTO_TEST_CASE(can_use_two_columns)
 }
 
 /******************************************************************************/
-BOOST_AUTO_TEST_CASE(can_access_multiple_structs)
+BOOST_AUTO_TEST_CASE(can_access_multiple_groups)
 {
   using namespace MzPeak;
   auto index = MzPeak::open("../test/files/small.mzpeak");

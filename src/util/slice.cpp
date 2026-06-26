@@ -6,13 +6,13 @@ top-level directory of this repository.
 
 */
 
-#include "mzpeak/util/slice.h"
-
 #include <memory>
+
+#include "mzpeak/util/slice.h"
 
 namespace MzPeak::Util {
 
-using Struct = MzPeak::Schema::Struct;
+using Group = MzPeak::Schema::Group;
 
 /******************************************************************************/
 struct Slice::Impl {
@@ -23,13 +23,13 @@ public:
   }
 
   /// Get the array key for the given field.
-  Struct::index_type key(const Column& field) const
+  Group::index_type key(const Column& field) const
   {
     return field.second->absolute_index();
   }
 
   std::vector<Column> fields_;
-  std::map<Struct::index_type, std::shared_ptr<Slice::Raw>> arrays_;
+  std::map<Group::index_type, std::shared_ptr<Slice::Raw>> arrays_;
 };
 
 /******************************************************************************/

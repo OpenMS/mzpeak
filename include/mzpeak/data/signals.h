@@ -11,7 +11,7 @@ top-level directory of this repository.
 #include <arrow/array.h>
 
 #include "mzpeak/data/array_index.h"
-#include "mzpeak/schema/struct.h"
+#include "mzpeak/schema/group.h"
 #include "mzpeak/util/parquet.h"
 #include "mzpeak/util/query.h"
 
@@ -52,7 +52,7 @@ public:
                                       const Util::Query&);
 
   /**
-   * Low-level interface for accessing a struct field given its name.
+   * Low-level interface for accessing a group field given its name.
    *
    * Useful if you need to manually construct queries.
    */
@@ -60,9 +60,9 @@ public:
 
   /**
    * Low-level interface for accessing the schema encoded as a map of
-     Struct objects.
+     Group objects.
    */
-  const std::shared_ptr<Schema::StructMap>& structs() const;
+  const std::shared_ptr<Schema::GroupMap>& groups() const;
 
 private:
   struct Impl;

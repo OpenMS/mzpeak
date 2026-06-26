@@ -10,7 +10,7 @@ top-level directory of this repository.
 
 #include <arrow/array.h>
 
-#include "mzpeak/schema/struct.h"
+#include "mzpeak/schema/group.h"
 #include "mzpeak/util/compat.h" // IWYU pragma: keep
 #include "mzpeak/util/decoders.h"
 

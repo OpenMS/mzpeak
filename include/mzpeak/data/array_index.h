@@ -16,9 +16,9 @@ directory of this repository.
 #include "mzpeak/data/dimension.h"
 #include "mzpeak/schema/buffer_format.h"
 #include "mzpeak/schema/entity_type.h"
+#include "mzpeak/schema/group.h"
 #include "mzpeak/schema/psi/array_type.h"
 #include "mzpeak/schema/psi/data_type.h"
-#include "mzpeak/schema/struct.h"
 
 namespace MzPeak::Data {
 
@@ -141,9 +141,9 @@ public:
   std::vector<Data::Dimension> dimensions() const;
 
   /**
-   * Convert an array index entry into a Struct::Field;
+   * Convert an array index entry into a Group::Field;
    */
-  std::optional<Schema::Column> entry_column(const Schema::StructMap&, const Entry&);
+  std::optional<Schema::Column> entry_column(const Schema::GroupMap&, const Entry&);
 
 private:
   // The entity type for the entire Parquet file.

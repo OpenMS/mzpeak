@@ -108,9 +108,9 @@ std::optional<Schema::Column> Signals::field(const std::string_view& name) const
 }
 
 /******************************************************************************/
-const std::shared_ptr<Schema::StructMap>& Signals::structs() const
+const std::shared_ptr<Schema::GroupMap>& Signals::groups() const
 {
-  return impl_->parquet_->structs();
+  return impl_->parquet_->groups();
 }
 
 /******************************************************************************/
@@ -138,7 +138,7 @@ Signals::select(const std::vector<Dimension>& projection, const Util::Query& que
 
     for (auto& entry : entries) {
       auto field =
-          impl_->array_index_->entry_column(*impl_->parquet_->structs(), entry);
+          impl_->array_index_->entry_column(*impl_->parquet_->groups(), entry);
       if (!field.has_value()) {
         throw ParquetError("array entry not present in schema: " + entry.name);
       } else {

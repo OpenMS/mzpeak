@@ -17,7 +17,7 @@ class Slice;
 }
 
 namespace MzPeak::Schema {
-class Struct;
+class Group;
 }
 
 namespace MzPeak::Metadata {
@@ -51,7 +51,7 @@ public:
 
 private:
   std::shared_ptr<Table> table_;
-  std::shared_ptr<Schema::Struct> group_;
+  std::shared_ptr<Schema::Group> group_;
   uint64_t index_;
 
   std::optional<uint8_t> ms_level_;
