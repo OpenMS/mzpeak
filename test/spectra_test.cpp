@@ -26,9 +26,20 @@ BOOST_AUTO_TEST_CASE(can_read_spectra)
   auto spectrum = spectra[0];
   auto mz = spectrum.mz();
 
-  BOOST_TEST((mz.size() == 13589));
+  BOOST_TEST(mz.size() == 13589);
   BOOST_TEST(mz[0] == 202.607, boost::test_tools::tolerance(0.001));
   BOOST_TEST(mz[mz.size() - 1] == 1999.840, boost::test_tools::tolerance(0.001));
+
+  // Test some NULL values.
+  BOOST_TEST(mz[7] == 202.608, boost::test_tools::tolerance(0.001));
+  BOOST_TEST(mz[8] == 202.609, boost::test_tools::tolerance(0.001));
+  BOOST_TEST(mz[14] == 204.761, boost::test_tools::tolerance(0.001));
+  BOOST_TEST(mz[15] == 204.762, boost::test_tools::tolerance(0.001));
+
+  // The m/z values should be monotonically increasing.
+  for (std::size_t i : std::views::iota(1ul, mz.size())) {
+    BOOST_TEST(mz[i] > mz[i - 1]);
+  }
 
   auto intensity = spectrum.intensity();
   BOOST_TEST((intensity.size() == mz.size()));

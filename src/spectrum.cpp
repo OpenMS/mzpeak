@@ -9,56 +9,30 @@ top-level directory of this repository.
 #include <memory>
 #include <vector>
 
-#include "mzpeak/data/encoding.h"
-#include "mzpeak/schema/psi/data_type.h"
 #include "mzpeak/spectrum.h"
 
 namespace MzPeak {
 
 /******************************************************************************/
-struct Decode {
-  Decode(const Data::Signals& data, std::shared_ptr<Util::Slice> slice)
-      : array_index_(data.array_index())
-      , group_map_(data.groups())
-      , slice_(slice)
-  {
-  }
-
-  template <Schema::PSI::DataType T>
-  void decode(const Data::ArrayIndex::Dimension& dim,
-              std::vector<typename Data::Encoding<T>::value_type>& v)
-  {
-    Data::Encoding<T> enc(array_index_, group_map_, slice_);
-    enc.decode_dimension(dim, v);
-  }
-
-  std::shared_ptr<Data::ArrayIndex> array_index_;
-  std::shared_ptr<Schema::GroupMap> group_map_;
-  std::shared_ptr<Util::Slice> slice_;
-};
-
-/******************************************************************************/
 Spectrum::Spectrum(uint64_t index,
-                   const Data::Signals& data,
+                   std::shared_ptr<Data::Signals> data,
                    const std::vector<Data::ArrayIndex::Dimension>& dims,
-                   std::unique_ptr<Util::Slice> slice_up,
+                   std::unique_ptr<Util::Slice> slice,
                    std::shared_ptr<Metadata::Table> metadata)
     : index_(index)
     , md_table_(std::move(metadata))
     , md_spec_(md_table_, index_)
+    , decoder_(data,
+               std::move(slice),
+               Util::DeltaEstimator<double>(md_spec_.delta_model()))
 {
-  std::shared_ptr<Util::Slice> slice(std::move(slice_up));
-
   for (auto& dim : dims) {
-    Decode decode(data, slice);
-
     switch (dim.array_type) {
     case Schema::PSI::ArrayType::Mz:
-      // FIXME: What if the values are float32?
-      decode.decode<Schema::PSI::DataType::Float64>(dim, mz_);
+      decoder_.decimal(dim, mz_);
       break;
     case Schema::PSI::ArrayType::Intensity:
-      decode.decode<Schema::PSI::DataType::Float32>(dim, intensity_);
+      decoder_.decimal(dim, intensity_);
       break;
     default:
       // FIXME: should we throw an exception here?

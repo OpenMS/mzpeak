@@ -9,83 +9,147 @@ top-level directory of this repository.
 #pragma once
 
 #include <arrow/array.h>
+#include <memory>
 #include <vector>
 
 #include "mzpeak/data/array_index.h"
+#include "mzpeak/data/null_marking.h"
+#include "mzpeak/data/signals.h"
+#include "mzpeak/exception.h"
 #include "mzpeak/schema/group.h"
 #include "mzpeak/schema/psi/data_type.h"
 #include "mzpeak/util/slice.h"
 
-namespace MzPeak::Data {
+namespace MzPeak::Data::Encoding {
 
 /**
  * Decode mzPeak signal data encoding (point and chunk).
+ *
+ * The template type T should match the type for the main axis.
  */
-template <Schema::PSI::DataType T> class Encoding {
+template <typename T> class Decoder {
 public:
-  /// Values that are encoded/decoded by this object.
-  using value_type = typename Schema::PSI::data_type_traits<T>::value_type;
-
   /// Constructor.
-  Encoding(std::shared_ptr<ArrayIndex> array_index,
-           std::shared_ptr<Schema::GroupMap> group_map,
-           std::shared_ptr<Util::Slice> slice)
-      : array_index_(std::move(array_index))
-      , group_map_(std::move(group_map))
+  Decoder(std::shared_ptr<Signals> signals,
+          std::shared_ptr<Util::Slice> slice,
+          const Util::DeltaEstimator<T>& estimator)
+      : signals_(std::move(signals))
       , slice_(std::move(slice))
+      , delta_estimator_(estimator)
   {
   }
 
-  /// Destructor.
-  ~Encoding() = default;
+  /**
+   * Decode a float or double.
+   */
+  template <typename V>
+  void decimal(const ArrayIndex::Dimension&, std::vector<V>&) const;
 
   /**
-   * Decode a single dimension.
+   * Decode a 32- or 64-bit integer.
    */
-  void decode_dimension(const ArrayIndex::Dimension&,
-                        std::vector<value_type>&) const;
-
-  /**
-   * Decode a dimension using the "point" encoding.
-   *
-   * You probably want to use `decode_dimension` instead.
-   */
-  void decode_point(const Schema::Column&, std::vector<value_type>&) const;
-
-  /**
-   * Decode a dimension using the "chunked" encoding.
-   *
-   * You probably want to use `decode_array` instead.
-   */
-  // std::vector<value_type>
-  // decode_chunked(const std::vector<Schema::ArrayIndex::Array>&) const;
+  template <typename V>
+  void integer(const ArrayIndex::Dimension&, std::vector<V>&) const;
 
 private:
-  std::shared_ptr<ArrayIndex> array_index_;
-  std::shared_ptr<Schema::GroupMap> group_map_;
+  template <typename V>
+  void decode(const ArrayIndex::Dimension&, std::vector<V>&) const;
+
+  template <typename N, typename V>
+  void point(const Schema::Column&, const N& null_decoder, std::vector<V>&) const;
+
+  template <Schema::PSI::DataType From, typename V>
+  void remap(const ArrayIndex::Dimension& dim, std::vector<V>& v) const;
+
+  std::shared_ptr<Signals> signals_;
   std::shared_ptr<Util::Slice> slice_;
+  Util::DeltaEstimator<T> delta_estimator_;
 };
 
 /******************************************************************************/
-template <Schema::PSI::DataType T>
-void Encoding<T>::decode_dimension(
-    const ArrayIndex::Dimension& dim,
-    std::vector<typename Encoding<T>::value_type>& v) const
+template <typename T>
+template <typename V>
+void Decoder<T>::decimal(const ArrayIndex::Dimension& dim, std::vector<V>& v) const
 {
-  const auto& columns = dim.entries;
+  switch (dim.data_type) {
+  case Schema::PSI::DataType::Float32: {
+    remap<Schema::PSI::DataType::Float32>(dim, v);
+  } break;
+  case Schema::PSI::DataType::Float64:
+    remap<Schema::PSI::DataType::Float64>(dim, v);
+    break;
+  default:
+    throw(TypeError("Expected Float32|Float64 but got: " +
+                    Schema::PSI::data_type_to_string(dim.data_type)));
+  }
+}
 
-  if (columns.empty()) {
+/******************************************************************************/
+template <typename T>
+template <typename V>
+void Decoder<T>::integer(const ArrayIndex::Dimension& dim, std::vector<V>& v) const
+{
+  switch (dim.data_type) {
+  case Schema::PSI::DataType::Int32: {
+    remap<Schema::PSI::DataType::Int32>(dim, v);
+  } break;
+  case Schema::PSI::DataType::Int64:
+    remap<Schema::PSI::DataType::Int64>(dim, v);
+    break;
+  default:
+    throw(TypeError("Expected Int32|Int64 but got: " +
+                    Schema::PSI::data_type_to_string(dim.data_type)));
+  }
+}
+
+/******************************************************************************/
+template <typename T>
+template <Schema::PSI::DataType From, typename V>
+void Decoder<T>::remap(const ArrayIndex::Dimension& dim, std::vector<V>& v) const
+{
+  using F = Schema::PSI::data_type_traits<From>::value_type;
+
+  if constexpr (std::is_same_v<F, V>) {
+    decode<V>(dim, v);
+  } else {
+    std::vector<F> tmp;
+    decode<F>(dim, tmp);
+    v.reserve(tmp.size());
+    v.insert(v.end(), tmp.begin(), tmp.end());
+  }
+}
+
+/******************************************************************************/
+template <typename T>
+template <typename V>
+void Decoder<T>::decode(const ArrayIndex::Dimension& dim, std::vector<V>& v) const
+{
+  const auto& entries = dim.entries;
+
+  if (entries.empty()) {
     std::string msg("unable to decode dimension, wrong encoding: ");
     throw ParquetError(msg + dim.name);
-  } else if (columns.size() == 1 &&
-             columns[0].buffer_format == Schema::BufferFormat::Point) {
-    auto field = array_index_->entry_column(*group_map_, columns[0]);
+  } else if (entries.size() == 1 &&
+             entries[0].buffer_format == Schema::BufferFormat::Point) {
+
+    auto field =
+        signals_->array_index()->entry_column(*signals_->groups(), entries[0]);
 
     if (!field.has_value()) {
       throw ParquetError("unable to decode dimension, not in schema: " + dim.name);
     }
 
-    decode_point(field.value(), v);
+    if (dim.needs_delta_model()) {
+      if constexpr (std::is_same_v<T, V>) {
+        using N = NullMarking::Decoder<T>;
+        point<N, V>(field.value(), N{delta_estimator_}, v);
+      } else {
+        throw TypeError("delta model only usable on the main axis");
+      }
+    } else {
+      using N = Util::Decoders::NullToZero<V>;
+      point<N, V>(field.value(), N{}, v);
+    }
   } else {
     throw("not implemented");
     // return decode_chunked(arrays);
@@ -93,15 +157,13 @@ void Encoding<T>::decode_dimension(
 }
 
 /******************************************************************************/
-template <Schema::PSI::DataType T>
-void Encoding<T>::decode_point(
-    const Schema::Column& col,
-    std::vector<typename Encoding<T>::value_type>& v) const
+template <typename T>
+template <typename N, typename V>
+void Decoder<T>::point(const Schema::Column& col,
+                       const N& null_decoder,
+                       std::vector<V>& v) const
 {
-  slice_->array(col, v,
-                Util::Decoders::Scalar<value_type, std::vector<value_type>,
-                                       Util::Decoders::NullToZero<value_type>>(
-                    Util::Decoders::NullToZero<value_type>{}));
+  slice_->array(col, v, Util::Decoders::Scalar<V, std::vector<V>, N>(null_decoder));
 }
 
-} // namespace MzPeak::Data
+} // namespace MzPeak::Data::Encoding
