@@ -156,16 +156,16 @@ decltype(auto) dispatch(DataType t, Fn&& func, Args&&... args)
 {
   switch (t) {
   case DataType::Int8:
-    return std::forward<Fn>(func).template operator()<DataType::Int32>(
+    return std::forward<Fn>(func).template operator()<DataType::Int8>(
         std::forward<Args>(args)...);
   case DataType::UInt8:
-    return std::forward<Fn>(func).template operator()<DataType::Int32>(
+    return std::forward<Fn>(func).template operator()<DataType::UInt8>(
         std::forward<Args>(args)...);
   case DataType::Int32:
     return std::forward<Fn>(func).template operator()<DataType::Int32>(
         std::forward<Args>(args)...);
   case DataType::UInt32:
-    return std::forward<Fn>(func).template operator()<DataType::Int32>(
+    return std::forward<Fn>(func).template operator()<DataType::UInt32>(
         std::forward<Args>(args)...);
   case DataType::Float32:
     return std::forward<Fn>(func).template operator()<DataType::Float32>(
