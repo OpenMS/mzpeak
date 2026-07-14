@@ -8,8 +8,10 @@ top-level directory of this repository.
 
 #pragma once
 
+#include <boost/math/statistics/univariate_statistics.hpp>
 #include <functional>
 #include <iterator>
+#include <ranges>
 #include <vector>
 
 namespace MzPeak::Util::Algorithm {
@@ -32,6 +34,48 @@ void spans(const std::vector<bool>& bins, Fn&& func, Args&&... args)
     std::invoke(func, static_cast<std::size_t>(first), static_cast<size_t>(last),
                 args...);
   }
+}
+
+/**
+ * Return a vector of deltas computed from the given input vector.
+ */
+template <typename T> std::vector<T> deltas(const std::vector<T>& values)
+{
+  std::vector<T> result;
+
+  if (values.size() > 1) {
+    result.reserve(values.size() - 1);
+  }
+
+  for (std::size_t i : std::views::iota(1ul, values.size())) {
+    result.push_back(values[i] - values[i - 1]);
+  }
+
+  return result;
+}
+
+/**
+ * Compute the "median-below-median".
+ *
+ * That is, compute deltas for the input vector, then return the
+ * median value from the deltas that are themselves below their
+ * median.
+ */
+template <typename T> T median_delta(const std::vector<T>& values, T or_else)
+{
+  std::vector<T> ds(deltas(values));
+  if (ds.empty()) return or_else;
+
+  std::ranges::sort(ds);
+  T median = boost::math::statistics::median(ds.begin(), ds.end());
+
+  auto [first, last] =
+      std::ranges::remove_if(ds, [&median](auto& v) { return v > median; });
+
+  ds.erase(first, last);
+  if (ds.empty()) return or_else;
+
+  return boost::math::statistics::median(ds.begin(), ds.end());
 }
 
 } // namespace MzPeak::Util::Algorithm

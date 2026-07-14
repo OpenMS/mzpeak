@@ -98,13 +98,10 @@ void Encoding<T>::decode_point(
     const Schema::Column& col,
     std::vector<typename Encoding<T>::value_type>& v) const
 {
-  // FIXME: use null mark decoding for the main axis and zeros for
-  // other dimensions.
-  auto on_null = [](auto& array, auto index) -> std::optional<value_type> {
-    return 0;
-  };
-
-  slice_->array(col, v, Util::Decoders::Scalar<value_type>(on_null));
+  slice_->array(col, v,
+                Util::Decoders::Scalar<value_type, std::vector<value_type>,
+                                       Util::Decoders::NullToZero<value_type>>(
+                    Util::Decoders::NullToZero<value_type>{}));
 }
 
 } // namespace MzPeak::Data
