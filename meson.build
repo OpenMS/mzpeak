@@ -23,6 +23,7 @@ lib_sources = [
   'src/schema/group.cpp',
   'src/schema/psi/array_type.cpp',
   'src/schema/psi/data_type.cpp',
+  'src/schema/psi/transform.cpp',
   'src/spectra.cpp',
   'src/spectrum.cpp',
   'src/util/arrow.cpp',
@@ -57,6 +58,7 @@ install_headers([
   'include/mzpeak/schema/group.h',
   'include/mzpeak/schema/psi/array_type.h',
   'include/mzpeak/schema/psi/data_type.h',
+  'include/mzpeak/schema/psi/transform.h',
   'include/mzpeak/spectra.h',
   'include/mzpeak/spectrum.h',
   'include/mzpeak/util/algorithm.h',
@@ -111,8 +113,8 @@ libmzpeak_a = static_library(
 
 # Testing
 test_names = [
+    'array_index',
     'arrow',
-    'data_arrays',
     'directory',
     'executor',
     'group',

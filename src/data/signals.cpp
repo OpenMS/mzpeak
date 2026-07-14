@@ -129,14 +129,13 @@ Util::Query::Builder Signals::index() const
 
 /******************************************************************************/
 std::unique_ptr<Util::Slice>
-Signals::select(const std::vector<Dimension>& projection, const Util::Query& query)
+Signals::select(const std::vector<ArrayIndex::Dimension>& projection,
+                const Util::Query& query)
 {
   Util::Projection columns;
 
-  for (auto& dim : projection) {
-    auto entries = impl_->array_index_->entries(dim);
-
-    for (auto& entry : entries) {
+  for (const auto& dim : projection) {
+    for (const auto& entry : dim.entries) {
       auto field =
           impl_->array_index_->entry_column(*impl_->parquet_->groups(), entry);
       if (!field.has_value()) {

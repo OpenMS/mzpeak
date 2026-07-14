@@ -12,7 +12,6 @@ top-level directory of this repository.
 #include <vector>
 
 #include "mzpeak/data/array_index.h"
-#include "mzpeak/data/dimension.h"
 #include "mzpeak/schema/group.h"
 #include "mzpeak/schema/psi/data_type.h"
 #include "mzpeak/util/slice.h"
@@ -43,7 +42,8 @@ public:
   /**
    * Decode a single dimension.
    */
-  void decode_dimension(const Dimension&, std::vector<value_type>&) const;
+  void decode_dimension(const ArrayIndex::Dimension&,
+                        std::vector<value_type>&) const;
 
   /**
    * Decode a dimension using the "point" encoding.
@@ -69,9 +69,10 @@ private:
 /******************************************************************************/
 template <Schema::PSI::DataType T>
 void Encoding<T>::decode_dimension(
-    const Dimension& dim, std::vector<typename Encoding<T>::value_type>& v) const
+    const ArrayIndex::Dimension& dim,
+    std::vector<typename Encoding<T>::value_type>& v) const
 {
-  auto columns = array_index_->entries(dim);
+  const auto& columns = dim.entries;
 
   if (columns.empty()) {
     std::string msg("unable to decode dimension, wrong encoding: ");

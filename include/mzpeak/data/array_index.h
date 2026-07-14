@@ -13,12 +13,12 @@ directory of this repository.
 #include <string>
 #include <vector>
 
-#include "mzpeak/data/dimension.h"
 #include "mzpeak/schema/buffer_format.h"
 #include "mzpeak/schema/entity_type.h"
 #include "mzpeak/schema/group.h"
 #include "mzpeak/schema/psi/array_type.h"
 #include "mzpeak/schema/psi/data_type.h"
+#include "mzpeak/schema/psi/transform.h"
 
 namespace MzPeak::Data {
 
@@ -87,7 +87,30 @@ public:
     /// zero trimming and null marking or Numpress compression,
     /// denoted as a CURIE from the PSI-MS controlled vocabulary. Some
     /// values are only usable with the chunked layout.
-    std::optional<std::string> transform;
+    std::optional<Schema::PSI::Transform> transform;
+  };
+
+  /**
+   * Describes a single dimension from the signals data file.
+   */
+  struct Dimension {
+    /// The name of this dimension (e.g., "mz", "intensity", etc.)
+    std::string name;
+
+    /// Data type used for decodeing.
+    Schema::PSI::DataType data_type;
+
+    /// The type of elements stored in this dimension.
+    Schema::PSI::ArrayType array_type;
+
+    /// Transformation information for this dimension.
+    std::optional<Schema::PSI::Transform> transform;
+
+    /// The index entries that make up this dimension.
+    std::vector<Entry> entries;
+
+    /// Does this dimension need a delta model for decoding?
+    bool needs_delta_model() const;
   };
 
   /// Default constructor.
@@ -115,17 +138,6 @@ public:
   const std::vector<Entry>& entries() const;
 
   /**
-   * Get a list of entry definitions that are for the given array
-   * type.
-   */
-  std::vector<Entry> entries(PSI::ArrayType) const;
-
-  /**
-   * Get a list of entries for the given dimension.
-   */
-  std::vector<Entry> entries(const Data::Dimension&) const;
-
-  /**
    * Update the hint as to how many entities are in the data file.
    */
   void num_entities(const std::optional<std::size_t>&);
@@ -138,7 +150,7 @@ public:
   /**
    * Return a list of all dimensions stored in the data file.
    */
-  std::vector<Data::Dimension> dimensions() const;
+  std::vector<Dimension> dimensions() const;
 
   /**
    * Convert an array index entry into a Group::Field;

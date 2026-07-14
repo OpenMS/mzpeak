@@ -25,7 +25,7 @@ struct Decode {
   }
 
   template <Schema::PSI::DataType T>
-  void decode(const Data::Dimension& dim,
+  void decode(const Data::ArrayIndex::Dimension& dim,
               std::vector<typename Data::Encoding<T>::value_type>& v)
   {
     Data::Encoding<T> enc(array_index_, group_map_, slice_);
@@ -40,7 +40,7 @@ struct Decode {
 /******************************************************************************/
 Spectrum::Spectrum(uint64_t index,
                    const Data::Signals& data,
-                   const std::vector<Data::Dimension>& dims,
+                   const std::vector<Data::ArrayIndex::Dimension>& dims,
                    std::unique_ptr<Util::Slice> slice_up,
                    std::shared_ptr<Metadata::Table> metadata)
     : index_(index)

@@ -10,6 +10,7 @@ top-level directory of this repository.
 
 #include <memory>
 
+#include "mzpeak/data/array_index.h"
 #include "mzpeak/data/signals.h"
 #include "mzpeak/metadata/spectrum.h"
 #include "mzpeak/metadata/table.h"
@@ -50,7 +51,7 @@ protected:
   /// Internal constructor.
   Spectrum(uint64_t index,
            const Data::Signals&,
-           const std::vector<Data::Dimension>&,
+           const std::vector<Data::ArrayIndex::Dimension>&,
            std::unique_ptr<Util::Slice>,
            std::shared_ptr<Metadata::Table>);
 
