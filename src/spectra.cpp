@@ -43,7 +43,7 @@ Spectrum Spectra::fetch(uint64_t index)
       std::ranges::to<std::vector<Data::ArrayIndex::Dimension>>();
 
   std::unique_ptr<Util::Slice> slice = data_->select(dims, data_->index().eq(index));
-  return Spectrum(index, *data_, dims, std::move(slice), meta_);
+  return Spectrum(index, data_, dims, std::move(slice), meta_);
 }
 
 } // namespace MzPeak

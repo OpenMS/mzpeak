@@ -11,6 +11,7 @@ top-level directory of this repository.
 #include <memory>
 
 #include "mzpeak/data/array_index.h"
+#include "mzpeak/data/encoding.h"
 #include "mzpeak/data/signals.h"
 #include "mzpeak/metadata/spectrum.h"
 #include "mzpeak/metadata/table.h"
@@ -26,6 +27,9 @@ class Spectra;
  */
 class Spectrum final {
 public:
+  /// The type of decoder used.
+  using decoder_type = Data::Encoding::Decoder<double>;
+
   /// Destructor.
   ~Spectrum() = default;
 
@@ -50,7 +54,7 @@ protected:
 
   /// Internal constructor.
   Spectrum(uint64_t index,
-           const Data::Signals&,
+           std::shared_ptr<Data::Signals>,
            const std::vector<Data::ArrayIndex::Dimension>&,
            std::unique_ptr<Util::Slice>,
            std::shared_ptr<Metadata::Table>);
@@ -59,6 +63,7 @@ private:
   uint64_t index_;
   std::shared_ptr<Metadata::Table> md_table_;
   Metadata::Spectrum md_spec_;
+  decoder_type decoder_;
   std::vector<double> mz_;
   std::vector<float> intensity_;
 };
