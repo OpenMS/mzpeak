@@ -10,6 +10,7 @@ top-level directory of this repository.
 
 #include <arrow/array.h>
 #include <functional>
+#include <memory>
 #include <ranges>
 
 namespace MzPeak::Util::Decoders {
@@ -86,15 +87,25 @@ concept from_arrow_array =
 
 /******************************************************************************/
 /**
- * A function that knows what to do with null values.
- *
- * It is given the casted arrow array that contains the null value and
- * the index of the null value.  It should return a value to insert
- * into the array or nullopt to signal this value should be skipped.
+ * A NULL decoder that always skips NULL values.
  */
-template <typename T>
-using null_decoder = std::move_only_function<std::optional<T>(
-    const std::shared_ptr<typename cast_traits<T>::array_type>&, int64_t)>;
+template <typename T> struct NullSkip final {
+  /// Skip this null;
+  std::optional<T> operator()(int64_t _index) { return std::nullopt; }
+};
+
+/******************************************************************************/
+/**
+ * A NULL decoder that replaces NULL values with zero.
+ */
+template <typename T> struct NullToZero final {
+  /// Replace the given NULL with zero.
+  std::optional<T> operator()(int64_t index)
+  {
+    T zero{};
+    return zero;
+  }
+};
 
 /******************************************************************************/
 template <typename Child> struct Helper {
@@ -119,9 +130,9 @@ template <typename Child> struct Helper {
 /**
  * A decoder that produces a vector of scalar values.
  */
-template <typename V, typename C = std::vector<V>>
+template <typename V, typename C = std::vector<V>, typename N = NullSkip<V>>
   requires scalar_or_container_of<C, V>
-class Scalar final : Helper<Scalar<V, C>> {
+class Scalar final : Helper<Scalar<V, C, N>> {
 public:
   /// The types of values this decoder can decode.
   using value_type = V;
@@ -129,9 +140,18 @@ public:
   /// The range or scalar type.
   using range_type = C;
 
+  /// The null decoder type.
+  using null_decoder_type = N;
+
+  /// Default constructor.
+  Scalar()
+      : null_decoder_({})
+  {
+  }
+
   /// Constructor.
-  Scalar(null_decoder<V> decoder = nullptr)
-      : decoder_(std::move(decoder))
+  Scalar(const null_decoder_type& decoder)
+      : null_decoder_(decoder)
   {
   }
 
@@ -146,12 +166,14 @@ public:
 
     array_ptr_type casted = std::static_pointer_cast<array_type>(src);
 
+    if constexpr (requires { null_decoder_.chunk(casted); }) {
+      null_decoder_.chunk(casted);
+    }
+
     for (int64_t i : std::views::iota(0, casted->length())) {
       if (casted->IsNull(i)) {
-        if (decoder_ != nullptr) {
-          std::optional<V> value = std::invoke(decoder_, casted, i);
-          if (value.has_value()) this->push(dst, std::move(*value));
-        }
+        std::optional<V> value = std::invoke(null_decoder_, i);
+        if (value.has_value()) this->push(dst, std::move(*value));
       } else {
         this->push(dst, std::move(casted->Value(i)));
       }
@@ -159,7 +181,7 @@ public:
   }
 
 private:
-  null_decoder<V> decoder_;
+  null_decoder_type null_decoder_;
 };
 
 /******************************************************************************/
