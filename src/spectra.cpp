@@ -35,12 +35,12 @@ Spectra::Spectra(std::unique_ptr<Data::Signals> data,
 Spectrum Spectra::fetch(uint64_t index)
 {
   // These are the dimensions we'll project by default.
-  std::vector<Data::Dimension> dims =
+  std::vector<Data::ArrayIndex::Dimension> dims =
       data_->array_index()->dimensions() | std::views::filter([](auto& d) {
         return d.array_type == Schema::PSI::ArrayType::Mz ||
                d.array_type == Schema::PSI::ArrayType::Intensity;
       }) |
-      std::ranges::to<std::vector<Data::Dimension>>();
+      std::ranges::to<std::vector<Data::ArrayIndex::Dimension>>();
 
   std::unique_ptr<Util::Slice> slice = data_->select(dims, data_->index().eq(index));
   return Spectrum(index, *data_, dims, std::move(slice), meta_);

@@ -48,7 +48,7 @@ public:
   /**
    * Execute a query, projecting the requested dimensions.
    */
-  std::unique_ptr<Util::Slice> select(const std::vector<Dimension>&,
+  std::unique_ptr<Util::Slice> select(const std::vector<ArrayIndex::Dimension>&,
                                       const Util::Query&);
 
   /**

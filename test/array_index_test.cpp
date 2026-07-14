@@ -6,7 +6,7 @@ directory of this repository.
 
 */
 
-#define BOOST_TEST_MODULE DataArrays
+#define BOOST_TEST_MODULE ArrayIndex
 #include <boost/test/included/unit_test.hpp>
 
 #include "mzpeak/data/signals.h"
@@ -31,6 +31,10 @@ BOOST_AUTO_TEST_CASE(can_get_array_index)
   BOOST_TEST(index->prefix() == "point");
   BOOST_TEST(index->entries().size() == 2ul);
 
+  std::optional<Schema::CV> transform_cv(Schema::CV::from_string("MS:1003901"));
+  BOOST_TEST((transform_cv.has_value()));
+  std::optional<Schema::PSI::Transform> transform(*transform_cv);
+
   // NOTE: Due to a sort after parsing the index, the m/z array gets
   // moved to the end of the index.
   BOOST_TEST((index->entries()[1].array_name == "m/z array"));
@@ -43,7 +47,7 @@ BOOST_AUTO_TEST_CASE(can_get_array_index)
   BOOST_TEST((index->entries()[1].buffer_priority));
   BOOST_TEST((index->entries()[1].sorting_rank == std::optional{0}));
   BOOST_TEST((index->entries()[1].data_processing_id == std::nullopt));
-  BOOST_TEST((index->entries()[1].transform == std::optional{"MS:1003901"}));
+  BOOST_TEST((index->entries()[1].transform == transform));
 
   std::size_t count = index->num_entities().value_or(0);
   BOOST_TEST(count == 48ul);

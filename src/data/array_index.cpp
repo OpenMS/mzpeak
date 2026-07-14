@@ -7,7 +7,6 @@ directory of this repository.
 */
 
 #include <algorithm>
-#include <iterator>
 #include <ranges>
 
 #include "mzpeak/data/array_index.h"
@@ -15,6 +14,15 @@ directory of this repository.
 #include "mzpeak/schema/entity_type.h"
 
 namespace MzPeak::Data {
+
+/******************************************************************************/
+bool ArrayIndex::Dimension::needs_delta_model() const
+{
+  bool from_tansform = transform.has_value() && transform->needs_delta_model();
+  return from_tansform || std::ranges::any_of(entries, [](const auto& e) {
+           return e.sorting_rank.has_value() && e.sorting_rank.value() == 0;
+         });
+}
 
 /******************************************************************************/
 ArrayIndex::ArrayIndex(EntityType entity_type, const json::object& obj)
@@ -63,7 +71,13 @@ ArrayIndex::ArrayIndex(EntityType entity_type, const json::object& obj)
 
         if (auto tr = eo.find("transform");
             tr != eo.end() && tr->value().is_string()) {
-          entry.transform = tr->value().as_string();
+          std::optional<Schema::CV> maybe_cv =
+              Schema::CV::from_string(tr->value().as_string());
+
+          entry.transform = maybe_cv.and_then(
+              [](const auto& cv) -> std::optional<Schema::PSI::Transform> {
+                return Schema::PSI::Transform(cv);
+              });
         }
 
         entries_.push_back(std::move(entry));
@@ -87,23 +101,6 @@ const std::vector<ArrayIndex::Entry>& ArrayIndex::entries() const
 }
 
 /******************************************************************************/
-std::vector<ArrayIndex::Entry> ArrayIndex::entries(PSI::ArrayType type) const
-{
-  return entries_ |
-         std::views::filter([type](const auto& c) { return c.array_type == type; }) |
-         std::ranges::to<std::vector>();
-}
-
-/******************************************************************************/
-std::vector<ArrayIndex::Entry> ArrayIndex::entries(const Data::Dimension& d) const
-{
-  return entries_ | std::views::filter([d](const auto& c) {
-           return c.array_type == d.array_type && c.data_type == d.data_type;
-         }) |
-         std::ranges::to<std::vector>();
-}
-
-/******************************************************************************/
 void ArrayIndex::num_entities(const std::optional<std::size_t>& ne)
 {
   num_entities_ = ne;
@@ -113,27 +110,27 @@ void ArrayIndex::num_entities(const std::optional<std::size_t>& ne)
 std::optional<std::size_t> ArrayIndex::num_entities() const { return num_entities_; }
 
 /******************************************************************************/
-std::vector<Data::Dimension> ArrayIndex::dimensions() const
+std::vector<ArrayIndex::Dimension> ArrayIndex::dimensions() const
 {
+  std::vector<std::vector<Entry>> groups =
+      entries_ | std::views::chunk_by([](auto& a, auto& b) {
+        return a.array_name == b.array_name && a.data_type == b.data_type &&
+               a.array_type == b.array_type;
+      }) |
+      std::ranges::to<std::vector<std::vector<Entry>>>();
 
-  std::vector<Entry> cols;
-  cols.reserve(entries_.size()); // Should be small
+  std::vector<Dimension> result;
+  result.reserve(groups.size());
 
-  std::ranges::unique_copy(entries_.begin(), entries_.end(),
-                           std::back_inserter(cols), [](auto& a, auto& b) {
-                             return a.array_name == b.array_name &&
-                                    a.data_type == b.data_type &&
-                                    a.array_type == b.array_type;
-                           });
+  for (auto& group : groups) {
+    if (group.empty()) continue;
+    auto& head = group[0];
 
-  std::vector<Data::Dimension> res;
-  res.reserve(cols.size());
-
-  for (auto& col : cols) {
-    res.push_back({col.array_name, col.data_type, col.array_type});
+    result.push_back({head.name, head.data_type, head.array_type, head.transform,
+                      std::move(group)});
   }
 
-  return res;
+  return result;
 }
 
 /******************************************************************************/
