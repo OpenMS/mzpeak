@@ -66,7 +66,7 @@ template <typename T> T median_delta(const std::vector<T>& values, T or_else)
   std::vector<T> ds(deltas(values));
   if (ds.empty()) return or_else;
 
-  std::ranges::sort(ds);
+  // NOTE: Explicit sorting is not needed to compute the median.
   T median = boost::math::statistics::median(ds.begin(), ds.end());
 
   auto [first, last] =
