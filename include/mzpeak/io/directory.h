@@ -30,7 +30,7 @@ public:
    *
    * NOTE: Only files will be returned.
    */
-  std::vector<fs::path> list();
+  std::vector<fs::path> list() override;
 
   /**
    * Open a file for reading.
@@ -38,7 +38,7 @@ public:
    * The path *must* be a file name relative to the directory as
    * returned by the `list` method.
    */
-  std::unique_ptr<File> read_file(const fs::path& path);
+  std::unique_ptr<File> read_file(const fs::path& path) override;
 
 private:
   fs::path path_;

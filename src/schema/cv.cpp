@@ -13,14 +13,13 @@ namespace MzPeak::Schema {
 /******************************************************************************/
 std::optional<CV> CV::from_string(const std::string_view& s)
 {
-  std::size_t sep_pos = s.find(':');
+  std::string_view::size_type sep_pos = s.find(':');
 
   if (sep_pos == std::string_view::npos) {
     return {};
   }
 
-  return CV(std::string(s[0], sep_pos),
-            std::string(s[sep_pos + 1], s.size() - (sep_pos + 1)));
+  return CV(s.substr(0, sep_pos), s.substr(sep_pos + 1));
 }
 
 /******************************************************************************/

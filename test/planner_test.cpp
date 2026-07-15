@@ -69,8 +69,9 @@ BOOST_AUTO_TEST_CASE(can_use_two_columns)
   auto start_time_field = parquet->field("scan", "scan_start_time");
   BOOST_TEST(start_time_field.has_value());
 
-  auto query = Util::Query::Builder(*index_field).eq<uint64_t>(3) &&
-               Util::Query::Builder(*start_time_field).gt<float>(0);
+  auto query = Util::Query::Builder(*index_field)
+                   .eq<uint64_t>(3)
+                   .and_then(Util::Query::Builder(*start_time_field).gt<float>(0));
 
   Util::Planner planner = parquet->planner(query);
 
@@ -103,8 +104,9 @@ BOOST_AUTO_TEST_CASE(can_access_multiple_groups)
   auto level_field = parquet->field("spectrum", "ms_level");
   BOOST_TEST(level_field.has_value());
 
-  auto query = Util::Query::Builder(*index_field).eq<uint64_t>(30) &&
-               Util::Query::Builder(*level_field).ge<uint8_t>(1);
+  auto query = Util::Query::Builder(*index_field)
+                   .eq<uint64_t>(30)
+                   .and_then(Util::Query::Builder(*level_field).ge<uint8_t>(1));
 
   Util::Planner planner = parquet->planner(query);
 

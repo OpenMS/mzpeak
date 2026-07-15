@@ -13,10 +13,9 @@ namespace MzPeak::Util {
 
 /******************************************************************************/
 Projection::Projection(std::size_t reserve)
+    : projections_({})
 {
-  if (reserve > 0) {
-    projections_.reserve(reserve);
-  }
+  projections_.reserve(reserve);
 }
 
 /******************************************************************************/

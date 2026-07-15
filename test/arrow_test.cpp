@@ -24,8 +24,10 @@ BOOST_AUTO_TEST_CASE(can_open_parque)
   arrow::Result<std::unique_ptr<parquet::arrow::FileReader>> arrow_reader(
       parquet::arrow::OpenFile(file, arrow::default_memory_pool()));
 
-  BOOST_TEST(arrow_reader.ok(),
-             "should have opened file: " << arrow_reader.status().ToString());
+  BOOST_TEST_CONTEXT("should have opened file: " << arrow_reader.status().ToString())
+  {
+    BOOST_TEST(arrow_reader.ok());
+  }
 
   auto reader = std::move(arrow_reader.ValueOrDie());
   std::shared_ptr<arrow::Table> table;

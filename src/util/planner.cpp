@@ -39,7 +39,7 @@ struct StatsCache {
   // A statistics cache.  May contain null values which indicate that
   // a previous attempt failed and to not try again.  Also used to
   // know how many unique columns were requested.
-  std::map<key_type, value_type> cache_;
+  std::map<key_type, value_type> cache_ = {};
 
   // Construct a key for the given group/field.
   key_type key(const Schema::Column& dest) const
@@ -128,6 +128,7 @@ public:
                       const std::shared_ptr<parquet::RowGroupPageIndexReader>& ri)
       : rg_(rg)
       , ri_(ri)
+      , cache_()
   {
   }
 

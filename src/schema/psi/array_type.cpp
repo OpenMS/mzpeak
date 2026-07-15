@@ -110,9 +110,9 @@ ArrayType array_type_from_string(const std::string_view& s)
     return ScanningQuadrupolePositionUpperBoundMz;
   } else if (s == "MS:1000786") {
     return NonStandard;
-  } else {
-    return NonStandard;
   }
+
+  return NonStandard;
 }
 
 } // namespace MzPeak::Schema::PSI

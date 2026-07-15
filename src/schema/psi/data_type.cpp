@@ -16,8 +16,6 @@ std::string data_type_to_string(DataType v)
 {
   using enum DataType;
 
-  // FIXME: Custom types
-
   switch (v) {
   case Int32:
     return "MS:1000519";
@@ -39,8 +37,6 @@ DataType data_type_from_string(const std::string_view& s)
 {
   using enum DataType;
 
-  // FIXME: Custom types
-
   if (s == "MS:1000519") {
     return Int32;
   } else if (s == "MS:1000521") {
@@ -51,9 +47,9 @@ DataType data_type_from_string(const std::string_view& s)
     return Float64;
   } else if (s == "MS:1001479") {
     return ASCII;
-  } else {
-    return ASCII;
   }
+
+  return ASCII;
 }
 
 /******************************************************************************/

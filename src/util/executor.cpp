@@ -25,6 +25,7 @@ struct Executor::Impl {
   Impl(std::shared_ptr<parquet::arrow::FileReader> reader, const Projection& fields)
       : reader_(reader)
       , projection_(fields)
+      , slice_(nullptr)
   {
   }
 

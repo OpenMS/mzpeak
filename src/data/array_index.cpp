@@ -18,8 +18,8 @@ namespace MzPeak::Data {
 /******************************************************************************/
 bool ArrayIndex::Dimension::needs_delta_model() const
 {
-  bool from_tansform = transform.has_value() && transform->needs_delta_model();
-  return from_tansform || std::ranges::any_of(entries, [](const auto& e) {
+  bool from_transform = transform.has_value() && transform->needs_delta_model();
+  return from_transform || std::ranges::any_of(entries, [](const auto& e) {
            return e.sorting_rank.has_value() && e.sorting_rank.value() == 0;
          });
 }
@@ -28,6 +28,8 @@ bool ArrayIndex::Dimension::needs_delta_model() const
 ArrayIndex::ArrayIndex(EntityType entity_type, const json::object& obj)
     : entity_type_(entity_type)
     , prefix_(obj.at("prefix").as_string())
+    , entries_()
+    , num_entities_()
 {
   auto entries = obj.find("entries");
 
@@ -35,9 +37,9 @@ ArrayIndex::ArrayIndex(EntityType entity_type, const json::object& obj)
     auto entries_ary(entries->value().as_array());
     entries_.reserve(entries_ary.size() + 1);
 
-    for (const auto& entry : entries_ary) {
-      if (entry.is_object()) {
-        const auto& eo(entry.as_object());
+    for (const auto& entry_obj : entries_ary) {
+      if (entry_obj.is_object()) {
+        const auto& eo(entry_obj.as_object());
         Entry entry;
         entry.array_name = eo.at("array_name").as_string();
         entry.buffer_format =

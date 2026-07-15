@@ -6,6 +6,8 @@ directory of this repository.
 
 */
 
+#include <utility>
+
 #include "mzpeak/schema/buffer_format.h"
 
 namespace MzPeak::Schema {
@@ -28,9 +30,11 @@ std::string buffer_format_to_string(BufferFormat v)
     return "chunk_encoding";
   case ChunkSecondary:
     return "chunk_secondary";
-  default:
-    return "point";
+  case ChunkTransform:
+    return "chunk_transform";
   }
+
+  std::unreachable();
 }
 
 /******************************************************************************/
@@ -50,6 +54,8 @@ BufferFormat buffer_format_from_string(const std::string_view& s)
     return ChunkEncoding;
   } else if (s == "chunk_secondary") {
     return ChunkSecondary;
+  } else if (s == "chunk_transform") {
+    return ChunkTransform;
   } else {
     return Point;
   }

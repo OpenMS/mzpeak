@@ -89,8 +89,8 @@ BOOST_AUTO_TEST_CASE(valid_query_logic)
   }
 
   { // Compound AND
-    auto q = Util::Query::Builder(column).le<int32_t>(3) &&
-             Util::Query::Builder(column).eq<int32_t>(1);
+    auto q = Util::Query::Builder(column).le<int32_t>(3).and_then(
+        Util::Query::Builder(column).eq<int32_t>(1));
 
     auto e = expect([](auto n) { return n <= 3 && n == 1; });
     auto r = run(q);
@@ -98,8 +98,8 @@ BOOST_AUTO_TEST_CASE(valid_query_logic)
   }
 
   { // Compound OR
-    auto q = Util::Query::Builder(column).le<int32_t>(3) ||
-             Util::Query::Builder(column).gt<int32_t>(5);
+    auto q = Util::Query::Builder(column).le<int32_t>(3).or_else(
+        Util::Query::Builder(column).gt<int32_t>(5));
 
     auto e = expect([](auto n) { return n <= 3 || n > 5; });
     auto r = run(q);
@@ -107,15 +107,17 @@ BOOST_AUTO_TEST_CASE(valid_query_logic)
   }
 
   { // Simple negation.
-    auto q = !Util::Query::Builder(column).gt<int32_t>(3);
+    auto q = Util::Query::Builder(column).gt<int32_t>(3).negate();
     auto e = expect([](auto n) { return !(n > 3); });
     auto r = run(q);
     BOOST_TEST(r == e, "!");
   }
 
   { // Negated compound
-    auto q = !(Util::Query::Builder(column).lt<int32_t>(3) ||
-               Util::Query::Builder(column).gt<int32_t>(5));
+    auto q = Util::Query::Builder(column)
+                 .lt<int32_t>(3)
+                 .or_else(Util::Query::Builder(column).gt<int32_t>(5))
+                 .negate();
 
     auto e = expect([](auto n) { return !(n < 3 || n > 5); });
     auto r = run(q);

@@ -137,8 +137,8 @@ int print_fmd_kv(MzPeak::Index& index,
 
     std::println("{}", res.ValueOrDie());
   } else {
-    for (const std::string& key : kv->keys()) {
-      std::println("{}", key);
+    for (const std::string& kv_key : kv->keys()) {
+      std::println("{}", kv_key);
     }
   }
 

@@ -72,14 +72,11 @@ template <typename T>
 template <typename V>
 void Decoder<T>::decimal(const ArrayIndex::Dimension& dim, std::vector<V>& v) const
 {
-  switch (dim.data_type) {
-  case Schema::PSI::DataType::Float32: {
+  if (dim.data_type == Schema::PSI::DataType::Float32) {
     remap<Util::Type::Float32>(dim, v);
-  } break;
-  case Schema::PSI::DataType::Float64:
+  } else if (dim.data_type == Schema::PSI::DataType::Float64) {
     remap<Util::Type::Float64>(dim, v);
-    break;
-  default:
+  } else {
     Util::Type t = Schema::PSI::data_type_to_type(dim.data_type);
     Util::lift_type(t, []<Util::Type X> {
       std::string msg("Expected float or double but got: ");
@@ -94,14 +91,11 @@ template <typename T>
 template <typename V>
 void Decoder<T>::integer(const ArrayIndex::Dimension& dim, std::vector<V>& v) const
 {
-  switch (dim.data_type) {
-  case Schema::PSI::DataType::Int32: {
+  if (dim.data_type == Schema::PSI::DataType::Int32) {
     remap<Util::Type::Int32>(dim, v);
-  } break;
-  case Schema::PSI::DataType::Int64:
+  } else if (dim.data_type == Schema::PSI::DataType::Int64) {
     remap<Util::Type::Int64>(dim, v);
-    break;
-  default:
+  } else {
     Util::Type t = Schema::PSI::data_type_to_type(dim.data_type);
     Util::lift_type(t, []<Util::Type X> {
       std::string msg("Expected int32 or int64 but got: ");
@@ -149,12 +143,8 @@ void Decoder<T>::decode(const ArrayIndex::Dimension& dim, std::vector<V>& v) con
     }
 
     if (dim.needs_delta_model()) {
-      if constexpr (std::is_same_v<T, V>) {
-        using N = NullMarking::Decoder<T>;
-        point<N, V>(field.value(), N{delta_estimator_}, v);
-      } else {
-        throw TypeError("delta model only usable on the main axis");
-      }
+      using N = NullMarking::Decoder<V, T>;
+      point<N, V>(field.value(), N{delta_estimator_}, v);
     } else {
       using N = Util::Decoders::NullToZero<V>;
       point<N, V>(field.value(), N{}, v);

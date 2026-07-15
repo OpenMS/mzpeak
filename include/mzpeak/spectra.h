@@ -27,13 +27,6 @@ namespace MzPeak {
  */
 class Spectra final : public Util::EnumerableProxy<Spectrum> {
 public:
-  /// Default constructor.
-  Spectra();
-
-  /// Destructor.
-  ~Spectra() = default;
-
-public:
   /// Low-level constructor from a Parquet file.
   explicit Spectra(std::unique_ptr<Data::Signals>, std::unique_ptr<Metadata::Table>);
 

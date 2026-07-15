@@ -19,7 +19,7 @@ namespace MzPeak::Schema {
 class CV {
 public:
   /// Constructor.
-  CV(std::string code, std::string accession)
+  CV(const std::string_view& code, const std::string_view& accession)
       : code_(std::move(code))
       , accession_(std::move(accession))
   {

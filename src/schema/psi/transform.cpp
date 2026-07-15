@@ -6,9 +6,10 @@ directory of this repository.
 
 */
 
-#include <type_traits>
+#include <utility>
 
 #include "mzpeak/schema/psi/transform.h"
+#include "mzpeak/util/compat.h" // IWYU pragma: keep
 
 namespace MzPeak::Schema::PSI {
 
@@ -22,24 +23,26 @@ CV type_to_cv(Transform::Type t)
     return CV("MS", "1003902");
   }
 
-  // Can't happen but the compiler complains.
-  return CV("MS", "1003901");
+  std::unreachable();
+}
+
+/******************************************************************************/
+Transform::value_type to_value_type(const CV& cv)
+{
+  if (cv.code() == "MS") {
+    if (cv.accession() == "1003901") {
+      return Transform::ZeroIntensityTrim;
+    } else if (cv.accession() == "1003902") {
+      return Transform::ZeroIntensityInterpolation;
+    }
+  }
+  return cv;
 }
 
 /******************************************************************************/
 Transform::Transform(const CV& cv)
+    : val_(to_value_type(cv))
 {
-  if (cv.code() == "MS") {
-    if (cv.accession() == "1003901") {
-      val_ = ZeroIntensityTrim;
-    } else if (cv.accession() == "1003902") {
-      val_ = ZeroIntensityInterpolation;
-    } else {
-      val_ = cv;
-    }
-  } else {
-    val_ = cv;
-  }
 }
 
 /******************************************************************************/
@@ -72,14 +75,14 @@ CV Transform::to_cv() const
         } else if constexpr (std::is_same_v<T, CV>) {
           return arg;
         } else {
-          static_assert(false, "variant not handled");
+          static_assert(false_type<T>, "variant not handled");
         }
       },
       val_);
 }
 
 /******************************************************************************/
-bool Transform::needs_delta_model() const
+bool Transform::needs_delta_model() const noexcept
 {
   return type()
       .and_then([](auto t) -> std::optional<bool> {

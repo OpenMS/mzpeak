@@ -22,19 +22,18 @@ Spectrum::Spectrum(uint64_t index,
     : index_(index)
     , md_table_(std::move(metadata))
     , md_spec_(md_table_, index_)
-    , decoder_(data,
+    , decoder_(std::move(data),
                std::move(slice),
                Util::DeltaEstimator<double>(md_spec_.delta_model()))
+    , mz_()
+    , intensity_()
 {
   for (auto& dim : dims) {
-    switch (dim.array_type) {
-    case Schema::PSI::ArrayType::Mz:
+    if (dim.array_type == Schema::PSI::ArrayType::Mz) {
       decoder_.decimal(dim, mz_);
-      break;
-    case Schema::PSI::ArrayType::Intensity:
+    } else if (dim.array_type == Schema::PSI::ArrayType::Intensity) {
       decoder_.decimal(dim, intensity_);
-      break;
-    default:
+    } else {
       // FIXME: should we throw an exception here?
       continue;
     }

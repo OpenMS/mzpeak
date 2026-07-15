@@ -12,4 +12,4 @@ test:: all
 	meson test -C $(BUILD_DIR)
 
 $(BUILD_DIR)/compile_commands.json:
-	meson setup $(BUILD_DIR)
+	meson setup $(BUILD_DIR) -Dwerror=true -Dbuildtype=debugoptimized

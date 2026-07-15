@@ -19,6 +19,7 @@ struct Slice::Impl {
 public:
   Impl(const std::vector<Column>& fields)
       : fields_(fields)
+      , arrays_()
   {
   }
 

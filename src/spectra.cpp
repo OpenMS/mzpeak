@@ -17,9 +17,6 @@ top-level directory of this repository.
 namespace MzPeak {
 
 /******************************************************************************/
-Spectra::Spectra() {}
-
-/******************************************************************************/
 Spectra::Spectra(std::unique_ptr<Data::Signals> data,
                  std::unique_ptr<Metadata::Table> meta)
     : EnumerableProxy(

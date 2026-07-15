@@ -1,8 +1,23 @@
 # https://mesonbuild.com/
 project('MZPeak C++ Library', 'cpp',
-        default_options : ['cpp_std=c++23'],
         version : '1.0.0',
-        license : 'BSD3')
+        license : 'BSD3',
+        default_options : [
+          'cpp_std=c++23',
+          'warning_level=3',
+        ])
+
+compiler = meson.get_compiler('cpp')
+add_project_arguments(compiler.get_supported_arguments([
+  '-Wno-abi-tag', # What lib is causing this?
+  '-Wno-missing-declarations',
+  '-Wno-noexcept', # Review at some point
+  '-Wno-padded', # Let the compiler do its thing
+  '-Wno-switch-default',
+  '-Wswitch-enum',
+  '/w14061',
+  '/w14062',
+]), language: 'cpp')
 
 # Source files included in the library:
 lib_sources = [

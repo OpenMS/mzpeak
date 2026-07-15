@@ -56,8 +56,7 @@ find_homogeneous_primitive(std::shared_ptr<parquet::schema::Node> node)
 std::pair<Group::Field::Kind, std::optional<Util::Type>>
 field_type_from_parquet(const std::shared_ptr<parquet::schema::GroupNode>& node)
 {
-  switch (node->logical_type()->type()) {
-  case parquet::LogicalType::Type::LIST:
+  if (node->logical_type()->type() == parquet::LogicalType::Type::LIST) {
     // If the list is a homogeneous collection of scalars...
     if (auto prim = find_homogeneous_primitive(
             std::static_pointer_cast<parquet::schema::Node>(node));
@@ -67,9 +66,9 @@ field_type_from_parquet(const std::shared_ptr<parquet::schema::GroupNode>& node)
     } else {
       return std::make_pair(Group::Field::Kind::List, std::nullopt);
     }
-  default:
-    return std::make_pair(Group::Field::Kind::Unknown, std::nullopt);
   }
+
+  return std::make_pair(Group::Field::Kind::Unknown, std::nullopt);
 }
 
 /******************************************************************************/
@@ -79,6 +78,10 @@ Group::Field::Field(const std::string_view& column_name,
     : rel_index_(rel_index)
     , abs_index_(abs_index)
     , schema_name_(column_name)
+    , clean_name_(column_name)
+    , cv_type_()
+    , cv_unit_()
+    , type_()
 {
   using std::operator""sv;
 
@@ -86,7 +89,6 @@ Group::Field::Field(const std::string_view& column_name,
                 std::ranges::to<std::vector<std::string>>();
 
   if (tokens.size() < 3) {
-    clean_name_ = schema_name_;
     return;
   }
 
@@ -148,6 +150,7 @@ Group::Group(const parquet::schema::GroupNode& node,
              index_type offset)
     : name_(node.name())
     , index_(index)
+    , fields_()
 {
   for (index_type i : std::views::iota(0, node.field_count())) {
     auto child = node.field(i);

@@ -6,9 +6,9 @@ directory of this repository.
 
 */
 
-#include "mzpeak/io/zip.h"
-
 #include <zip.h>
+
+#include "mzpeak/io/zip.h"
 
 namespace MzPeak::IO {
 
@@ -23,11 +23,11 @@ public:
   {
   }
 
-  std::string name() const { return impl_->path_; }
+  std::string name() const override { return impl_->path_; }
 
-  std::size_t size() const { return impl_->size_; }
+  std::size_t size() const override { return impl_->size_; }
 
-  std::optional<std::size_t> read(uint8_t* buf, std::size_t size)
+  std::optional<std::size_t> read(uint8_t* buf, std::size_t size) override
   {
     if (buf == nullptr || size == 0 || !is_open()) return {};
 
@@ -40,7 +40,7 @@ public:
     }
   }
 
-  std::optional<std::size_t> tell() const
+  std::optional<std::size_t> tell() const override
   {
     zip_int64_t n = zip_ftell(impl_->file_);
 
@@ -51,14 +51,14 @@ public:
     }
   }
 
-  bool seek(std::size_t pos)
+  bool seek(std::size_t pos) override
   {
     zip_int8_t errnum = zip_fseek(impl_->file_, pos, SEEK_SET);
     return errnum == 0;
   }
 
-  void close() { impl_->close(); }
-  bool is_open() const { return impl_->file_ != nullptr; }
+  void close() override { impl_->close(); }
+  bool is_open() const override { return impl_->file_ != nullptr; }
 
 private:
   class Impl {
@@ -84,6 +84,7 @@ private:
     fs::path path_;
 
   private:
+    Impl& operator=(const Impl&) = default;
     Impl(const Impl&) = default;
   };
 
@@ -142,6 +143,10 @@ struct Zip::Impl {
 
   /**************************************************************************/
   zip_t* archive;
+
+private:
+  Impl(const Impl&) = delete;
+  Impl& operator=(const Impl&) = delete;
 };
 
 /******************************************************************************/

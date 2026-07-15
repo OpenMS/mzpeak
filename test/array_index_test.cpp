@@ -33,7 +33,7 @@ BOOST_AUTO_TEST_CASE(can_get_array_index)
 
   std::optional<Schema::CV> transform_cv(Schema::CV::from_string("MS:1003901"));
   BOOST_TEST((transform_cv.has_value()));
-  std::optional<Schema::PSI::Transform> transform(*transform_cv);
+  std::optional<Schema::PSI::Transform> transform(transform_cv.value());
 
   // NOTE: Due to a sort after parsing the index, the m/z array gets
   // moved to the end of the index.

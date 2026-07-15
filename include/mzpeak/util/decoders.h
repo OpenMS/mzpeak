@@ -13,6 +13,7 @@ top-level directory of this repository.
 #include <memory>
 #include <ranges>
 
+#include "mzpeak/util/compat.h" // IWYU pragma: keep
 #include "mzpeak/util/types.h"
 
 namespace MzPeak::Util::Decoders {
@@ -51,7 +52,7 @@ concept from_arrow_array =
  */
 template <typename T> struct NullSkip final {
   /// Skip this null;
-  std::optional<T> operator()(int64_t _index) { return std::nullopt; }
+  std::optional<T> operator()(int64_t) { return std::nullopt; }
 };
 
 /******************************************************************************/
@@ -60,7 +61,7 @@ template <typename T> struct NullSkip final {
  */
 template <typename T> struct NullToZero final {
   /// Replace the given NULL with zero.
-  std::optional<T> operator()(int64_t index)
+  std::optional<T> operator()(int64_t)
   {
     T zero{};
     return zero;
@@ -81,9 +82,9 @@ template <typename Child> struct Helper {
     } else if constexpr (std::is_same_v<C, std::remove_cvref_t<V>>) {
       dst = std::move(v);
     } else {
-      static_assert(false, "bad destination");
+      static_assert(false_type<C, V>, "bad destination");
     }
-  };
+  }
 };
 
 /******************************************************************************/
@@ -159,7 +160,7 @@ public:
   using value_type = std::vector<V>;
 
   /// Constructor.
-  List() {};
+  List() {}
 
   /// Destructor.
   ~List() = default;

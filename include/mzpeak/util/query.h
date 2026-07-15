@@ -25,7 +25,8 @@ namespace MzPeak::Util {
  * predicate functions.
  *
  * More complex queries can be constructed using the logic operators
- * (`&&`, `||`, and `!`).
+ * (`&&`, `||`, and `!`) using the `and_then`, `or_else`, and `negate`
+ * functions.
  */
 class Query final {
 private:
@@ -105,9 +106,6 @@ public:
       return validate({dest_, op, val});
     }
 
-    /// Destructor.
-    ~Builder() = default;
-
   private:
     Query validate(Predicate&& p) const;
     Schema::Column dest_;
@@ -157,9 +155,9 @@ public:
     template <typename U> Result<U> to(U) const;
 
     /// Combine values using logical operations.
-    Result operator&&(const Result& other);
-    Result operator||(const Result& other);
-    Result operator!();
+    Result and_then(const Result& other);
+    Result or_else(const Result& other);
+    Result negate();
 
   private:
     explicit Result(bool f, std::optional<T> r)
@@ -176,17 +174,14 @@ public:
   };
 
 public:
-  /// Destructor.
-  ~Query();
-
   /// Join two queries together with a logical AND.
-  Query operator&&(const Query&) const;
+  Query and_then(const Query&) const;
 
   /// Join two queries together with a logical OR.
-  Query operator||(const Query&) const;
+  Query or_else(const Query&) const;
 
   /// Negate a query.
-  Query operator!() const;
+  Query negate() const;
 
   // Column types that can be used in a query.
   using value_t = any_value_type; // From types.h
@@ -287,7 +282,7 @@ Query::Result<U> Query::Result<T>::to(U u) const
 
 /******************************************************************************/
 template <typename T>
-Query::Result<T> Query::Result<T>::operator&&(const Query::Result<T>& other)
+Query::Result<T> Query::Result<T>::and_then(const Query::Result<T>& other)
 {
   if (failed_) return *this;
   if (other.failed_) return other;
@@ -298,7 +293,7 @@ Query::Result<T> Query::Result<T>::operator&&(const Query::Result<T>& other)
 
 /******************************************************************************/
 template <typename T>
-Query::Result<T> Query::Result<T>::operator||(const Query::Result<T>& other)
+Query::Result<T> Query::Result<T>::or_else(const Query::Result<T>& other)
 {
   if (failed_) return *this;
   if (other.failed_) return other;
@@ -308,7 +303,7 @@ Query::Result<T> Query::Result<T>::operator||(const Query::Result<T>& other)
 }
 
 /******************************************************************************/
-template <typename T> Query::Result<T> Query::Result<T>::operator!()
+template <typename T> Query::Result<T> Query::Result<T>::negate()
 {
   Result r = *this;
   r.result_ = r.result_.and_then([](auto& v) -> std::optional<T> { return !v; });
