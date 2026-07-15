@@ -10,6 +10,7 @@ directory of this repository.
 #include <ranges>
 
 #include "mzpeak/data/array_index.h"
+#include "mzpeak/exception.h"
 #include "mzpeak/schema/buffer_format.h"
 #include "mzpeak/schema/entity_type.h"
 
@@ -22,6 +23,14 @@ bool ArrayIndex::Dimension::needs_delta_model() const
   return from_transform || std::ranges::any_of(entries, [](const auto& e) {
            return e.sorting_rank.has_value() && e.sorting_rank.value() == 0;
          });
+}
+
+/******************************************************************************/
+Util::Type ArrayIndex::Dimension::type_or_throw() const
+{
+  std::optional<Util::Type> type = data_type.as_type();
+  if (type.has_value()) return type.value();
+  throw TypeError("dimension " + name + " does not have a type set!");
 }
 
 /******************************************************************************/
@@ -47,7 +56,18 @@ ArrayIndex::ArrayIndex(EntityType entity_type, const json::object& obj)
         entry.context = entity_type_from_string(eo.at("context").as_string());
         entry.path = eo.at("path").as_string();
         entry.name = entry.path.substr(prefix_.size() + 1);
-        entry.data_type = PSI::data_type_from_string(eo.at("data_type").as_string());
+
+        std::optional<Schema::CV> data_type_cv =
+            Schema::CV::from_string(eo.at("data_type").as_string());
+
+        if (data_type_cv.has_value()) {
+          entry.data_type = Schema::PSI::DataType(data_type_cv.value());
+        } else {
+          std::string msg("invalid CV: ");
+          msg += eo.at("data_type").as_string();
+          throw JsonError(msg);
+        }
+
         entry.array_type =
             PSI::array_type_from_string(eo.at("array_type").as_string());
         entry.unit = eo.at("unit").as_string();

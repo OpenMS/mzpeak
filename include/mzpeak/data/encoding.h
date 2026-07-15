@@ -72,13 +72,14 @@ template <typename T>
 template <typename V>
 void Decoder<T>::decimal(const ArrayIndex::Dimension& dim, std::vector<V>& v) const
 {
-  if (dim.data_type == Schema::PSI::DataType::Float32) {
+  Util::Type type = dim.type_or_throw();
+
+  if (type == Util::Type::Float32) {
     remap<Util::Type::Float32>(dim, v);
-  } else if (dim.data_type == Schema::PSI::DataType::Float64) {
+  } else if (type == Util::Type::Float64) {
     remap<Util::Type::Float64>(dim, v);
   } else {
-    Util::Type t = Schema::PSI::data_type_to_type(dim.data_type);
-    Util::lift_type(t, []<Util::Type X> {
+    Util::lift_type(type, []<Util::Type X> {
       std::string msg("Expected float or double but got: ");
       msg += Util::type_traits<X>::name;
       throw(TypeError(msg));
@@ -91,13 +92,14 @@ template <typename T>
 template <typename V>
 void Decoder<T>::integer(const ArrayIndex::Dimension& dim, std::vector<V>& v) const
 {
-  if (dim.data_type == Schema::PSI::DataType::Int32) {
+  Util::Type type = dim.type_or_throw();
+
+  if (type == Util::Type::Int32) {
     remap<Util::Type::Int32>(dim, v);
-  } else if (dim.data_type == Schema::PSI::DataType::Int64) {
+  } else if (type == Util::Type::Int64) {
     remap<Util::Type::Int64>(dim, v);
   } else {
-    Util::Type t = Schema::PSI::data_type_to_type(dim.data_type);
-    Util::lift_type(t, []<Util::Type X> {
+    Util::lift_type(type, []<Util::Type X> {
       std::string msg("Expected int32 or int64 but got: ");
       msg += Util::type_traits<X>::name;
       throw(TypeError(msg));

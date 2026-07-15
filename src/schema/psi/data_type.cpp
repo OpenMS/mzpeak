@@ -6,71 +6,109 @@ directory of this repository.
 
 */
 
+#include <type_traits>
+#include <utility>
+
 #include "mzpeak/schema/psi/data_type.h"
 #include "mzpeak/util/types.h"
 
 namespace MzPeak::Schema::PSI {
 
 /******************************************************************************/
-std::string data_type_to_string(DataType v)
+DataType::DataType(const CV& cv)
+    : val_(cv)
 {
-  using enum DataType;
+  if (cv.code() == "MS") {
+    const auto& accession = cv.accession();
 
-  switch (v) {
-  case Int32:
-    return "MS:1000519";
-  case Int64:
-    return "MS:1000522";
-  case Float32:
-    return "MS:1000521";
-  case Float64:
-    return "MS:1000523";
-  case ASCII:
-    return "MS:1001479";
-  default:
-    return "MS:1001479";
+    if (accession == "1000519") {
+      val_ = Int32;
+    } else if (accession == "1000521") {
+      val_ = Float32;
+    } else if (accession == "1000522") {
+      val_ = Int64;
+    } else if (accession == "1000523") {
+      val_ = Float64;
+    } else if (accession == "1001479") {
+      val_ = ASCII;
+    }
   }
 }
 
 /******************************************************************************/
-DataType data_type_from_string(const std::string_view& s)
+DataType::DataType(Type t)
+    : val_(t)
 {
-  using enum DataType;
-
-  if (s == "MS:1000519") {
-    return Int32;
-  } else if (s == "MS:1000521") {
-    return Float32;
-  } else if (s == "MS:1000522") {
-    return Int64;
-  } else if (s == "MS:1000523") {
-    return Float64;
-  } else if (s == "MS:1001479") {
-    return ASCII;
-  }
-
-  return ASCII;
 }
 
 /******************************************************************************/
-Util::Type data_type_to_type(DataType v)
+CV DataType::to_cv() const
 {
-  using enum DataType;
+  return std::visit(
+      [](auto&& v) -> CV {
+        using T = std::decay_t<decltype(v)>;
+        if constexpr (std::is_same_v<T, CV>) {
+          return v;
+        } else if constexpr (std::is_same_v<T, Type>) {
+          switch (v) {
+          case Int32:
+            return CV("MS", "1000519");
+          case Int64:
+            return CV("MS", "1000522");
+          case Float32:
+            return CV("MS", "1000521");
+          case Float64:
+            return CV("MS", "1000523");
+          case ASCII:
+            return CV("MS", "1001479");
+          }
 
-  switch (v) {
-  case Int32:
-    return Util::Type::Int32;
-  case Int64:
-    return Util::Type::Int64;
-  case Float32:
-    return Util::Type::Float32;
-  case Float64:
-    return Util::Type::Float64;
-  case ASCII:
-    return Util::Type::ByteArray;
+          std::unreachable();
+        }
+      },
+      val_);
+}
+
+/******************************************************************************/
+std::optional<DataType::Type> DataType::data_type() const
+{
+  if (std::holds_alternative<Type>(val_)) {
+    return std::get<Type>(val_);
+  } else {
+    return {};
+  }
+}
+
+/******************************************************************************/
+std::optional<Util::Type> DataType::as_type() const
+{
+  if (as_type_.has_value()) {
+    return as_type_;
+  } else if (std::holds_alternative<Type>(val_)) {
+    switch (std::get<Type>(val_)) {
+    case Int32:
+      return Util::Type::Int32;
+    case Int64:
+      return Util::Type::Int64;
+    case Float32:
+      return Util::Type::Float32;
+    case Float64:
+      return Util::Type::Float64;
+    case ASCII:
+      return Util::Type::ByteArray;
+    }
   }
 
-  std::unreachable();
+  return {};
+}
+
+/******************************************************************************/
+void DataType::as_type(Util::Type t) { as_type_ = t; }
+
+/******************************************************************************/
+bool DataType::operator==(const DataType& other) const
+{
+  return val_ == other.val_ && as_type_ == other.as_type_;
 }
 
 } // namespace MzPeak::Schema::PSI
