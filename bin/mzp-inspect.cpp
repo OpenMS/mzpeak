@@ -100,8 +100,11 @@ int print_groups(MzPeak::Index& index, const std::string& file)
         break;
       }
 
-      if (field->data_type().has_value()) {
-        type = MzPeak::Schema::PSI::data_type_to_string(field->data_type().value());
+      if (field->type().has_value()) {
+        MzPeak::Util::lift_type(field->type().value(),
+                                [&type]<MzPeak::Util::Type T>() {
+                                  type = MzPeak::Util::type_traits<T>::name;
+                                });
       }
 
       std::println("  | {} [rel_idx:{}, abs_idx: {}, kind: {}, type:{}]",

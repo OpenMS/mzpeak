@@ -14,7 +14,7 @@ top-level directory of this repository.
 #include <string>
 
 #include "mzpeak/schema/cv.h"
-#include "mzpeak/schema/psi/data_type.h"
+#include "mzpeak/util/types.h"
 
 // Forward declarations.
 namespace parquet::schema {
@@ -116,12 +116,12 @@ public:
     /**
      * The data type for values in this field.
      */
-    const std::optional<PSI::DataType>& data_type() const;
+    const std::optional<Util::Type>& type() const;
 
     /**
      * Update the field's data type.
      */
-    void data_type(PSI::DataType);
+    void type(Util::Type);
 
   private:
     friend class Group;
@@ -132,7 +132,7 @@ public:
     std::string clean_name_;
     std::optional<CVType> cv_type_;
     std::optional<CVUnit> cv_unit_;
-    std::optional<PSI::DataType> data_type_;
+    std::optional<Util::Type> type_;
     Kind kind_ = Kind::Scalar;
   };
 

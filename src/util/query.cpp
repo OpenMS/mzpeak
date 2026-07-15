@@ -11,7 +11,6 @@ top-level directory of this repository.
 #include <variant>
 
 #include "mzpeak/exception.h"
-#include "mzpeak/schema/psi/data_type.h"
 #include "mzpeak/util/compat.h" // IWYU pragma: keep
 #include "mzpeak/util/query.h"
 
@@ -65,29 +64,15 @@ std::pair<Query::value_t, Query::value_t> decode_range_type(const Query::range_t
 /******************************************************************************/
 Query Query::Builder::validate(Query::Predicate&& p) const
 {
-  if (!p.dest.second->data_type().has_value()) {
+  if (!p.dest.second->type().has_value()) {
     std::string msg("cannot query field with unknown type: ");
     msg += p.dest.first->name() + "." + p.dest.second->name();
     throw TypeError(msg);
   }
 
-  std::visit(
-      [p](auto&& v) -> void {
-        using T = std::decay_t<decltype(v)>;
-
-        Schema::PSI::DataType query_type =
-            Schema::PSI::data_type_for_value_type<T>();
-        Schema::PSI::DataType field_type = p.dest.second->data_type().value();
-
-        if (field_type != query_type) {
-          std::string msg("query type does not match field type for ");
-          msg += p.dest.first->name() + "." + p.dest.second->name() + ": ";
-          msg += Schema::PSI::data_type_to_string(query_type) + " != ";
-          msg += Schema::PSI::data_type_to_string(field_type);
-          throw TypeError(msg);
-        }
-      },
-      p.val);
+  std::visit([&type = p.dest.second->type().value()](
+                 auto&& v) -> void { ensure_same_type<decltype(v)>(type); },
+             p.val);
 
   return Query(std::move(p));
 }
@@ -102,18 +87,15 @@ template <typename Fn, typename V> struct EvalHelper {
   // Eval a query node.
   Trampoline<Query::Result<bool>> eval_node(const Query::Node& node, Fn fn) const;
 
+  // Dispatch on the type of the predicate's value.
+  template <Util::Type T>
+  Query::Result<bool> eval_predicate(const Query::Predicate& p, Fn fn) const;
+
   // Match a predicate against a single value.
   bool match(const Query::Predicate&, Query::value_t) const;
 
   // Match a predicate against a min/max range.
   bool match(const Query::Predicate& p, Query::range_t) const;
-
-  // Dispatch on the type of the given predicate.
-  Query::Result<bool> dispatch_dest_type(const Query::Predicate& pred, Fn fn) const;
-
-  // Dispatch on the type of the predicate's value.
-  template <Schema::PSI::DataType T>
-  Query::Result<bool> dispatch_value(const Query::Predicate& p, Fn fn) const;
 };
 
 /******************************************************************************/
@@ -226,8 +208,8 @@ bool EvalHelper<Fn, V>::match(const Query::Predicate& p, Query::range_t v) const
 
 /******************************************************************************/
 template <typename Fn, typename V>
-template <Schema::PSI::DataType T>
-Query::Result<bool> EvalHelper<Fn, V>::dispatch_value(const Query::Predicate& p,
+template <Util::Type T>
+Query::Result<bool> EvalHelper<Fn, V>::eval_predicate(const Query::Predicate& p,
                                                       Fn fn) const
 {
   Query::Result<V> val(std::invoke(fn, p.dest));
@@ -235,7 +217,7 @@ Query::Result<bool> EvalHelper<Fn, V>::dispatch_value(const Query::Predicate& p,
 
   return std::visit(
       [&](auto&& v) -> Query::Result<bool> {
-        using T1 = Schema::PSI::data_type_traits<T>::value_type;
+        using T1 = Util::type_traits<T>::value_type;
         using T2 = std::decay_t<decltype(v)>;
         using T3 = std::pair<T1, T1>;
 
@@ -254,46 +236,6 @@ Query::Result<bool> EvalHelper<Fn, V>::dispatch_value(const Query::Predicate& p,
 
 /******************************************************************************/
 template <typename Fn, typename V>
-Query::Result<bool>
-EvalHelper<Fn, V>::dispatch_dest_type(const Query::Predicate& pred, Fn fn) const
-{
-  if (!pred.dest.second->data_type().has_value()) {
-    std::string msg("invalid query on field with unknown data type: ");
-    msg += pred.dest.first->name() + "." + pred.dest.second->name();
-    throw TypeError(msg);
-  }
-
-  using enum Schema::PSI::DataType;
-
-  switch (pred.dest.second->data_type().value()) {
-  case Int8:
-    return dispatch_value<Int8>(pred, fn);
-  case UInt8:
-    return dispatch_value<UInt8>(pred, fn);
-  case Int32:
-    return dispatch_value<Int32>(pred, fn);
-  case UInt32:
-    return dispatch_value<UInt32>(pred, fn);
-  case Int64:
-    return dispatch_value<Int64>(pred, fn);
-  case UInt64:
-    return dispatch_value<UInt64>(pred, fn);
-  case Float32:
-    return dispatch_value<Float32>(pred, fn);
-  case Float64:
-    return dispatch_value<Float64>(pred, fn);
-  case ASCII: {
-    std::string msg("unsupported ASCII query on: ");
-    msg += pred.dest.first->name() + "." + pred.dest.second->name();
-    throw TypeError(msg);
-  }
-  }
-
-  return false;
-}
-
-/******************************************************************************/
-template <typename Fn, typename V>
 Trampoline<Query::Result<bool>> EvalHelper<Fn, V>::eval(const Query& query,
                                                         Fn fn) const
 {
@@ -302,7 +244,15 @@ Trampoline<Query::Result<bool>> EvalHelper<Fn, V>::eval(const Query& query,
         using T = std::decay_t<decltype(tree)>;
 
         if constexpr (std::is_same_v<T, Query::Predicate>) {
-          return dispatch_dest_type(tree, fn);
+          if (!tree.dest.second->type().has_value()) {
+            std::string msg("invalid query on field with unknown data type: ");
+            msg += tree.dest.first->name() + "." + tree.dest.second->name();
+            throw TypeError(msg);
+          }
+
+          return lift_type(tree.dest.second->type().value(), [&]<Util::Type T> {
+            return eval_predicate<T>(tree, fn);
+          });
         } else if constexpr (std::is_same_v<T, Query::Node>) {
           return trampoline(eval_node(tree, fn));
         } else {
