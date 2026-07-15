@@ -161,6 +161,52 @@ template <> struct type_traits<Type::ByteArray> {
   using array_type = arrow::StringArray;
 };
 
+/******************************************************************************/
+/**
+ * Compile-type map from C++ types back to the Type enum.
+ */
+template <supported_type T> struct type_from_value_type;
+
+template <> struct type_from_value_type<int8_t> {
+  static constexpr Type enum_type = Type::Int8;
+};
+
+template <> struct type_from_value_type<uint8_t> {
+  static constexpr Type enum_type = Type::UInt8;
+};
+
+template <> struct type_from_value_type<int32_t> {
+  static constexpr Type enum_type = Type::Int32;
+};
+
+template <> struct type_from_value_type<uint32_t> {
+  static constexpr Type enum_type = Type::UInt32;
+};
+
+template <> struct type_from_value_type<int64_t> {
+  static constexpr Type enum_type = Type::Int64;
+};
+
+template <> struct type_from_value_type<uint64_t> {
+  static constexpr Type enum_type = Type::UInt64;
+};
+
+template <> struct type_from_value_type<float> {
+  static constexpr Type enum_type = Type::Float32;
+};
+
+template <> struct type_from_value_type<double> {
+  static constexpr Type enum_type = Type::Float64;
+};
+
+template <> struct type_from_value_type<std::string_view> {
+  static constexpr Type enum_type = Type::ByteArray;
+};
+
+/// Helper to use the above map.
+template <supported_type T>
+inline constexpr Type enum_type_v = type_from_value_type<T>::enum_type;
+
 /**
  * Return a type for the given parquet node.
  */
