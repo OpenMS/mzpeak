@@ -57,7 +57,7 @@ public:
     /// The data type for this column, denoted using a CURIE from the
     /// PSI-MS controlled vocabulary for a child of MS:1000518 (binary
     /// data type).
-    PSI::DataType data_type = PSI::DataType::Float64;
+    PSI::DataType data_type = PSI::DataType(PSI::DataType::Float64);
 
     /// The type of column this is.
     PSI::ArrayType array_type = PSI::ArrayType::NonStandard;
@@ -111,6 +111,9 @@ public:
 
     /// Does this dimension need a delta model for decoding?
     bool needs_delta_model() const;
+
+    /// Return an associated Util::Type or throw an exception.
+    Util::Type type_or_throw() const;
   };
 
   /// Default constructor.

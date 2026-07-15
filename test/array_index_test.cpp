@@ -41,7 +41,8 @@ BOOST_AUTO_TEST_CASE(can_get_array_index)
   BOOST_TEST((index->entries()[1].buffer_format == Schema::BufferFormat::Point));
   BOOST_TEST((index->entries()[1].context == Schema::EntityType::Spectrum));
   BOOST_TEST((index->entries()[1].path == "point.mz"));
-  BOOST_TEST((index->entries()[1].data_type == Schema::PSI::DataType::Float64));
+  BOOST_TEST((index->entries()[1].data_type ==
+              Schema::PSI::DataType(Schema::PSI::DataType::Float64)));
   BOOST_TEST((index->entries()[1].array_type == Schema::PSI::ArrayType::Mz));
   BOOST_TEST((index->entries()[1].unit == "MS:1000040"));
   BOOST_TEST((index->entries()[1].buffer_priority));
