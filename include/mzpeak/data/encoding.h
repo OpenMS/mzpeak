@@ -19,6 +19,7 @@ top-level directory of this repository.
 #include "mzpeak/schema/group.h"
 #include "mzpeak/schema/psi/data_type.h"
 #include "mzpeak/util/slice.h"
+#include "mzpeak/util/types.h"
 
 namespace MzPeak::Data::Encoding {
 
@@ -58,7 +59,7 @@ private:
   template <typename N, typename V>
   void point(const Schema::Column&, const N& null_decoder, std::vector<V>&) const;
 
-  template <Schema::PSI::DataType From, typename V>
+  template <Util::Type From, typename V>
   void remap(const ArrayIndex::Dimension& dim, std::vector<V>& v) const;
 
   std::shared_ptr<Signals> signals_;
@@ -73,14 +74,18 @@ void Decoder<T>::decimal(const ArrayIndex::Dimension& dim, std::vector<V>& v) co
 {
   switch (dim.data_type) {
   case Schema::PSI::DataType::Float32: {
-    remap<Schema::PSI::DataType::Float32>(dim, v);
+    remap<Util::Type::Float32>(dim, v);
   } break;
   case Schema::PSI::DataType::Float64:
-    remap<Schema::PSI::DataType::Float64>(dim, v);
+    remap<Util::Type::Float64>(dim, v);
     break;
   default:
-    throw(TypeError("Expected Float32|Float64 but got: " +
-                    Schema::PSI::data_type_to_string(dim.data_type)));
+    Util::Type t = Schema::PSI::data_type_to_type(dim.data_type);
+    Util::lift_type(t, []<Util::Type X> {
+      std::string msg("Expected float or double but got: ");
+      msg += Util::type_traits<X>::name;
+      throw(TypeError(msg));
+    });
   }
 }
 
@@ -91,23 +96,27 @@ void Decoder<T>::integer(const ArrayIndex::Dimension& dim, std::vector<V>& v) co
 {
   switch (dim.data_type) {
   case Schema::PSI::DataType::Int32: {
-    remap<Schema::PSI::DataType::Int32>(dim, v);
+    remap<Util::Type::Int32>(dim, v);
   } break;
   case Schema::PSI::DataType::Int64:
-    remap<Schema::PSI::DataType::Int64>(dim, v);
+    remap<Util::Type::Int64>(dim, v);
     break;
   default:
-    throw(TypeError("Expected Int32|Int64 but got: " +
-                    Schema::PSI::data_type_to_string(dim.data_type)));
+    Util::Type t = Schema::PSI::data_type_to_type(dim.data_type);
+    Util::lift_type(t, []<Util::Type X> {
+      std::string msg("Expected int32 or int64 but got: ");
+      msg += Util::type_traits<X>::name;
+      throw(TypeError(msg));
+    });
   }
 }
 
 /******************************************************************************/
 template <typename T>
-template <Schema::PSI::DataType From, typename V>
+template <Util::Type From, typename V>
 void Decoder<T>::remap(const ArrayIndex::Dimension& dim, std::vector<V>& v) const
 {
-  using F = Schema::PSI::data_type_traits<From>::value_type;
+  using F = Util::type_traits<From>::value_type;
 
   if constexpr (std::is_same_v<F, V>) {
     decode<V>(dim, v);

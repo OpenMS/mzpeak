@@ -16,11 +16,9 @@ top-level directory of this repository.
 
 #include "mzpeak/util/algorithm.h"
 #include "mzpeak/util/executor.h"
-#include "mzpeak/util/parquet_types.h"
+#include "mzpeak/util/types.h"
 
 namespace MzPeak::Util {
-
-namespace psi = Schema::PSI;
 
 /******************************************************************************/
 struct Executor::Impl {
@@ -55,7 +53,7 @@ struct Executor::Impl {
 
   /// Helper to extract a single value from an array.
   struct ArrayValueHelper {
-    template <psi::DataType T> Query::Result<Query::value_t> operator()();
+    template <Type T> Query::Result<Query::value_t> operator()();
     Executor::Impl& impl_;
     const Schema::Column& field_;
     std::shared_ptr<arrow::RecordBatch>& batch_;
@@ -68,7 +66,7 @@ struct Executor::Impl {
 };
 
 /******************************************************************************/
-template <psi::DataType T>
+template <Type T>
 Query::Result<Query::value_t> Executor::Impl::ArrayValueHelper::operator()()
 {
   std::shared_ptr<arrow::Array> a(impl_.array(batch_, field_));
@@ -77,16 +75,8 @@ Query::Result<Query::value_t> Executor::Impl::ArrayValueHelper::operator()()
     return Query::Result<Query::value_t>::skip();
   }
 
-  auto casted = parquet_array_cast<T>(a);
+  auto casted = std::static_pointer_cast<typename type_traits<T>::array_type>(a);
   return Query::Result<Query::value_t>(casted->Value(row_index_));
-}
-
-/******************************************************************************/
-template <> // Specialized since we don't support ASCII types.
-Query::Result<Query::value_t>
-Executor::Impl::ArrayValueHelper::operator()<psi::DataType::ASCII>()
-{
-  return Query::Result<Query::value_t>::skip();
 }
 
 /******************************************************************************/
@@ -98,9 +88,9 @@ std::vector<bool> Executor::Impl::filter(const Planner::Plan& plan,
   auto get_value =
       [&](int64_t row_index,
           const Schema::Column& field) -> Query::Result<Query::value_t> {
-    if (field.second->data_type().has_value()) {
-      return psi::dispatch(field.second->data_type().value(),
-                           ArrayValueHelper{*this, field, batch, row_index});
+    if (field.second->type().has_value()) {
+      return lift_type(field.second->type().value(),
+                       ArrayValueHelper{*this, field, batch, row_index});
     } else {
       return Query::Result<Query::value_t>::fail();
     }

@@ -12,7 +12,6 @@ in the LICENSE file found in the top-level directory of this project.
 #include <memory>
 #include <ranges>
 
-#include "mzpeak/schema/psi/data_type.h"
 #include "mzpeak/schema/group.h"
 #include "mzpeak/util/compat.h" // IWYU pragma: keep
 #include "mzpeak/util/query.h"
@@ -24,7 +23,7 @@ BOOST_AUTO_TEST_CASE(valid_query_logic)
 
   // This makes me want to make the query class a template class.
   Schema::Group::Field field("fake", 0, 0);
-  field.data_type(Schema::PSI::DataType::Int32);
+  field.type(Util::Type::Int32);
 
   Schema::Column column =
       std::make_pair(nullptr, std::make_shared<Schema::Group::Field>(field));

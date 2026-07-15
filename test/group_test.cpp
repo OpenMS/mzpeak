@@ -65,7 +65,6 @@ BOOST_AUTO_TEST_CASE(can_load_all_groups)
 
   auto spectrum_index = parquet->field("spectrum", "index");
   BOOST_TEST(spectrum_index.has_value());
-  BOOST_TEST((spectrum_index->second->data_type().has_value()));
-  BOOST_TEST((spectrum_index->second->data_type().value() ==
-              MzPeak::Schema::PSI::DataType::UInt64));
+  BOOST_TEST((spectrum_index->second->type().has_value()));
+  BOOST_TEST((spectrum_index->second->type().value() == MzPeak::Util::Type::UInt64));
 }

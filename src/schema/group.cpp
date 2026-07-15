@@ -53,7 +53,7 @@ find_homogeneous_primitive(std::shared_ptr<parquet::schema::Node> node)
 }
 
 /******************************************************************************/
-std::pair<Group::Field::Kind, std::optional<PSI::DataType>>
+std::pair<Group::Field::Kind, std::optional<Util::Type>>
 field_type_from_parquet(const std::shared_ptr<parquet::schema::GroupNode>& node)
 {
   switch (node->logical_type()->type()) {
@@ -63,7 +63,7 @@ field_type_from_parquet(const std::shared_ptr<parquet::schema::GroupNode>& node)
             std::static_pointer_cast<parquet::schema::Node>(node));
         prim != nullptr) {
       return std::make_pair(Group::Field::Kind::List,
-                            PSI::data_type_from_parquet(*prim));
+                            Util::type_from_parquet(*prim));
     } else {
       return std::make_pair(Group::Field::Kind::List, std::nullopt);
     }
@@ -137,13 +137,10 @@ const std::optional<Group::CVUnit>& Group::Field::cv_unit() const
 }
 
 /******************************************************************************/
-const std::optional<PSI::DataType>& Group::Field::data_type() const
-{
-  return data_type_;
-}
+const std::optional<Util::Type>& Group::Field::type() const { return type_; }
 
 /******************************************************************************/
-void Group::Field::data_type(PSI::DataType dt) { data_type_ = dt; }
+void Group::Field::type(Util::Type type) { type_ = type; }
 
 /******************************************************************************/
 Group::Group(const parquet::schema::GroupNode& node,
@@ -161,7 +158,7 @@ Group::Group(const parquet::schema::GroupNode& node,
     if (child->is_primitive()) {
       auto prim = std::static_pointer_cast<parquet::schema::PrimitiveNode>(child);
       field->kind_ = Field::Kind::Scalar;
-      field->data_type_ = PSI::data_type_from_parquet(*prim);
+      field->type_ = Util::type_from_parquet(*prim);
     } else {
       auto grp = std::static_pointer_cast<parquet::schema::GroupNode>(child);
 
@@ -170,7 +167,7 @@ Group::Group(const parquet::schema::GroupNode& node,
       } else {
         auto grp_type = field_type_from_parquet(grp);
         field->kind_ = grp_type.first;
-        field->data_type_ = grp_type.second;
+        field->type_ = grp_type.second;
       }
     }
 

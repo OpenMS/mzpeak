@@ -16,14 +16,12 @@ top-level directory of this repository.
 #include <print>
 #include <ranges>
 
-#include "mzpeak/schema/psi/data_type.h"
 #include "mzpeak/util/algorithm.h"
-#include "mzpeak/util/parquet_types.h"
 #include "mzpeak/util/planner.h"
+#include "mzpeak/util/types.h"
 
 namespace MzPeak::Util {
 
-namespace psi = Schema::PSI;
 using namespace std::placeholders;
 
 /******************************************************************************/
@@ -276,19 +274,19 @@ struct ColMinMax final {
   /// currently querying.
   std::size_t page_index_ = 0;
 
-  template <psi::DataType T> Query::Result<Query::range_t> operator()() const
+  template <Type T> Query::Result<Query::range_t> operator()() const
   {
-    using S = typename psi_to_parquet_tag<T>::scalar_type;
-    using V = typename Schema::PSI::data_type_traits<T>::value_type;
+    using V = typename type_traits<T>::value_type;
+    using P = typename type_traits<T>::parquet_type;
     using R = Query::Result<Query::range_t>;
 
     if (index_ != nullptr) {
-      using Index = parquet::TypedColumnIndex<S>;
+      using Index = parquet::TypedColumnIndex<P>;
       std::shared_ptr<Index> index = std::static_pointer_cast<Index>(index_);
       return R(std::make_pair(static_cast<V>(index->min_values()[page_index_]),
                               static_cast<V>(index->max_values()[page_index_])));
     } else if (stats_ != nullptr) {
-      using Stats = parquet::TypedStatistics<S>;
+      using Stats = parquet::TypedStatistics<P>;
       if (!stats_->HasMinMax()) return R::skip();
       std::shared_ptr<Stats> stats = std::static_pointer_cast<Stats>(stats_);
       return R(std::make_pair(static_cast<V>(stats->min()),
@@ -298,13 +296,6 @@ struct ColMinMax final {
     }
   }
 };
-
-// We don't support string searches right now.
-template <>
-Query::Result<Query::range_t> ColMinMax::operator()<psi::DataType::ASCII>() const
-{
-  return Query::Result<Query::range_t>::fail();
-}
 
 /******************************************************************************/
 /**
@@ -369,9 +360,8 @@ Query::Result<bool> Planner::Impl::with_column_stats(
   auto via_stats = [&stats_cache, &rg](
                        const Schema::Column& dest) -> Query::Result<Query::range_t> {
     auto stats = stats_cache.get(rg, dest);
-    if (stats.has_value() && dest.second->data_type().has_value()) {
-      return psi::dispatch(dest.second->data_type().value(),
-                           ColMinMax(stats->second));
+    if (stats.has_value() && dest.second->type().has_value()) {
+      return lift_type(dest.second->type().value(), ColMinMax(stats->second));
     } else {
       return Query::Result<Query::range_t>::skip();
     }
@@ -390,7 +380,7 @@ Query::Result<bool> Planner::Impl::with_page_index(
 
   auto via_page_index =
       [&](const Schema::Column& dest) -> Query::Result<Query::range_t> {
-    if (!dest.second->data_type().has_value())
+    if (!dest.second->type().has_value())
       return Query::Result<Query::range_t>::fail();
 
     auto index = index_cache.get(dest);
@@ -408,8 +398,8 @@ Query::Result<bool> Planner::Impl::with_page_index(
     }
 
     index.value()->current_page += 1;
-    return psi::dispatch(dest.second->data_type().value(),
-                         ColMinMax(index.value()->col_index, page));
+    return lift_type(dest.second->type().value(),
+                     ColMinMax(index.value()->col_index, page));
   };
 
   // We need to loop once for each page in the page index.  But we
