@@ -13,49 +13,9 @@ top-level directory of this repository.
 #include <memory>
 #include <ranges>
 
+#include "mzpeak/util/types.h"
+
 namespace MzPeak::Util::Decoders {
-
-/******************************************************************************/
-/**
- * Type traits for casting.
- */
-template <typename T> struct cast_traits;
-
-template <> struct cast_traits<int8_t> {
-  using array_type = arrow::Int8Array;
-};
-
-template <> struct cast_traits<uint8_t> {
-  using array_type = arrow::UInt8Array;
-};
-
-template <> struct cast_traits<int32_t> {
-  using array_type = arrow::Int32Array;
-};
-
-template <> struct cast_traits<uint32_t> {
-  using array_type = arrow::UInt32Array;
-};
-
-template <> struct cast_traits<int64_t> {
-  using array_type = arrow::Int64Array;
-};
-
-template <> struct cast_traits<uint64_t> {
-  using array_type = arrow::UInt64Array;
-};
-
-template <> struct cast_traits<float> {
-  using array_type = arrow::FloatArray;
-};
-
-template <> struct cast_traits<double> {
-  using array_type = arrow::DoubleArray;
-};
-
-template <> struct cast_traits<std::string> {
-  using array_type = arrow::StringArray;
-};
 
 /******************************************************************************/
 /**
@@ -161,7 +121,7 @@ public:
   /// Decoding function.
   void decode(const std::shared_ptr<arrow::Array>& src, C& dst)
   {
-    using array_type = typename cast_traits<V>::array_type;
+    using array_type = type_traits<enum_type_v<V>>::array_type;
     using array_ptr_type = std::shared_ptr<array_type>;
 
     array_ptr_type casted = std::static_pointer_cast<array_type>(src);

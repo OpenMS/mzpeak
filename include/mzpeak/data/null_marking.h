@@ -17,16 +17,18 @@ directory of this repository.
 
 namespace MzPeak::Data::NullMarking {
 
+using namespace MzPeak::Util;
+
 /**
  * A class that can decode Null Marking (transform MS:1003902).
  */
 template <typename T> class Decoder final {
 public:
   /// The type of arrow arrays we work with.
-  using array_type = MzPeak::Util::Decoders::cast_traits<T>::array_type;
+  using array_type = type_traits<enum_type_v<T>>::array_type;
 
   /// Constructor.
-  explicit Decoder(const Util::DeltaEstimator<T>& estimator);
+  explicit Decoder(const DeltaEstimator<T>& estimator);
 
   /// Destructor.
   ~Decoder() = default;
@@ -68,7 +70,7 @@ private:
     T delta;
   };
 
-  Util::DeltaEstimator<T> estimator_;
+  DeltaEstimator<T> estimator_;
   std::shared_ptr<array_type> array_;
   std::vector<Range> ranges_;
   std::vector<Range>::iterator next_range_;
@@ -78,7 +80,7 @@ private:
 
 /******************************************************************************/
 template <typename T>
-Decoder<T>::Decoder(const Util::DeltaEstimator<T>& estimator)
+Decoder<T>::Decoder(const DeltaEstimator<T>& estimator)
     : estimator_(estimator)
     , array_(nullptr)
     , next_range_(ranges_.end())
@@ -172,11 +174,11 @@ template <typename T> std::optional<T> Decoder<T>::operator()(int64_t index)
       std::vector<T> values;
       values.reserve(slice->length());
 
-      Util::Decoders::Scalar<T> decoder;
+      Decoders::Scalar<T> decoder;
       decoder.decode(slice, values);
 
       prior_.value = array_->Value(range.anchor(index));
-      prior_.delta = Util::Algorithm::median_delta(values, zero_);
+      prior_.delta = Algorithm::median_delta(values, zero_);
     }
 
     // Delta may come from a range following a run of NULL values.
