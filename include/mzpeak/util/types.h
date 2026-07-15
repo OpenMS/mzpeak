@@ -266,7 +266,7 @@ template <typename T> bool is_same_type(Type type)
   return lift_type(type, []<Type U>() -> bool {
     return std::is_same_v<TT, typename type_traits<U>::value_type>;
   });
-};
+}
 
 /**
  * Throw an exception if `T` and `type_traits<Type>::value_type` are

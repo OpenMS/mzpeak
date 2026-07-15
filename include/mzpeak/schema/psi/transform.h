@@ -67,7 +67,7 @@ public:
   /**
    * Return `true` if this transformation needs a delta model.
    */
-  bool needs_delta_model() const;
+  bool needs_delta_model() const noexcept;
 
   /// Equality.
   bool operator==(const Transform& other) const { return val_ == other.val_; }

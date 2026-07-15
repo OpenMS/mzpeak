@@ -24,7 +24,7 @@ BOOST_AUTO_TEST_CASE(can_list_files)
   for (auto& i : files)
     paths += i.string() + ", ";
 
-  BOOST_TEST(expect, paths << " is missing expected value");
+  BOOST_TEST_CONTEXT(paths << " is missing expected value") { BOOST_TEST(expect); }
 }
 
 /******************************************************************************/

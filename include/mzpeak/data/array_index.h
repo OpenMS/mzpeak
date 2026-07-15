@@ -39,20 +39,20 @@ public:
     /// name for the array, otherwise it should be the human-readable
     /// name for the `array_type` from the PSI-MS controlled
     /// vocabulary.
-    std::string array_name;
+    std::string array_name = {};
 
     /// How the array data is stored in the Parquet file.
-    BufferFormat buffer_format;
+    BufferFormat buffer_format = BufferFormat::Point;
 
     /// The entity type this column belongs to.
     EntityType context = EntityType::Other;
 
     /// The path from the *root* of the Parquet file's schema to this
     /// column.
-    std::string path;
+    std::string path = {};
 
     /// The name of the column with the schema prefix removed.
-    std::string name;
+    std::string name = {};
 
     /// The data type for this column, denoted using a CURIE from the
     /// PSI-MS controlled vocabulary for a child of MS:1000518 (binary
@@ -64,7 +64,7 @@ public:
 
     /// The unit describing the measurement, denoted using a CURIE
     /// from the PSI-MS controlled vocabulary or the unit ontology.
-    std::string unit;
+    std::string unit = {};
 
     /// A flag to indicate this column is the representative instance
     /// of this column type. The primary column of its type SHOULD have
@@ -76,18 +76,18 @@ public:
     /// in ascending order if any. The lower the rank, the earlier the
     /// dimension was sorted, starting from 0. If this value is null
     /// or absent, this column is assumed not to be sorted.
-    std::optional<std::size_t> sorting_rank;
+    std::optional<std::size_t> sorting_rank = {};
 
     /// The identifier of a data processing method that governs this
     /// column. If not specified, assumed to be the default data
     /// processing method for this run.
-    std::optional<std::string> data_processing_id;
+    std::optional<std::string> data_processing_id = {};
 
     /// A transformation that may be applied to this column such as
     /// zero trimming and null marking or Numpress compression,
     /// denoted as a CURIE from the PSI-MS controlled vocabulary. Some
     /// values are only usable with the chunked layout.
-    std::optional<Schema::PSI::Transform> transform;
+    std::optional<Schema::PSI::Transform> transform = {};
   };
 
   /**

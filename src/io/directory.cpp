@@ -6,10 +6,10 @@ directory of this repository.
 
 */
 
-#include "mzpeak/io/directory.h"
-
 #include <fstream>
 #include <memory>
+
+#include "mzpeak/io/directory.h"
 
 namespace MzPeak::IO {
 
@@ -25,11 +25,11 @@ public:
 
   ~DirFile_() = default;
 
-  std::string name() const { return path_.string(); }
+  std::string name() const override { return path_.string(); }
 
-  std::size_t size() const { return fs::file_size(path_); }
+  std::size_t size() const override { return fs::file_size(path_); }
 
-  std::optional<std::size_t> read(uint8_t* buffer, std::size_t size)
+  std::optional<std::size_t> read(uint8_t* buffer, std::size_t size) override
   {
     if (stream_.good() && !stream_.eof()) {
       stream_.read(reinterpret_cast<char*>(buffer), size);
@@ -39,22 +39,22 @@ public:
     }
   }
 
-  std::optional<std::size_t> tell() const
+  std::optional<std::size_t> tell() const override
   {
     // `tellg` should be const, but it's not marked that way.
     std::fstream& s(const_cast<std::fstream&>(stream_));
     return s.tellg();
   }
 
-  bool seek(std::size_t pos)
+  bool seek(std::size_t pos) override
   {
     stream_.seekg(pos);
     return !stream_.fail();
   }
 
-  void close() { stream_.close(); }
+  void close() override { stream_.close(); }
 
-  bool is_open() const { return stream_.is_open(); }
+  bool is_open() const override { return stream_.is_open(); }
 
 private:
   fs::path path_;

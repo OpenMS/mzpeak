@@ -46,10 +46,6 @@ template <typename T> inline T trampoline(Trampoline<T> t)
 }
 
 /******************************************************************************/
-// Helper to produce useful messages with static_assert.
-template <typename...> inline constexpr bool failed_match = false;
-
-/******************************************************************************/
 std::pair<Query::value_t, Query::value_t> decode_range_type(const Query::range_t& rt)
 {
   return std::visit(
@@ -111,7 +107,7 @@ Query::Query(Node&& c)
 }
 
 /******************************************************************************/
-Query Query::operator!() const
+Query Query::negate() const
 {
   Query q(*this);
   q.not_ = !q.not_;
@@ -119,16 +115,13 @@ Query Query::operator!() const
 }
 
 /******************************************************************************/
-Query::~Query() = default;
-
-/******************************************************************************/
-Query Query::operator&&(const Query& rhs) const
+Query Query::and_then(const Query& rhs) const
 {
   return join(rhs, Node::Connective::AND);
 }
 
 /******************************************************************************/
-Query Query::operator||(const Query& rhs) const
+Query Query::or_else(const Query& rhs) const
 {
   return join(rhs, Node::Connective::OR);
 }
@@ -256,13 +249,13 @@ Trampoline<Query::Result<bool>> EvalHelper<Fn, V>::eval(const Query& query,
         } else if constexpr (std::is_same_v<T, Query::Node>) {
           return trampoline(eval_node(tree, fn));
         } else {
-          static_assert(false, "unhanded variant");
+          static_assert(false_type<T>, "unhanded variant");
         }
       },
       query.tree_);
 
   if (query.not_) {
-    return !result;
+    return result.negate();
   } else {
     return result;
   }
@@ -285,10 +278,12 @@ Trampoline<Query::Result<bool>> EvalHelper<Fn, V>::eval_node(const Query::Node& 
       if (result.is(true)) {
         return Trampoline(trampoline(eval(std::any_cast<Query>(node.rhs_), fn)));
       }
+      break;
     case Query::Node::Connective::OR:
       if (result.is(false)) {
         return Trampoline(trampoline(eval(std::any_cast<Query>(node.rhs_), fn)));
       }
+      break;
     }
   }
 

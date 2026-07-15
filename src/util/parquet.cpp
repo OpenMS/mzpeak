@@ -57,6 +57,7 @@ struct Parquet::Impl {
   Impl(std::unique_ptr<IO::File> data, Schema::File file)
       : file_(std::move(file))
       , arrow_(std::make_unique<Arrow>(std::move(data)))
+      , reader_(nullptr)
       , groups_(std::make_shared<Schema::GroupMap>())
   {
     auto raf = arrow_->reader();

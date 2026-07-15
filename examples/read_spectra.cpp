@@ -29,9 +29,9 @@ int main(int argc, char* argv[])
   std::println("| Index | First m/z | Last m/z |");
   std::println("|-------|-----------|----------|");
 
-  for (auto index = 0;
+  for (auto spec_index = 0;
        const auto& spectrum : spectra | std::views::take(to_review)) {
-    std::print("| {:5d} | ", index);
+    std::print("| {:5d} | ", spec_index);
 
     if (spectrum.mz().size() > 0) {
       std::print("{:9.2f} | ", spectrum.mz().front());
@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
     }
 
     std::println();
-    ++index; // std::views::enumerate isn't available on macOS :-(
+    ++spec_index; // std::views::enumerate isn't available on macOS :-(
   }
 
   return 0;

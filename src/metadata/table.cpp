@@ -27,6 +27,7 @@ struct Table::Impl {
 /******************************************************************************/
 Table::Impl::Impl(std::unique_ptr<Util::Parquet> parquet)
     : parquet_(std::move(parquet))
+    , n_entries()
 {
   auto file = parquet_->index_file();
 

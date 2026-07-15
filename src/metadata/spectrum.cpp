@@ -23,11 +23,13 @@ using namespace MzPeak::Util;
 /******************************************************************************/
 Spectrum::Spectrum(std::shared_ptr<Table> table, uint64_t index)
     : table_(std::move(table))
-    , group_(table_->group("spectrum"))
+    , group_(table_ == nullptr ? nullptr : table_->group("spectrum"))
     , index_(index)
+    , ms_level_()
+    , delta_model_()
 {
-  if (group_ == nullptr) {
-    throw ParquetError("metadata files is missing the spectrum group");
+  if (table_ == nullptr || group_ == nullptr) {
+    throw ParquetError("metadata file missing or does not have the spectrum group");
   }
 
   Projection projection;

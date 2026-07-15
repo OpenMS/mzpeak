@@ -6,8 +6,6 @@ directory of this repository.
 
 */
 
-#include "mzpeak/util/arrow.h"
-
 #include <arrow/buffer.h>
 #include <arrow/io/api.h>
 #include <arrow/io/buffered.h>
@@ -15,6 +13,7 @@ directory of this repository.
 #include <parquet/properties.h>
 
 #include "mzpeak/exception.h"
+#include "mzpeak/util/arrow.h"
 
 namespace MzPeak::Util {
 
@@ -27,6 +26,7 @@ public:
   /// Constructor.
   ArrowFile_(std::shared_ptr<IO::File> file)
       : file_(std::move(file))
+      , buffer_(nullptr)
   {
     arrow::Result<std::unique_ptr<arrow::ResizableBuffer>> res(
         arrow::AllocateResizableBuffer(parquet::kDefaultFooterReadSize));
@@ -42,10 +42,10 @@ public:
   ~ArrowFile_() = default;
 
   /// Return the total file size in bytes.
-  arrow::Result<int64_t> GetSize() { return file_->size(); }
+  arrow::Result<int64_t> GetSize() override { return file_->size(); }
 
   /// Seek in file/stream.
-  arrow::Status Seek(int64_t position)
+  arrow::Status Seek(int64_t position) override
   {
     if (!file_->seek(position)) {
       std::string msg("unable to seek");
@@ -56,7 +56,7 @@ public:
   }
 
   /// Report the current position.
-  arrow::Result<int64_t> Tell() const
+  arrow::Result<int64_t> Tell() const override
   {
     std::optional<std::size_t> n = file_->tell();
 
@@ -69,7 +69,7 @@ public:
   }
 
   /// Read data from current file position.
-  arrow::Result<int64_t> Read(int64_t nbytes, void* out)
+  arrow::Result<int64_t> Read(int64_t nbytes, void* out) override
   {
     std::optional<std::size_t> n = file_->read(static_cast<uint8_t*>(out), nbytes);
 
@@ -81,7 +81,7 @@ public:
   }
 
   /// Read into a buffer.
-  arrow::Result<std::shared_ptr<arrow::Buffer>> Read(int64_t nbytes)
+  arrow::Result<std::shared_ptr<arrow::Buffer>> Read(int64_t nbytes) override
   {
     using arrow_buffer_t = std::shared_ptr<arrow::Buffer>;
 
@@ -102,14 +102,14 @@ public:
   }
 
   /// Close the file/stream.
-  arrow::Status Close()
+  arrow::Status Close() override
   {
     file_->close();
     return buffer_->Resize(0, true);
   }
 
   /// Return `true` if the file/stream is closed.
-  bool closed() const { return !file_->is_open(); }
+  bool closed() const override { return !file_->is_open(); }
 
 private:
   std::shared_ptr<IO::File> file_;

@@ -18,4 +18,8 @@ template <class S> using move_only_function = boost::compat::move_only_function<
 } // namespace std
 #endif
 
+/******************************************************************************/
+// Helper to produce useful messages with static_assert.
+template <typename...> inline constexpr bool false_type = false;
+
 // #endif

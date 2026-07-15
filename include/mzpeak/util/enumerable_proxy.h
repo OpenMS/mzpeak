@@ -35,12 +35,15 @@ public:
     Iterator(std::size_t n, fetch_t fetch)
         : n_(n)
         , fetch_(fetch)
+        , cache_()
     {
     }
 
     /// Constructor for an invalid iterator.
     Iterator(std::size_t n)
         : n_(n)
+        , fetch_(nullptr)
+        , cache_()
     {
     }
 
@@ -104,7 +107,7 @@ public:
 
   private:
     std::size_t n_;
-    fetch_t fetch_ = nullptr;
+    fetch_t fetch_;
     std::optional<std::pair<std::size_t, value_type>> cache_;
   };
 
@@ -145,7 +148,7 @@ protected:
 
 private:
   std::size_t count_ = 0;
-  fetch_t fetch_;
+  fetch_t fetch_ = nullptr;
 };
 
 } // namespace MzPeak::Util

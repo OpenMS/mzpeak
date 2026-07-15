@@ -21,4 +21,4 @@ namespace fs = std::filesystem;
  */
 MzPeak::Index open(const fs::path&);
 
-}; // namespace MzPeak
+} // namespace MzPeak

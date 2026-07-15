@@ -30,7 +30,7 @@ public:
   /**
    * Retrieve a list of files in the zip archive.
    */
-  std::vector<fs::path> list();
+  std::vector<fs::path> list() override;
 
   /**
    * Open a file from within the zip archive for reading.
@@ -38,7 +38,7 @@ public:
    * NOTE: The path given must be one returned from the `list`
    * method.
    */
-  std::unique_ptr<File> read_file(const fs::path&);
+  std::unique_ptr<File> read_file(const fs::path&) override;
 
 private:
   struct Impl;

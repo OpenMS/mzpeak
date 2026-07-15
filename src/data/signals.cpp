@@ -22,8 +22,8 @@ namespace MzPeak::Data {
 struct Signals::Impl {
   Impl(std::unique_ptr<Util::Parquet> parquet)
       : parquet_(std::move(parquet))
+      , array_index_(parse_array_index())
   {
-    array_index_ = parse_array_index();
   }
 
   std::shared_ptr<ArrayIndex> parse_array_index() const;

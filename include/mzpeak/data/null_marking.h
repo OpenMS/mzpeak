@@ -22,16 +22,15 @@ using namespace MzPeak::Util;
 /**
  * A class that can decode Null Marking (transform MS:1003902).
  */
-template <typename T> class Decoder final {
+template <typename T, typename U>
+  requires convertible_between<T, U>
+class Decoder final {
 public:
   /// The type of arrow arrays we work with.
   using array_type = type_traits<enum_type_v<T>>::array_type;
 
   /// Constructor.
-  explicit Decoder(const DeltaEstimator<T>& estimator);
-
-  /// Destructor.
-  ~Decoder() = default;
+  explicit Decoder(const DeltaEstimator<U>& estimator);
 
   /**
    * Called by the decoder when a new array chuck is about to be
@@ -66,11 +65,11 @@ private:
   // The last null value that was decoded.
   struct Prior {
     int64_t index = -1;
-    T value;
-    T delta;
+    T value = {};
+    T delta = {};
   };
 
-  DeltaEstimator<T> estimator_;
+  DeltaEstimator<U> estimator_;
   std::shared_ptr<array_type> array_;
   std::vector<Range> ranges_;
   std::vector<Range>::iterator next_range_;
@@ -79,11 +78,14 @@ private:
 };
 
 /******************************************************************************/
-template <typename T>
-Decoder<T>::Decoder(const DeltaEstimator<T>& estimator)
+template <typename T, typename U>
+  requires convertible_between<T, U>
+Decoder<T, U>::Decoder(const DeltaEstimator<U>& estimator)
     : estimator_(estimator)
     , array_(nullptr)
+    , ranges_()
     , next_range_(ranges_.end())
+    , prior_()
 {
 }
 
@@ -96,8 +98,9 @@ Decoder<T>::Decoder(const DeltaEstimator<T>& estimator)
  * done the `ranges_` queue will contain all the `[begin, end)` ranges
  * of contiguous non-NULL values.
  */
-template <typename T>
-void Decoder<T>::chunk(const std::shared_ptr<array_type>& array)
+template <typename T, typename U>
+  requires convertible_between<T, U>
+void Decoder<T, U>::chunk(const std::shared_ptr<array_type>& array)
 {
   int64_t nulls = array->null_count();
 
@@ -133,7 +136,9 @@ void Decoder<T>::chunk(const std::shared_ptr<array_type>& array)
 }
 
 /******************************************************************************/
-template <typename T> std::optional<T> Decoder<T>::operator()(int64_t index)
+template <typename T, typename U>
+  requires convertible_between<T, U>
+std::optional<T> Decoder<T, U>::operator()(int64_t index)
 {
   // Sanity check.
   if (array_ == nullptr) {

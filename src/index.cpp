@@ -32,6 +32,7 @@ struct Index::Impl {
   /// Constructor.
   Impl(std::unique_ptr<MzPeak::IO::Archive> archive)
       : archive_(std::move(archive))
+      , files_()
   {
     parse_index();
   }
@@ -93,9 +94,9 @@ void Index::Impl::parse_index()
     const json::array files(it->value().as_array());
     files_.reserve(files.size());
 
-    for (const auto& file : files) {
-      if (file.is_object()) {
-        files_.push_back(Schema::File(file.as_object()));
+    for (const auto& file_obj : files) {
+      if (file_obj.is_object()) {
+        files_.push_back(Schema::File(file_obj.as_object()));
       }
     }
   }
@@ -108,7 +109,7 @@ Spectra Index::spectra() const
   auto meta_it = impl_->find_file("spectra_metadata.parquet");
 
   if (data_it == impl_->files_.end()) {
-    return Spectra();
+    throw ParquetError("missing files: spectra_data.parquet");
   }
 
   std::unique_ptr<Data::Signals> data =
