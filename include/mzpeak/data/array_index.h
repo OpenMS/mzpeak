@@ -88,6 +88,10 @@ public:
     /// denoted as a CURIE from the PSI-MS controlled vocabulary. Some
     /// values are only usable with the chunked layout.
     std::optional<Schema::PSI::Transform> transform = {};
+
+    /// Return `true` if this entry needs to be projected in a query
+    /// in order to properly decode the dimension it represents.
+    bool needed_for_decoding() const;
   };
 
   /**

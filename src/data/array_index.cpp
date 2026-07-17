@@ -17,6 +17,29 @@ directory of this repository.
 namespace MzPeak::Data {
 
 /******************************************************************************/
+bool ArrayIndex::Entry::needed_for_decoding() const
+{
+  switch (buffer_format) {
+  case MzPeak::Schema::BufferFormat::Point:
+    return true;
+  case MzPeak::Schema::BufferFormat::ChunkStart:
+    return false;
+  case MzPeak::Schema::BufferFormat::ChunkEnd:
+    return false;
+  case MzPeak::Schema::BufferFormat::ChunkValues:
+    return true;
+  case MzPeak::Schema::BufferFormat::ChunkEncoding:
+    return true;
+  case MzPeak::Schema::BufferFormat::ChunkSecondary:
+    return true;
+  case MzPeak::Schema::BufferFormat::ChunkTransform:
+    return true;
+  }
+
+  std::unreachable();
+}
+
+/******************************************************************************/
 bool ArrayIndex::Dimension::needs_delta_model() const
 {
   bool from_transform = transform.has_value() && transform->needs_delta_model();

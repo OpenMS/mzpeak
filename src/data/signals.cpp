@@ -136,6 +136,8 @@ Signals::select(const std::vector<ArrayIndex::Dimension>& projection,
 
   for (const auto& dim : projection) {
     for (const auto& entry : dim.entries) {
+      if (!entry.needed_for_decoding()) continue;
+
       auto field =
           impl_->array_index_->entry_column(*impl_->parquet_->groups(), entry);
       if (!field.has_value()) {
