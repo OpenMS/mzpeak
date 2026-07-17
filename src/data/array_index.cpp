@@ -17,6 +17,18 @@ directory of this repository.
 namespace MzPeak::Data {
 
 /******************************************************************************/
+ArrayIndex::Layout group_name_to_layout(const std::string& name)
+{
+  if (name == "point") {
+    return ArrayIndex::Layout::Point;
+  } else if (name == "chunk") {
+    return ArrayIndex::Layout::Chunked;
+  } else {
+    return ArrayIndex::Layout::Unknown;
+  }
+}
+
+/******************************************************************************/
 bool ArrayIndex::Entry::needed_for_decoding() const
 {
   switch (buffer_format) {
@@ -40,6 +52,54 @@ bool ArrayIndex::Entry::needed_for_decoding() const
 }
 
 /******************************************************************************/
+bool ArrayIndex::Entry::is_value_entry() const
+{
+  switch (buffer_format) {
+  case MzPeak::Schema::BufferFormat::Point:
+    return true;
+  case MzPeak::Schema::BufferFormat::ChunkStart:
+    return false;
+  case MzPeak::Schema::BufferFormat::ChunkEnd:
+    return false;
+  case MzPeak::Schema::BufferFormat::ChunkValues:
+    return true;
+  case MzPeak::Schema::BufferFormat::ChunkEncoding:
+    return false;
+  case MzPeak::Schema::BufferFormat::ChunkSecondary:
+    return true;
+  case MzPeak::Schema::BufferFormat::ChunkTransform:
+    return true;
+  }
+
+  std::unreachable();
+}
+
+/******************************************************************************/
+bool ArrayIndex::Dimension::is_main_axis() const
+{
+  for (const auto& entry : entries) {
+    switch (entry.buffer_format) {
+    case MzPeak::Schema::BufferFormat::Point:
+      return true;
+    case MzPeak::Schema::BufferFormat::ChunkStart:
+      return true;
+    case MzPeak::Schema::BufferFormat::ChunkEnd:
+      return true;
+    case MzPeak::Schema::BufferFormat::ChunkValues:
+      return true;
+    case MzPeak::Schema::BufferFormat::ChunkEncoding:
+      return true;
+    case MzPeak::Schema::BufferFormat::ChunkSecondary:
+      return false;
+    case MzPeak::Schema::BufferFormat::ChunkTransform:
+      continue; // Could be main or secondary.
+    }
+  }
+
+  return false;
+}
+
+/******************************************************************************/
 bool ArrayIndex::Dimension::needs_delta_model() const
 {
   bool from_transform = transform.has_value() && transform->needs_delta_model();
@@ -57,9 +117,50 @@ Util::Type ArrayIndex::Dimension::type_or_throw() const
 }
 
 /******************************************************************************/
+const ArrayIndex::Entry& ArrayIndex::Dimension::values_entry() const
+{
+  // There are a few buffer formats that indicate that an entry is
+  // definitely the column that stores dimension values.  However,
+  // some of them (i.e. `ChunkTransform`) are ambitious so we need to
+  // consider them after all other entries have been considered.
+  //
+  // We don't assume the `entries` vector is in an particular order
+  // here.
+  Entry const* chunk_transform = nullptr;
+
+  for (const auto& entry : entries) {
+    switch (entry.buffer_format) {
+    case MzPeak::Schema::BufferFormat::Point:
+      return entry;
+    case MzPeak::Schema::BufferFormat::ChunkStart:
+      continue;
+    case MzPeak::Schema::BufferFormat::ChunkEnd:
+      continue;
+    case MzPeak::Schema::BufferFormat::ChunkValues:
+      return entry;
+    case MzPeak::Schema::BufferFormat::ChunkEncoding:
+      continue;
+    case MzPeak::Schema::BufferFormat::ChunkSecondary:
+      return entry;
+    case MzPeak::Schema::BufferFormat::ChunkTransform:
+      chunk_transform = &entry;
+      continue;
+    }
+  }
+
+  if (chunk_transform != nullptr && !is_main_axis()) {
+    return *chunk_transform;
+  } else {
+    std::string msg("dimension " + name + " lacks a data values column");
+    throw InvalidFormatError(msg);
+  }
+}
+
+/******************************************************************************/
 ArrayIndex::ArrayIndex(EntityType entity_type, const json::object& obj)
     : entity_type_(entity_type)
     , prefix_(obj.at("prefix").as_string())
+    , layout_(group_name_to_layout(prefix_))
     , entries_()
     , num_entities_()
 {
@@ -138,6 +239,9 @@ EntityType ArrayIndex::entity_type() const { return entity_type_; }
 
 /******************************************************************************/
 const std::string& ArrayIndex::prefix() const { return prefix_; }
+
+/******************************************************************************/
+ArrayIndex::Layout ArrayIndex::layout() const { return layout_; }
 
 /******************************************************************************/
 const std::vector<ArrayIndex::Entry>& ArrayIndex::entries() const

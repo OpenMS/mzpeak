@@ -16,7 +16,6 @@ top-level directory of this repository.
 #include "mzpeak/data/null_marking.h"
 #include "mzpeak/data/signals.h"
 #include "mzpeak/exception.h"
-#include "mzpeak/schema/group.h"
 #include "mzpeak/schema/psi/data_type.h"
 #include "mzpeak/util/slice.h"
 #include "mzpeak/util/types.h"
@@ -57,7 +56,8 @@ private:
   void decode(const ArrayIndex::Dimension&, std::vector<V>&) const;
 
   template <typename N, typename V>
-  void point(const Schema::Column&, const N& null_decoder, std::vector<V>&) const;
+  void
+  point(const ArrayIndex::Dimension&, const N& null_decoder, std::vector<V>&) const;
 
   template <Util::Type From, typename V>
   void remap(const ArrayIndex::Dimension& dim, std::vector<V>& v) const;
@@ -129,42 +129,50 @@ template <typename T>
 template <typename V>
 void Decoder<T>::decode(const ArrayIndex::Dimension& dim, std::vector<V>& v) const
 {
-  const auto& entries = dim.entries;
-
-  if (entries.empty()) {
-    std::string msg("unable to decode dimension, wrong encoding: ");
-    throw ParquetError(msg + dim.name);
-  } else if (entries.size() == 1 &&
-             entries[0].buffer_format == Schema::BufferFormat::Point) {
-
-    auto field =
-        signals_->array_index()->entry_column(*signals_->groups(), entries[0]);
-
-    if (!field.has_value()) {
-      throw ParquetError("unable to decode dimension, not in schema: " + dim.name);
-    }
-
+  switch (signals_->array_index()->layout()) {
+  case ArrayIndex::Layout::Point:
     if (dim.needs_delta_model()) {
       using N = NullMarking::Decoder<V, T>;
-      point<N, V>(field.value(), N{delta_estimator_}, v);
+      point<N, V>(dim, N{delta_estimator_}, v);
     } else {
       using N = Util::Decoders::NullToZero<V>;
-      point<N, V>(field.value(), N{}, v);
+      point<N, V>(dim, N{}, v);
     }
-  } else {
+    break;
+
+  case ArrayIndex::Layout::Chunked:
     throw("not implemented");
-    // return decode_chunked(arrays);
+    break;
+
+  case ArrayIndex::Layout::Unknown:
+    throw UnknownLayoutError("cannot decode dimension: " + dim.name);
   }
 }
 
 /******************************************************************************/
 template <typename T>
 template <typename N, typename V>
-void Decoder<T>::point(const Schema::Column& col,
+void Decoder<T>::point(const ArrayIndex::Dimension& dim,
                        const N& null_decoder,
                        std::vector<V>& v) const
 {
-  slice_->array(col, v, Util::Decoders::Scalar<V, std::vector<V>, N>(null_decoder));
+  const auto& primary_entry = dim.values_entry();
+
+  if (primary_entry.buffer_format != Schema::BufferFormat::Point) {
+    std::string msg("file uses point layout, but " + dim.name);
+    msg += " is not using the point buffer_format";
+    throw InvalidFormatError(msg);
+  }
+
+  auto col =
+      signals_->array_index()->entry_column(*signals_->groups(), primary_entry);
+
+  if (!col.has_value()) {
+    throw ParquetError("unable to decode dimension, not in schema: " + dim.name);
+  }
+
+  slice_->array(col.value(), v,
+                Util::Decoders::Scalar<V, std::vector<V>, N>(null_decoder));
 }
 
 } // namespace MzPeak::Data::Encoding

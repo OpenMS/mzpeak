@@ -58,6 +58,38 @@ public:
 };
 
 /**
+ * The mzPeak file is malformed and the error could not be recovered
+ * from.
+ */
+class InvalidFormatError final : public Exception {
+public:
+  /// Constructor.
+  InvalidFormatError(const std::string& msg)
+      : Exception(msg)
+  {
+  }
+
+  /// Destructor.
+  ~InvalidFormatError() = default;
+};
+
+/**
+ * Automatic decoding of signal data is only supported for standard
+ * file layouts such as point and chunked.
+ */
+class UnknownLayoutError final : public Exception {
+public:
+  /// Constructor.
+  UnknownLayoutError(const std::string& msg)
+      : Exception(msg)
+  {
+  }
+
+  /// Destructor.
+  ~UnknownLayoutError() = default;
+};
+
+/**
  * Attempt to access an invalid iterator.
  */
 class InvalidIterator final : public Exception {
