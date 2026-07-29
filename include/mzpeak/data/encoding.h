@@ -56,8 +56,9 @@ private:
   void decode(const ArrayIndex::Dimension&, std::vector<V>&) const;
 
   template <typename N, typename V>
-  void
-  point(const ArrayIndex::Dimension&, const N& null_decoder, std::vector<V>&) const;
+  void decode_with_nulls(const ArrayIndex::Dimension&,
+                         const N& null_decoder,
+                         std::vector<V>&) const;
 
   template <Util::Type From, typename V>
   void remap(const ArrayIndex::Dimension& dim, std::vector<V>& v) const;
@@ -131,17 +132,14 @@ void Decoder<T>::decode(const ArrayIndex::Dimension& dim, std::vector<V>& v) con
 {
   switch (signals_->array_index()->layout()) {
   case ArrayIndex::Layout::Point:
+  case ArrayIndex::Layout::Chunked:
     if (dim.needs_delta_model()) {
       using N = NullMarking::Decoder<V, T>;
-      point<N, V>(dim, N{delta_estimator_}, v);
+      decode_with_nulls<N, V>(dim, N{delta_estimator_}, v);
     } else {
       using N = Util::Decoders::NullToZero<V>;
-      point<N, V>(dim, N{}, v);
+      decode_with_nulls<N, V>(dim, N{}, v);
     }
-    break;
-
-  case ArrayIndex::Layout::Chunked:
-    throw("not implemented");
     break;
 
   case ArrayIndex::Layout::Unknown:
@@ -152,17 +150,11 @@ void Decoder<T>::decode(const ArrayIndex::Dimension& dim, std::vector<V>& v) con
 /******************************************************************************/
 template <typename T>
 template <typename N, typename V>
-void Decoder<T>::point(const ArrayIndex::Dimension& dim,
-                       const N& null_decoder,
-                       std::vector<V>& v) const
+void Decoder<T>::decode_with_nulls(const ArrayIndex::Dimension& dim,
+                                   const N& null_decoder,
+                                   std::vector<V>& v) const
 {
   const auto& primary_entry = dim.values_entry();
-
-  if (primary_entry.buffer_format != Schema::BufferFormat::Point) {
-    std::string msg("file uses point layout, but " + dim.name);
-    msg += " is not using the point buffer_format";
-    throw InvalidFormatError(msg);
-  }
 
   auto col =
       signals_->array_index()->entry_column(*signals_->groups(), primary_entry);
@@ -171,8 +163,15 @@ void Decoder<T>::point(const ArrayIndex::Dimension& dim,
     throw ParquetError("unable to decode dimension, not in schema: " + dim.name);
   }
 
-  slice_->array(col.value(), v,
-                Util::Decoders::Scalar<V, std::vector<V>, N>(null_decoder));
+  if (primary_entry.buffer_format == Schema::BufferFormat::Point) {
+    auto decoder = Util::Decoders::Scalar<V, std::vector<V>, N>(null_decoder);
+    slice_->array(col.value(), v, decoder);
+  } else {
+    auto decoder = Util::Decoders::Flattened<V, std::vector<V>, N>(null_decoder);
+    slice_->array(col.value(), v, decoder);
+  }
+
+  // FIXME: Apply necessary transformations on the decoded array.
 }
 
 } // namespace MzPeak::Data::Encoding

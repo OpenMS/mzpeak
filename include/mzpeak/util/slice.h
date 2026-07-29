@@ -80,6 +80,11 @@ public:
     requires Decoders::from_arrow_array<T, V>
   void array(const Column&, V&, T&& = {}) const;
 
+  /****************************************************************************/
+  template <typename T, typename V = std::vector<typename T::value_type>>
+    requires Decoders::from_arrow_array<T, V>
+  void array(const Column&, V&, T&) const;
+
 private:
   friend class MzPeak::Util::Executor;
 
@@ -126,6 +131,14 @@ void Slice::singleton(const Column& field, R& dst, T&& t) const
 template <typename T, typename V>
   requires Decoders::from_arrow_array<T, V>
 void Slice::array(const Column& field, V& v, T&& t) const
+{
+  array(field, v, t);
+}
+
+/******************************************************************************/
+template <typename T, typename V>
+  requires Decoders::from_arrow_array<T, V>
+void Slice::array(const Column& field, V& v, T& t) const
 {
   std::shared_ptr<Raw> chunks = raw(field);
   if (chunks == nullptr) return;

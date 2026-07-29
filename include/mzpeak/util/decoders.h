@@ -33,10 +33,6 @@ concept scalar_or_container_of =
  * `T` is a type that has a `decode` function that can decode values
  * from an `arrow::Array` and place the result in `R`.  The `R` type
  * can be a container or scalar value.
- *
- * The `decode` function should return `true` to indicate it can
- * continue to decode values.  If it returns `false` the chunk
- * decoding will stop.
  */
 template <typename T, typename R>
 concept from_arrow_array =
@@ -122,9 +118,6 @@ public:
   {
   }
 
-  /// Destructor.
-  ~Scalar() = default;
-
   /// Decoding function.
   void decode(const std::shared_ptr<arrow::Array>& src, C& dst)
   {
@@ -182,9 +175,6 @@ public:
   {
   }
 
-  /// Destructor.
-  ~List() = default;
-
   /// Decoding function.
   void decode(const std::shared_ptr<arrow::Array>& src, C& dst)
   {
@@ -210,6 +200,82 @@ public:
 
 private:
   Scalar<V, C, N> scalar_decoder_;
+};
+
+/******************************************************************************/
+/**
+ * An array transformer that returns its argument unchanged.
+ */
+struct IdentityTransform {
+  std::shared_ptr<arrow::Array>&& operator()(int64_t,
+                                             std::shared_ptr<arrow::Array>&& a) const
+  {
+    return a;
+  }
+};
+
+/******************************************************************************/
+/**
+ * A decoder that handles array elements that are lists, and the
+ * destination object is a list of scalar values.
+ *
+ * This class can decode null values in the lists, and also transform
+ * the lists using a helper object.  Once use of the transformer
+ * object is to decode delta encoding prior to null decoding.
+ *
+ * Transformers are called with two arguments:
+ *
+ *   - The index of the array element currently being decoded.
+ *
+ *   - The array element itself, as an Arrow Array.
+ *
+ * The transformer should return a `std::shared_ptr<arrow::Array>`
+ * which contains the transformed values that can be decoded.
+ */
+template <typename Value,
+          typename Container = std::vector<Value>,
+          typename NullDecoder = NullSkip<Value>,
+          typename Transformer = IdentityTransform>
+  requires Decoders::scalar_or_container_of<Container, Value>
+class Flattened final : Helper<Flattened<Value, Container>> {
+public:
+  /// The types of values this decoder can decode.
+  using value_type = Value;
+
+  // Constructor where you can pass a null decoder to the scalar decoder.
+  Flattened(const NullDecoder& null_decoder, Transformer transformer = {})
+      : scalar_decoder_(null_decoder)
+      , transformer_(transformer)
+  {
+  }
+
+  /// Decoding function.
+  void decode(const std::shared_ptr<arrow::Array>& src, Container& dst)
+  {
+    if (!is_list_array(src)) {
+      std::string msg("expected an arrow list array but found: ");
+      msg += src->type()->name();
+      throw TypeError(msg);
+    }
+
+    std::shared_ptr<arrow::ListArray> casted =
+        std::static_pointer_cast<arrow::ListArray>(src);
+
+    for (int64_t i : std::views::iota(0, casted->length())) {
+      if (casted->IsValid(i)) {
+        std::shared_ptr<arrow::Array> values(
+            transformer_(index_, casted->value_slice(i)));
+        scalar_decoder_.decode(values, dst);
+      }
+    }
+
+    ++index_;
+  }
+
+private:
+  Scalar<Value, Container, NullDecoder> scalar_decoder_;
+  Transformer transformer_;
+  int64_t index_ = 0;
 };
 
 } // namespace MzPeak::Util::Decoders
