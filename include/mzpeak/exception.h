@@ -119,4 +119,19 @@ public:
   ~TypeError() = default;
 };
 
+/**
+ * Failed to allocate memory.
+ */
+class AllocationError final : public Exception {
+public:
+  /// Constructor.
+  AllocationError(const std::string& msg)
+      : Exception(msg)
+  {
+  }
+
+  /// Destructor.
+  ~AllocationError() = default;
+};
+
 } // namespace MzPeak

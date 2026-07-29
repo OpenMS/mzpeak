@@ -136,6 +136,7 @@ libmzpeak_a = static_library(
 
 # Testing
 test_names = [
+    'algorithm',
     'array_index',
     'arrow',
     'directory',
