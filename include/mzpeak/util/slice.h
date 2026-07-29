@@ -55,6 +55,12 @@ public:
 
   /**
    * Decode the first non-null value.
+   *
+   * Template Parameters:
+   *
+   *   - T: The Decoder class to use (see MzPeak::Util::Decoders)
+   *
+   *   - R: The destination object to update with the decoded value
    */
   template <typename T, typename R = std::optional<typename T::value_type>>
   void singleton(const Column&, R&, T&& = {}) const;
@@ -63,6 +69,12 @@ public:
    * Exact and decode an array.
    *
    * Use one of the decoders defined in `decoders.h`, or write your own.
+   *
+   * Template Parameters:
+   *
+   *   - T: The Decoder class to use (see MzPeak::Util::Decoders)
+   *
+   *   - V: The destination object to fill with decoded values
    */
   template <typename T, typename V = std::vector<typename T::value_type>>
     requires Decoders::from_arrow_array<T, V>
