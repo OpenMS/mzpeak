@@ -48,6 +48,12 @@ concept from_arrow_array =
 
 /******************************************************************************/
 /**
+ * Return `true` if the given Arrow array is a `ListArray`.
+ */
+bool is_list_array(const std::shared_ptr<arrow::Array>&);
+
+/******************************************************************************/
+/**
  * A NULL decoder that always skips NULL values.
  */
 template <typename T> struct NullSkip final {
@@ -168,6 +174,12 @@ public:
   /// Decoding function.
   void decode(const std::shared_ptr<arrow::Array>& src, C& dst)
   {
+    if (!is_list_array(src)) {
+      std::string msg("expected an arrow list array but found: ");
+      msg += src->type()->name();
+      throw TypeError(msg);
+    }
+
     std::shared_ptr<arrow::ListArray> casted =
         std::static_pointer_cast<arrow::ListArray>(src);
 

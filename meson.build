@@ -42,6 +42,7 @@ lib_sources = [
   'src/spectra.cpp',
   'src/spectrum.cpp',
   'src/util/arrow.cpp',
+  'src/util/decoders.cpp',
   'src/util/executor.cpp',
   'src/util/manager.cpp',
   'src/util/parquet.cpp',
