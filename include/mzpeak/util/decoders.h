@@ -155,18 +155,32 @@ private:
 /**
  * A decoder where array elements are lists.
  *
- * NULL `ListArray` elements, and NULL elements inside the
- * `ListArray` are skipped.
+ * NULL `ListArray` elements are skipped.
+ *
+ * NULL elements inside the `ListArray` elements are decoded using the
+ * (optionally) provided null decoder.
  */
-template <typename V, typename C = std::vector<V>>
+template <typename V, typename C = std::vector<V>, typename N = NullSkip<V>>
   requires Decoders::scalar_or_container_of<C, V>
 class List final : Helper<List<V, C>> {
 public:
   /// Decodes vectors of type T.
   using value_type = std::vector<V>;
 
+  /// The range or scalar type.
+  using range_type = C;
+
+  /// The null decoder type.
+  using null_decoder_type = N;
+
   /// Constructor.
   List() {}
+
+  // Constructor where you can pass a null decoder to the scalar decoder.
+  List(const null_decoder_type& null_decoder)
+      : scalar_decoder_(null_decoder)
+  {
+  }
 
   /// Destructor.
   ~List() = default;
@@ -188,11 +202,14 @@ public:
         std::shared_ptr<arrow::Array> values(casted->value_slice(i));
         value_type res;
         res.reserve(values->length());
-        Scalar<V, C>().decode(values, res);
+        scalar_decoder_.decode(values, res);
         this->push(dst, res);
       }
     }
   }
+
+private:
+  Scalar<V, C, N> scalar_decoder_;
 };
 
 } // namespace MzPeak::Util::Decoders
