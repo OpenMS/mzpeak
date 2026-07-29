@@ -134,7 +134,11 @@ void Slice::array(const Column& field, V& v, T&& t) const
     std::size_t size{};
 
     for (const auto& chunk : *chunks) {
-      size += chunk->length();
+      if (Decoders::is_list_array(chunk)) {
+        size += std::static_pointer_cast<arrow::ListArray>(chunk)->length();
+      } else {
+        size += chunk->length();
+      }
     }
 
     v.reserve(v.size() + size);
