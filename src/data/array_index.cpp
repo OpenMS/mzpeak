@@ -127,6 +127,7 @@ const ArrayIndex::Entry& ArrayIndex::Dimension::values_entry() const
   // We don't assume the `entries` vector is in an particular order
   // here.
   Entry const* chunk_transform = nullptr;
+  Entry const* chunk_values = nullptr;
 
   for (const auto& entry : entries) {
     switch (entry.buffer_format) {
@@ -137,7 +138,8 @@ const ArrayIndex::Entry& ArrayIndex::Dimension::values_entry() const
     case MzPeak::Schema::BufferFormat::ChunkEnd:
       continue;
     case MzPeak::Schema::BufferFormat::ChunkValues:
-      return entry;
+      chunk_values = &entry;
+      continue;
     case MzPeak::Schema::BufferFormat::ChunkEncoding:
       continue;
     case MzPeak::Schema::BufferFormat::ChunkSecondary:
@@ -148,8 +150,10 @@ const ArrayIndex::Entry& ArrayIndex::Dimension::values_entry() const
     }
   }
 
-  if (chunk_transform != nullptr && !is_main_axis()) {
+  if (chunk_transform != nullptr) {
     return *chunk_transform;
+  } else if (chunk_values != nullptr) {
+    return *chunk_values;
   } else {
     std::string msg("dimension " + name + " lacks a data values column");
     throw InvalidFormatError(msg);
