@@ -229,8 +229,13 @@ struct IdentityTransform {
  *
  *   - The array element itself, as an Arrow Array.
  *
- * The transformer should return a `std::shared_ptr<arrow::Array>`
- * which contains the transformed values that can be decoded.
+ * The transformer can return one of two types:
+ *
+ *   - `std::shared_ptr<arrow::Array>` which contains the transformed
+ *      values that can then be decoded.
+ *
+ *   - A container of decoded values when can be inserted into the
+ *     destination vector and further decoding can be skipped.
  */
 template <typename Value,
           typename Container = std::vector<Value>,
@@ -241,6 +246,10 @@ class Flattened final : Helper<Flattened<Value, Container>> {
 public:
   /// The types of values this decoder can decode.
   using value_type = Value;
+
+  /// The type of return value allowed from transformers.
+  using transform_result_type =
+      std::variant<std::shared_ptr<arrow::Array>, std::shared_ptr<Container>>;
 
   // Constructor where you can pass a null decoder to the scalar decoder.
   Flattened(const NullDecoder& null_decoder, Transformer transformer = {})
@@ -263,9 +272,21 @@ public:
 
     for (int64_t i : std::views::iota(0, casted->length())) {
       if (casted->IsValid(i)) {
-        std::shared_ptr<arrow::Array> values(
-            transformer_(index_, casted->value_slice(i)));
-        scalar_decoder_.decode(values, dst);
+        transform_result_type values(transformer_(index_, casted->value_slice(i)));
+
+        std::visit(
+            [&](auto&& v) -> void {
+              using U = std::decay_t<decltype(v)>;
+
+              if constexpr (std::is_same_v<U, std::shared_ptr<arrow::Array>>) {
+                scalar_decoder_.decode(v, dst);
+              } else if constexpr (std::is_same_v<U, std::shared_ptr<Container>>) {
+                dst.insert(dst.end(), v->begin(), v->end());
+              } else {
+                static_assert(false_type<U>, "invalid transform result");
+              }
+            },
+            values);
       }
     }
 
