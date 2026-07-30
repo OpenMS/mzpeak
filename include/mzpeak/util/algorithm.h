@@ -9,6 +9,7 @@ top-level directory of this repository.
 #pragma once
 
 #include <arrow/array.h>
+#include <arrow/builder.h>
 #include <boost/math/statistics/univariate_statistics.hpp>
 #include <functional>
 #include <iterator>
