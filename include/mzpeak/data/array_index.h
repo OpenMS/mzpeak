@@ -148,6 +148,9 @@ public:
     /// malformed and thus doesn't include any of the expected
     /// entries.
     const Entry& values_entry() const;
+
+    /// Find the first entry with the given buffer format.
+    std::optional<Entry> entry_with(BufferFormat) const;
   };
 
   /// Default constructor.

@@ -157,6 +157,19 @@ const ArrayIndex::Entry& ArrayIndex::Dimension::values_entry() const
 }
 
 /******************************************************************************/
+std::optional<ArrayIndex::Entry>
+ArrayIndex::Dimension::entry_with(BufferFormat format) const
+{
+  auto it = std::ranges::find(entries, format, &ArrayIndex::Entry::buffer_format);
+
+  if (it == entries.end()) {
+    return {};
+  } else {
+    return *it;
+  }
+}
+
+/******************************************************************************/
 ArrayIndex::ArrayIndex(EntityType entity_type, const json::object& obj)
     : entity_type_(entity_type)
     , prefix_(obj.at("prefix").as_string())
