@@ -229,10 +229,14 @@ struct IdentityTransform {
  *
  *   - The array element itself, as an Arrow Array.
  *
- * The transformer can return one of two types:
+ * The transformer can return one of the following types:
  *
  *   - `std::shared_ptr<arrow::Array>` which contains the transformed
  *      values that can then be decoded.
+ *
+ *   - A pair where the first element is a starting value that should
+ *     be inserted into the destination and the second element is an
+ *     Arrow array to decode.
  *
  *   - A container of decoded values when can be inserted into the
  *     destination vector and further decoding can be skipped.
@@ -249,7 +253,9 @@ public:
 
   /// The type of return value allowed from transformers.
   using transform_result_type =
-      std::variant<std::shared_ptr<arrow::Array>, std::shared_ptr<Container>>;
+      std::variant<std::shared_ptr<arrow::Array>,
+                   std::pair<Value, std::shared_ptr<arrow::Array>>,
+                   std::shared_ptr<Container>>;
 
   // Constructor where you can pass a null decoder to the scalar decoder.
   Flattened(const NullDecoder& null_decoder, Transformer transformer = {})
@@ -277,9 +283,13 @@ public:
         std::visit(
             [&](auto&& v) -> void {
               using U = std::decay_t<decltype(v)>;
+              using P = std::pair<Value, std::shared_ptr<arrow::Array>>;
 
               if constexpr (std::is_same_v<U, std::shared_ptr<arrow::Array>>) {
                 scalar_decoder_.decode(v, dst);
+              } else if constexpr (std::is_same_v<U, P>) {
+                dst.push_back(v.first);
+                scalar_decoder_.decode(v.second, dst);
               } else if constexpr (std::is_same_v<U, std::shared_ptr<Container>>) {
                 dst.insert(dst.end(), v->begin(), v->end());
               } else {
