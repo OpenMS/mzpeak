@@ -35,7 +35,7 @@ bool ArrayIndex::Entry::needed_for_decoding() const
   case MzPeak::Schema::BufferFormat::Point:
     return true;
   case MzPeak::Schema::BufferFormat::ChunkStart:
-    return false;
+    return true;
   case MzPeak::Schema::BufferFormat::ChunkEnd:
     return false;
   case MzPeak::Schema::BufferFormat::ChunkValues:
