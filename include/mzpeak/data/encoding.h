@@ -15,6 +15,7 @@ top-level directory of this repository.
 #include "mzpeak/data/array_index.h"
 #include "mzpeak/data/null_marking.h"
 #include "mzpeak/data/signals.h"
+#include "mzpeak/data/transformer/primary.h"
 #include "mzpeak/exception.h"
 #include "mzpeak/schema/psi/data_type.h"
 #include "mzpeak/util/slice.h"
@@ -155,23 +156,30 @@ void Decoder<T>::decode_with_nulls(const ArrayIndex::Dimension& dim,
                                    std::vector<V>& v) const
 {
   const auto& primary_entry = dim.values_entry();
-
-  auto col =
-      signals_->array_index()->entry_column(*signals_->groups(), primary_entry);
+  auto col = signals_->column(primary_entry);
 
   if (!col.has_value()) {
     throw ParquetError("unable to decode dimension, not in schema: " + dim.name);
   }
 
+  auto go = [&](auto&& decoder) -> void { slice_->array(col.value(), v, decoder); };
+
   if (primary_entry.buffer_format == Schema::BufferFormat::Point) {
     auto decoder = Util::Decoders::Scalar<V, std::vector<V>, N>(null_decoder);
-    slice_->array(col.value(), v, decoder);
+    go(decoder);
   } else {
-    auto decoder = Util::Decoders::Flattened<V, std::vector<V>, N>(null_decoder);
-    slice_->array(col.value(), v, decoder);
+    if (dim.is_main_axis()) {
+      using Transformer = Transformer::Primary::Decoder<V>;
+      Transformer transformer(signals_, slice_, dim);
+      auto decoder = Util::Decoders::Flattened<V, std::vector<V>, N, Transformer>(
+          null_decoder, std::move(transformer));
+      go(decoder);
+    } else {
+      // FIXME: Apply necessary transformations on the decoded array.
+      auto decoder = Util::Decoders::Flattened<V, std::vector<V>, N>(null_decoder);
+      go(decoder);
+    }
   }
-
-  // FIXME: Apply necessary transformations on the decoded array.
 }
 
 } // namespace MzPeak::Data::Encoding
