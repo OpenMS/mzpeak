@@ -98,6 +98,9 @@ install_headers([
   'include/mzpeak/util/types.h',
 ], subdir : 'mzpeak')
 
+# Sub-projects:
+numpress = subproject('msnumpress')
+
 # Library and executable targets:
 include = include_directories('include')
 
@@ -120,6 +123,8 @@ deps = [
     dependency('parquet', # Part of Arrow above.
                version : arrow_ver_str,
                required : true),
+
+    numpress.get_variable('msnumpres_cpp_lib_so'),
 ]
 
 libmzpeak_so = library(
