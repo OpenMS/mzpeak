@@ -18,6 +18,7 @@ top-level directory of this repository.
 
 // Forward declarations.
 namespace parquet::schema {
+class Node;
 class GroupNode;
 } // namespace parquet::schema
 
@@ -88,15 +89,9 @@ public:
     index_type absolute_index() const;
 
     /**
-     * The name of this field using underscores to replace spaces and
-     * other special characters.
-     */
-    const std::string& name() const;
-
-    /**
      * The name of this field as recognized by parquet.
      */
-    const std::string& schema_name() const;
+    const std::string& name() const;
 
     /**
      * The structural type this field represents.
@@ -129,7 +124,6 @@ public:
     index_type rel_index_;
     index_type abs_index_;
     std::string schema_name_;
-    std::string clean_name_;
     std::optional<CVType> cv_type_;
     std::optional<CVUnit> cv_unit_;
     std::optional<Util::Type> type_;
@@ -139,6 +133,10 @@ public:
 public:
   /// Fields are stored in a map for quick look-up using their name.
   using field_map_t = std::map<std::string, std::shared_ptr<Field>>;
+
+  /// Constructor for the root group to hold all of the top-level
+  /// columns that are not in a separate struct/group.
+  explicit Group(const parquet::schema::GroupNode&);
 
   /// Constructor from a parquet schema descriptor.
   explicit Group(const parquet::schema::GroupNode&,
@@ -176,8 +174,26 @@ public:
    */
   const field_map_t& fields() const;
 
+  /**
+   * Return true if this is the root group.
+   *
+   * There is only one root group and its fields represent the
+   * top-level columns that are not themselves members of a group or
+   * struct.
+   */
+  bool is_root() const;
+
+  /**
+   * Return a schema path to the given field.  Mostly useful for error
+   * messages.
+   */
+  std::string path(const Field&) const;
+
 private:
+  void make_fields(const parquet::schema::GroupNode& node, index_type offset);
+
   std::string name_;
+  bool is_root_;
   index_type index_;
   field_map_t fields_;
 };

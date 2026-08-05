@@ -23,7 +23,7 @@ using namespace MzPeak::Util;
 /******************************************************************************/
 Spectrum::Spectrum(std::shared_ptr<Table> table, uint64_t index)
     : table_(std::move(table))
-    , group_(table_ == nullptr ? nullptr : table_->group("spectrum"))
+    , group_(table_ == nullptr ? nullptr : table_->group("root"))
     , index_(index)
     , ms_level_()
     , delta_model_()

@@ -119,14 +119,17 @@ std::shared_ptr<arrow::Array>
 Executor::Impl::array(std::shared_ptr<arrow::RecordBatch>& batch,
                       const Schema::Column& field)
 {
-  std::shared_ptr<arrow::Array> col(batch->column(field.first->index()));
-
-  if (col && col->type_id() == arrow::Type::STRUCT) {
-    auto sa = std::static_pointer_cast<arrow::StructArray>(col);
-    return sa->field(field.second->relative_index());
+  if (field.first->is_root()) {
+    return batch->column(field.second->absolute_index());
   } else {
-    throw ParquetError("column not in batch: " + field.first->name() + "." +
-                       field.second->name());
+    std::shared_ptr<arrow::Array> col(batch->column(field.first->index()));
+
+    if (col && col->type_id() == arrow::Type::STRUCT) {
+      auto sa = std::static_pointer_cast<arrow::StructArray>(col);
+      return sa->field(field.second->relative_index());
+    } else {
+      throw ParquetError("column not in batch: " + field.first->path(*field.second));
+    }
   }
 }
 
