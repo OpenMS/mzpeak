@@ -106,12 +106,16 @@ void Parquet::Impl::parse_schema()
   auto root = fmd->schema()->group_node();
   int32_t offset = 0;
 
+  std::shared_ptr<Schema::Group> root_group = std::make_shared<Schema::Group>(*root);
+
+  if (!root_group->fields().empty()) {
+    (*groups_)[root_group->name()] = root_group;
+  }
+
   for (int32_t i : std::views::iota(0, root->field_count())) {
     auto node = root->field(i);
 
-    // TODO: Should we emit a warning if there is a top-level
-    // primitive column?
-    if (node->is_group()) {
+    if (node->is_group() && !node->logical_type()->is_list()) {
       std::shared_ptr<parquet::schema::GroupNode> group =
           std::static_pointer_cast<parquet::schema::GroupNode>(node);
 

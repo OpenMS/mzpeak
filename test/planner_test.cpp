@@ -56,57 +56,22 @@ BOOST_AUTO_TEST_CASE(can_use_two_columns)
   using namespace MzPeak;
   auto index = MzPeak::open("../test/files/small.mzpeak");
 
-  auto entry = std::ranges::find(index.files(), "spectra_metadata.parquet",
+  auto entry = std::ranges::find(index.files(), "spectra_metadata_scans.parquet",
                                  &Schema::File::file_name);
 
   BOOST_TEST((entry != index.files().end()));
 
   auto parquet = index.parquet(*entry);
 
-  auto index_field = parquet->field("scan", "source_index");
+  auto index_field = parquet->field("root", "source_index");
   BOOST_TEST(index_field.has_value());
 
-  auto start_time_field = parquet->field("scan", "scan_start_time");
+  auto start_time_field = parquet->field("root", "scan_start_time");
   BOOST_TEST(start_time_field.has_value());
 
   auto query = Util::Query::Builder(*index_field)
                    .eq<uint64_t>(3)
-                   .and_then(Util::Query::Builder(*start_time_field).gt<float>(0));
-
-  Util::Planner planner = parquet->planner(query);
-
-  auto plan = planner.plan();
-  BOOST_TEST(plan.ranges.size() == 1ul);
-
-  // Ug, this file is too small to exercise the planner.
-  auto first = plan.ranges[0];
-  BOOST_TEST(first.row_group == 0);
-  BOOST_TEST(first.offset == 0);
-  BOOST_TEST(first.length == 48);
-}
-
-/******************************************************************************/
-BOOST_AUTO_TEST_CASE(can_access_multiple_groups)
-{
-  using namespace MzPeak;
-  auto index = MzPeak::open("../test/files/small.mzpeak");
-
-  auto entry = std::ranges::find(index.files(), "spectra_metadata.parquet",
-                                 &Schema::File::file_name);
-
-  BOOST_TEST((entry != index.files().end()));
-
-  auto parquet = index.parquet(*entry);
-
-  auto index_field = parquet->field("scan", "source_index");
-  BOOST_TEST(index_field.has_value());
-
-  auto level_field = parquet->field("spectrum", "ms_level");
-  BOOST_TEST(level_field.has_value());
-
-  auto query = Util::Query::Builder(*index_field)
-                   .eq<uint64_t>(30)
-                   .and_then(Util::Query::Builder(*level_field).ge<uint8_t>(1));
+                   .and_then(Util::Query::Builder(*start_time_field).gt<float>(0.0));
 
   Util::Planner planner = parquet->planner(query);
 

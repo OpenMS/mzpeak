@@ -78,37 +78,10 @@ Group::Field::Field(const std::string_view& column_name,
     : rel_index_(rel_index)
     , abs_index_(abs_index)
     , schema_name_(column_name)
-    , clean_name_(column_name)
     , cv_type_()
     , cv_unit_()
     , type_()
 {
-  using std::operator""sv;
-
-  auto tokens = column_name | std::views::split("_"sv) |
-                std::ranges::to<std::vector<std::string>>();
-
-  if (tokens.size() < 3) {
-    return;
-  }
-
-  auto name_begin = tokens.begin();
-  auto name_end = tokens.end();
-
-  if (*name_begin == "MS" || *name_begin == "UO") {
-    cv_type_ = CVType(*name_begin, *(name_begin + 1));
-    name_begin += 2;
-  }
-
-  auto unit = std::ranges::find_last(name_begin, name_end, "unit"sv);
-
-  if (unit.begin() != name_begin && unit.begin() != name_end &&
-      std::ranges::distance(unit.begin(), name_end) == 3) {
-    cv_unit_ = CVUnit(*(unit.begin() + 1), *(unit.begin() + 2));
-    name_end = unit.begin();
-  }
-
-  clean_name_ = join_(name_begin, name_end);
 }
 
 /******************************************************************************/
@@ -118,10 +91,7 @@ Group::index_type Group::Field::relative_index() const { return rel_index_; }
 Group::index_type Group::Field::absolute_index() const { return abs_index_; }
 
 /******************************************************************************/
-const std::string& Group::Field::name() const { return clean_name_; }
-
-/******************************************************************************/
-const std::string& Group::Field::schema_name() const { return schema_name_; }
+const std::string& Group::Field::name() const { return schema_name_; }
 
 /******************************************************************************/
 Group::Field::Kind Group::Field::kind() const { return kind_; }
@@ -145,36 +115,59 @@ const std::optional<Util::Type>& Group::Field::type() const { return type_; }
 void Group::Field::type(Util::Type type) { type_ = type; }
 
 /******************************************************************************/
+Group::Group(const parquet::schema::GroupNode& node)
+    : name_("root")
+    , is_root_(true)
+    , index_(0)
+    , fields_()
+{
+  // This is the root group so only collect non-group top-level columns.
+  make_fields(node, 0);
+}
+
+/******************************************************************************/
 Group::Group(const parquet::schema::GroupNode& node,
              index_type index,
              index_type offset)
     : name_(node.name())
+    , is_root_(false)
     , index_(index)
     , fields_()
+{
+  make_fields(node, offset);
+}
+
+/******************************************************************************/
+void Group::make_fields(const parquet::schema::GroupNode& node, index_type offset)
 {
   for (index_type i : std::views::iota(0, node.field_count())) {
     auto child = node.field(i);
 
-    std::shared_ptr<Field> field =
-        std::make_shared<Field>(child->name(), i, offset + i);
-
     if (child->is_primitive()) {
+      std::shared_ptr<Field> field =
+          std::make_shared<Field>(child->name(), i, offset + i);
+      fields_[field->name()] = field;
+
       auto prim = std::static_pointer_cast<parquet::schema::PrimitiveNode>(child);
       field->kind_ = Field::Kind::Scalar;
       field->type_ = Util::type_from_parquet(*prim);
-    } else {
+    } else if (child->is_group()) {
       auto grp = std::static_pointer_cast<parquet::schema::GroupNode>(child);
 
-      if (field->name() == "parameters" && grp->logical_type()->is_list()) {
-        field->kind_ = Group::Field::Kind::Params;
-      } else {
+      if (grp->field_count() == 1) {
+        std::shared_ptr<Field> field =
+            std::make_shared<Field>(grp->name(), i, offset + i);
+        fields_[field->name()] = field;
+
         auto grp_type = field_type_from_parquet(grp);
         field->kind_ = grp_type.first;
         field->type_ = grp_type.second;
+
+        if (field->name() == "parameters") {
+          field->kind_ = Group::Field::Kind::Params;
+        }
       }
     }
-
-    fields_[field->name()] = field;
   }
 }
 
@@ -217,5 +210,18 @@ Group::field(const CVType&& cvt) const
 
 /******************************************************************************/
 const Group::field_map_t& Group::fields() const { return fields_; }
+
+/******************************************************************************/
+bool Group::is_root() const { return is_root_; }
+
+/******************************************************************************/
+std::string Group::path(const Field& field) const
+{
+  if (is_root_) {
+    return field.name();
+  } else {
+    return name() + "." + field.name();
+  }
+}
 
 } // namespace MzPeak::Schema

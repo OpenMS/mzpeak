@@ -62,7 +62,7 @@ Query Query::Builder::validate(Query::Predicate&& p) const
 {
   if (!p.dest.second->type().has_value()) {
     std::string msg("cannot query field with unknown type: ");
-    msg += p.dest.first->name() + "." + p.dest.second->name();
+    msg += p.dest.first->path(*p.dest.second);
     throw TypeError(msg);
   }
 
@@ -239,7 +239,7 @@ Trampoline<Query::Result<bool>> EvalHelper<Fn, V>::eval(const Query& query,
         if constexpr (std::is_same_v<T, Query::Predicate>) {
           if (!tree.dest.second->type().has_value()) {
             std::string msg("invalid query on field with unknown data type: ");
-            msg += tree.dest.first->name() + "." + tree.dest.second->name();
+            msg += tree.dest.first->path(*tree.dest.second);
             throw TypeError(msg);
           }
 

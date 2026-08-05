@@ -10,42 +10,7 @@ top-level directory of this repository.
 #include <boost/test/included/unit_test.hpp>
 
 #include "mzpeak/open.h"
-#include "mzpeak/schema/group.h"
 #include "mzpeak/util/parquet.h"
-
-/******************************************************************************/
-BOOST_AUTO_TEST_CASE(can_parse_column_names)
-{
-  using namespace MzPeak::Schema;
-
-  // All components.
-  Group::Field a("MS_1000528_lowest_observed_mz_unit_MS_1000040", 0, 2);
-  BOOST_TEST(a.relative_index() == 0);
-  BOOST_TEST(a.absolute_index() == 2);
-  BOOST_TEST(a.name() == "lowest_observed_mz");
-
-  BOOST_TEST(a.cv_type().has_value());
-  BOOST_TEST((a.cv_type()->code() == "MS"));
-  BOOST_TEST((a.cv_type()->accession() == "1000528"));
-  BOOST_TEST((a.cv_type()->to_string() == "MS:1000528"));
-
-  BOOST_TEST((a.cv_unit().has_value()));
-  BOOST_TEST((a.cv_unit().has_value() && a.cv_unit()->code() == "MS"));
-  BOOST_TEST((a.cv_unit()->accession() == "1000040"));
-
-  // No unit.
-  Group::Field b("MS_1000016_scan_start_time", 0, 0);
-  BOOST_TEST(b.name() == "scan_start_time");
-  BOOST_TEST((b.cv_type().has_value() && b.cv_type()->code() == "MS"));
-  BOOST_TEST((b.cv_type().has_value() && b.cv_type()->accession() == "1000016"));
-  BOOST_TEST((!b.cv_unit().has_value()));
-
-  // Nmae only.
-  Group::Field c("mz", 0, 0);
-  BOOST_TEST(c.name() == "mz");
-  BOOST_TEST(!c.cv_type().has_value());
-  BOOST_TEST(!c.cv_unit().has_value());
-}
 
 /******************************************************************************/
 BOOST_AUTO_TEST_CASE(can_load_all_groups)
@@ -61,9 +26,9 @@ BOOST_AUTO_TEST_CASE(can_load_all_groups)
   auto parquet = mzpeak.parquet(*entry);
 
   auto groups = parquet->groups();
-  BOOST_TEST((groups->size() == 4));
+  BOOST_TEST((groups->size() == 1));
 
-  auto spectrum_index = parquet->field("spectrum", "index");
+  auto spectrum_index = parquet->field("root", "index");
   BOOST_TEST(spectrum_index.has_value());
   BOOST_TEST((spectrum_index->second->type().has_value()));
   BOOST_TEST((spectrum_index->second->type().value() == MzPeak::Util::Type::UInt64));

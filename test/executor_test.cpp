@@ -71,10 +71,10 @@ BOOST_AUTO_TEST_CASE(can_read_uint8_t)
 
   auto parquet = index.parquet(*entry);
 
-  auto index_field = parquet->field("spectrum", "index");
+  auto index_field = parquet->field("root", "index");
   BOOST_TEST(index_field.has_value());
 
-  auto ms_level = parquet->field("spectrum", "ms_level");
+  auto ms_level = parquet->field("root", "ms_level");
   BOOST_TEST(ms_level.has_value());
 
   auto query = Util::Query::Builder(*index_field).eq<uint64_t>(0ul);
