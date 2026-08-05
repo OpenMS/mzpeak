@@ -9,6 +9,7 @@ in the LICENSE file found in the top-level directory of this project.
 #include <boost/test/included/unit_test.hpp>
 
 #include "mzpeak/open.h"
+#include "mzpeak/util/manager.h" // IWYU pragma: keep
 #include "mzpeak/util/parquet.h"
 #include "mzpeak/util/planner.h"
 
@@ -23,7 +24,7 @@ BOOST_AUTO_TEST_CASE(can_locate_correct_rows)
 
   BOOST_TEST((entry != index.files().end()));
 
-  auto parquet = index.parquet(*entry);
+  auto parquet = index.manager()->parquet(*entry);
 
   auto index_field = parquet->field("point", "spectrum_index");
   BOOST_TEST(index_field.has_value());
@@ -61,7 +62,7 @@ BOOST_AUTO_TEST_CASE(can_use_two_columns)
 
   BOOST_TEST((entry != index.files().end()));
 
-  auto parquet = index.parquet(*entry);
+  auto parquet = index.manager()->parquet(*entry);
 
   auto index_field = parquet->field("root", "source_index");
   BOOST_TEST(index_field.has_value());

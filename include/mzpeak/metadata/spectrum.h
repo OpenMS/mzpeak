@@ -13,16 +13,10 @@ top-level directory of this repository.
 #include <vector>
 
 namespace MzPeak::Util {
-class Slice;
-}
-
-namespace MzPeak::Schema {
-class Group;
+class Parquet;
 }
 
 namespace MzPeak::Metadata {
-
-class Table;
 
 /**
  * Metadata from the spectrum table.
@@ -30,10 +24,7 @@ class Table;
 class Spectrum final {
 public:
   /// Constructor.
-  Spectrum(std::shared_ptr<Table>, uint64_t);
-
-  /// Destructor.
-  ~Spectrum() = default;
+  Spectrum(std::unique_ptr<Util::Parquet>, uint64_t);
 
   /**
    * Return the spectrum level (MS:1000511).
@@ -50,10 +41,6 @@ public:
   const std::vector<double>& delta_model() const { return delta_model_; }
 
 private:
-  std::shared_ptr<Table> table_;
-  std::shared_ptr<Schema::Group> group_;
-  uint64_t index_;
-
   std::optional<uint8_t> ms_level_;
   std::vector<double> delta_model_;
 };

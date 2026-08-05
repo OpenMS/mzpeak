@@ -9,6 +9,8 @@ directory of this repository.
 #define BOOST_TEST_MODULE Spectra
 #include <boost/test/included/unit_test.hpp>
 
+#include <ranges>
+
 #include "mzpeak/open.h"
 #include "mzpeak/spectra.h"
 #include "mzpeak/spectrum.h"
