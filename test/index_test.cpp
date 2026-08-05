@@ -13,6 +13,7 @@ directory of this repository.
 
 #include "mzpeak/index.h"
 #include "mzpeak/open.h"
+#include "mzpeak/schema/file.h"
 
 /******************************************************************************/
 BOOST_AUTO_TEST_CASE(can_parse_json)
@@ -26,11 +27,9 @@ BOOST_AUTO_TEST_CASE(can_parse_json)
 BOOST_AUTO_TEST_CASE(is_associated_with)
 {
   auto index = MzPeak::open("../test/files/small.mzpeak");
+
   const auto& files = index.files();
-
-  const auto& spectra = std::ranges::find(files, "spectra_data.parquet",
-                                          &MzPeak::Schema::File::file_name);
-
+  const auto& spectra = index.find("spectra_data.parquet");
   BOOST_TEST((spectra != files.end()), "missing spectra_data.parquet");
 
   auto matches = [&](const auto& other) -> bool {

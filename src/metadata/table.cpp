@@ -56,7 +56,8 @@ std::shared_ptr<Schema::Group> Table::group(const std::string_view& name) const
   auto it = map->find(std::string(name));
 
   if (it == map->end()) {
-    return nullptr;
+    // FIXME: Replace with the InvalidFormat exception.
+    throw ParquetError("schema is missing the " + std::string(name) + " group");
   } else {
     return it->second;
   }

@@ -21,22 +21,18 @@ using namespace MzPeak::Schema;
 using namespace MzPeak::Util;
 
 /******************************************************************************/
-Spectrum::Spectrum(std::shared_ptr<Table> table, uint64_t index)
-    : table_(std::move(table))
-    , group_(table_ == nullptr ? nullptr : table_->group("root"))
-    , index_(index)
-    , ms_level_()
+Spectrum::Spectrum(std::unique_ptr<Util::Parquet> parquet, uint64_t index)
+    : ms_level_()
     , delta_model_()
 {
-  if (table_ == nullptr || group_ == nullptr) {
-    throw ParquetError("metadata file missing or does not have the spectrum group");
-  }
+  Table table(std::move(parquet));
+  std::shared_ptr<Schema::Group> group = table.group("root");
 
   Projection projection;
-  auto level_field = projection.project(group_, Group::CVType("MS", "1000511"));
-  auto delta_field = projection.project(group_, "mz_delta_model");
+  auto level_field = projection.project(group, Group::CVType("MS", "1000511"));
+  auto delta_field = projection.project(group, "mz_delta_model");
 
-  std::unique_ptr<Slice> slice = table_->indexed(index_, group_, projection);
+  std::unique_ptr<Slice> slice = table.indexed(index, group, projection);
 
   if (level_field.has_value()) {
     using ms_level_t = decltype(ms_level_)::value_type;

@@ -10,6 +10,7 @@ top-level directory of this repository.
 #include <boost/test/included/unit_test.hpp>
 
 #include "mzpeak/open.h"
+#include "mzpeak/util/manager.h" // IWYU pragma: keep
 #include "mzpeak/util/parquet.h"
 
 /******************************************************************************/
@@ -18,12 +19,10 @@ BOOST_AUTO_TEST_CASE(can_load_all_groups)
   using namespace MzPeak::Util;
   auto mzpeak = MzPeak::open("../test/files/small.mzpeak");
 
-  auto entry = std::ranges::find(mzpeak.files(), "spectra_metadata.parquet",
-                                 &MzPeak::Schema::File::file_name);
-
+  auto entry = mzpeak.find("spectra_metadata.parquet");
   BOOST_TEST((entry != mzpeak.files().end()));
 
-  auto parquet = mzpeak.parquet(*entry);
+  auto parquet = mzpeak.manager()->parquet(*entry);
 
   auto groups = parquet->groups();
   BOOST_TEST((groups->size() == 1));

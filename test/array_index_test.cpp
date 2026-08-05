@@ -11,6 +11,7 @@ directory of this repository.
 
 #include "mzpeak/data/signals.h"
 #include "mzpeak/open.h"
+#include "mzpeak/util/manager.h"
 
 /******************************************************************************/
 BOOST_AUTO_TEST_CASE(can_get_array_index)
@@ -24,7 +25,7 @@ BOOST_AUTO_TEST_CASE(can_get_array_index)
 
   BOOST_TEST((entry != mzpeak.files().end()));
 
-  auto parquet = mzpeak.parquet(*entry);
+  auto parquet = mzpeak.manager()->parquet(*entry);
   Data::Signals data(std::move(parquet));
   std::shared_ptr<Data::ArrayIndex> index(data.array_index());
 
@@ -73,7 +74,7 @@ BOOST_AUTO_TEST_CASE(can_read_mz_array)
 
   BOOST_TEST((entry != mzpeak.files().end()));
 
-  auto parquet = mzpeak.parquet(*entry);
+  auto parquet = mzpeak.manager()->parquet(*entry);
 
   Data::Signals data(std::move(parquet));
 
