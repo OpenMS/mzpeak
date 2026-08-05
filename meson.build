@@ -96,7 +96,7 @@ install_headers([
 # Library and executable targets:
 include = include_directories('include')
 
-arrow_ver_str = '>=23.0.0'
+arrow_ver_str = '>=24.0.0'
 
 deps = [
     dependency('arrow',
