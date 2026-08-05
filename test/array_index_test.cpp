@@ -31,24 +31,32 @@ BOOST_AUTO_TEST_CASE(can_get_array_index)
   BOOST_TEST(index->prefix() == "point");
   BOOST_TEST(index->entries().size() == 2ul);
 
-  std::optional<Schema::CV> transform_cv(Schema::CV::from_string("MS:1003901"));
-  BOOST_TEST((transform_cv.has_value()));
-  std::optional<Schema::PSI::Transform> transform(transform_cv.value());
+  const auto mz_it = std::ranges::find(index->entries(), "m/z array",
+                                       &Data::ArrayIndex::Entry::array_name);
+  BOOST_TEST((mz_it != index->entries().end()));
 
-  // NOTE: Due to a sort after parsing the index, the m/z array gets
-  // moved to the end of the index.
-  BOOST_TEST((index->entries()[1].array_name == "m/z array"));
-  BOOST_TEST((index->entries()[1].buffer_format == Schema::BufferFormat::Point));
-  BOOST_TEST((index->entries()[1].context == Schema::EntityType::Spectrum));
-  BOOST_TEST((index->entries()[1].path == "point.mz"));
-  BOOST_TEST((index->entries()[1].data_type ==
-              Schema::PSI::DataType(Schema::PSI::DataType::Float64)));
-  BOOST_TEST((index->entries()[1].array_type == Schema::PSI::ArrayType::Mz));
-  BOOST_TEST((index->entries()[1].unit == "MS:1000040"));
-  BOOST_TEST((index->entries()[1].buffer_priority));
-  BOOST_TEST((index->entries()[1].sorting_rank == std::optional{0}));
-  BOOST_TEST((index->entries()[1].data_processing_id == std::nullopt));
-  BOOST_TEST((index->entries()[1].transform == transform));
+  const std::optional<Schema::PSI::Transform> interpolation(
+      Schema::PSI::Transform::ZeroIntensityInterpolation);
+  const Schema::PSI::DataType f64(Schema::PSI::DataType::Float64);
+
+  BOOST_TEST((mz_it->buffer_format == Schema::BufferFormat::Point));
+  BOOST_TEST((mz_it->context == Schema::EntityType::Spectrum));
+  BOOST_TEST((mz_it->path == "point.mz"));
+  BOOST_TEST((mz_it->data_type == f64));
+  BOOST_TEST((mz_it->array_type == Schema::PSI::ArrayType::Mz));
+  BOOST_TEST((mz_it->unit == "MS:1000040"));
+  BOOST_TEST((mz_it->buffer_priority));
+  BOOST_TEST((mz_it->sorting_rank == std::optional{0}));
+  BOOST_TEST((mz_it->data_processing_id == std::nullopt));
+  BOOST_TEST((mz_it->transform == interpolation));
+
+  const auto intensity_it = std::ranges::find(index->entries(), "intensity array",
+                                              &Data::ArrayIndex::Entry::array_name);
+  BOOST_TEST((intensity_it != index->entries().end()));
+
+  const std::optional<Schema::PSI::Transform> trim(
+      Schema::PSI::Transform::ZeroIntensityTrim);
+  BOOST_TEST((intensity_it->transform == trim));
 
   std::size_t count = index->num_entities().value_or(0);
   BOOST_TEST(count == 48ul);
