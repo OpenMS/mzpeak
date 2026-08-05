@@ -30,8 +30,7 @@ BOOST_AUTO_TEST_CASE(can_open_parque)
   }
 
   auto reader = std::move(arrow_reader.ValueOrDie());
-  std::shared_ptr<arrow::Table> table;
-  arrow::Status status = reader->ReadTable(&table);
+  arrow::Result result = reader->ReadTable();
 
-  BOOST_TEST(status.ok(), status.ToString());
+  BOOST_TEST(result.ok(), result.status().ToString());
 }
