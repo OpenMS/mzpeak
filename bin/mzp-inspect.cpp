@@ -40,7 +40,7 @@ int print_array_index(MzPeak::Index& index, const std::string& file)
   if (parquet == nullptr) return 1;
 
   auto fmd = parquet->file_metadata();
-  auto et = parquet->index_file().entity_type;
+  auto et = parquet->index_file().entity_type();
   auto key = MzPeak::Schema::entity_type_to_string(et) + "_array_index";
   auto json = parquet->kv_string(fmd, key);
 

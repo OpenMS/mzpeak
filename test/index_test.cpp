@@ -37,10 +37,10 @@ BOOST_AUTO_TEST_CASE(is_associated_with)
   };
 
   for (const auto& other : files | std::views::filter(matches)) {
-    BOOST_TEST_CONTEXT(spectra->file_name << " should not be associated with "
-                                          << other.file_name)
+    BOOST_TEST_CONTEXT(spectra->file_name()
+                       << " should not be associated with " << other.file_name())
     {
-      BOOST_TEST((other.file_name == "spectra_metadata.parquet"));
+      BOOST_TEST((other.file_name() == "spectra_metadata.parquet"));
     }
   }
 }

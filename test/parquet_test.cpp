@@ -27,7 +27,7 @@ BOOST_AUTO_TEST_CASE(can_get_kv_string)
 
   auto parquet = mzpeak.manager()->parquet(*entry);
   auto fmd = parquet->file_metadata();
-  auto et = parquet->index_file().entity_type;
+  auto et = parquet->index_file().entity_type();
   auto key = MzPeak::Schema::entity_type_to_string(et) + "_array_index";
   auto json = parquet->kv_string(fmd, key);
 
