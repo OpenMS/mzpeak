@@ -16,6 +16,13 @@ directory of this repository.
 namespace MzPeak::Util::Numpress {
 
 /**
+ * The kind of Numpress compression.
+ */
+enum Type {
+  Linear,
+};
+
+/**
  * Decode a vector of bytes into a vector of doubles.
  *
  * The bytes need to be encoded using the MS-Numpress Linear encoding.
