@@ -74,7 +74,7 @@ Manager::find_file(const std::string_view& name) const
 /******************************************************************************/
 std::unique_ptr<Util::Parquet> Manager::parquet(const Schema::File& file) const
 {
-  std::unique_ptr<IO::File> data(archive_->read_file(file.file_name));
+  std::unique_ptr<IO::File> data(archive_->read_file(file.file_name()));
   return std::make_unique<Util::Parquet>(std::move(data), file);
 }
 

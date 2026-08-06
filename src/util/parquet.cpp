@@ -66,7 +66,7 @@ struct Parquet::Impl {
     auto status = reader_builder.Open(std::move(raf));
 
     if (!status.ok()) {
-      std::string msg("while opening file: " + file.file_name + ": ");
+      std::string msg("while opening file: " + file_.file_name() + ": ");
       throw ParquetError(msg + status.ToString());
     }
 
@@ -74,7 +74,7 @@ struct Parquet::Impl {
     status = reader_builder.Build(&reader);
 
     if (!status.ok()) {
-      std::string msg("while reading file: " + file.file_name + ": ");
+      std::string msg("while reading file: " + file_.file_name() + ": ");
       throw ParquetError(msg + status.ToString());
     }
 
@@ -86,7 +86,7 @@ struct Parquet::Impl {
 
   void error(const std::string& error)
   {
-    std::string msg("file accessing " + file_.file_name + ": " + error);
+    std::string msg("file accessing " + file_.file_name() + ": " + error);
     throw ParquetError(msg);
   }
 

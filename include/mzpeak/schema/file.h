@@ -17,13 +17,20 @@ directory of this repository.
 namespace MzPeak::Schema {
 namespace json = boost::json;
 
-struct File {
+/**
+ * A description of a file in the mzPeak archive.
+ */
+class File final {
+public:
+  struct Column {
+    std::string name;
+    std::string path;
+    std::optional<std::string> accession;
+    std::optional<std::string> unit;
+  };
 
   /// Constructor from a file name.
-  explicit File(const std::string& name)
-      : file_name(name)
-  {
-  }
+  explicit File(const std::string& name);
 
   /// Conversion from JSON.
   explicit File(const json::object&);
@@ -34,16 +41,25 @@ struct File {
   bool is_associated_with(const File&) const;
 
   /// Equality operator.
-  bool operator==(const File&) const = default;
+  bool operator==(const File&) const;
 
   /// The name of this file.
-  std::string file_name;
+  const std::string& file_name() const { return file_name_; }
 
   /// This file's data kind.
-  DataKind data_kind = DataKind::Other;
+  DataKind data_kind() const { return data_kind_; }
 
   /// This file's entity type.
-  EntityType entity_type = EntityType::Other;
+  EntityType entity_type() const { return entity_type_; }
+
+  /// Column definitions for this file.
+  const std::vector<Column>& columns() const { return columns_; }
+
+private:
+  std::string file_name_;
+  DataKind data_kind_ = DataKind::Other;
+  EntityType entity_type_ = EntityType::Other;
+  std::vector<Column> columns_;
 };
 
 } // namespace MzPeak::Schema

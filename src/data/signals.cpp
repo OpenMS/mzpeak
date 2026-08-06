@@ -36,7 +36,7 @@ struct Signals::Impl {
 std::shared_ptr<ArrayIndex> Signals::Impl::parse_array_index() const
 {
   Util::Parquet::file_metadata_t fmd(parquet_->file_metadata());
-  EntityType entity_type = parquet_->index_file().entity_type;
+  EntityType entity_type = parquet_->index_file().entity_type();
 
   std::string num_key(Schema::entity_type_to_string(entity_type) + "_count");
   std::optional<std::size_t> num_entities(parquet_->kv_size_t(fmd, num_key));
