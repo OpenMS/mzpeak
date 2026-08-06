@@ -13,6 +13,7 @@ top-level directory of this repository.
 #include <memory>
 #include <ranges>
 
+#include "mzpeak/schema/group.h"
 #include "mzpeak/util/compat.h" // IWYU pragma: keep
 #include "mzpeak/util/types.h"
 
@@ -44,9 +45,50 @@ concept from_arrow_array =
 
 /******************************************************************************/
 /**
- * Return `true` if the given Arrow array is a `ListArray`.
+ * If the given array is a "list of lists" then visit each element of
+ * the outer list.  The given function is called on non-null elements
+ * and given the index to the list element.
+ *
+ * Returns the length of the outer list.
  */
-bool is_list_array(const std::shared_ptr<arrow::Array>&);
+template <typename F> int64_t visit(const std::shared_ptr<arrow::Array>& ary, F f)
+{
+  auto go = [&f]<typename L>(const std::shared_ptr<L>& list) -> int64_t {
+    for (int64_t index : std::views::iota(0, list->length())) {
+      if (list->IsValid(index)) {
+        std::invoke(f, index, list->value_slice(index));
+      }
+    }
+
+    return list->length();
+  };
+
+  auto type = ary->type_id();
+
+  if (type == arrow::Type::LIST) {
+    return go(std::static_pointer_cast<arrow::ListArray>(ary));
+  } else if (type == arrow::Type::FIXED_SIZE_LIST) {
+    return go(std::static_pointer_cast<arrow::FixedSizeListArray>(ary));
+  } else if (type == arrow::Type::LARGE_LIST) {
+    return go(std::static_pointer_cast<arrow::LargeListArray>(ary));
+  } else if (type == arrow::Type::LIST_VIEW) {
+    return go(std::static_pointer_cast<arrow::ListViewArray>(ary));
+  } else if (type == arrow::Type::LARGE_LIST_VIEW) {
+    return go(std::static_pointer_cast<arrow::LargeListViewArray>(ary));
+  } else {
+    std::string msg("expected an arrow list array but found: ");
+    msg += ary->type()->name();
+    throw TypeError(msg);
+  }
+}
+
+/******************************************************************************/
+/**
+ * Try to figure out how many bytes should be reserved to decode the
+ * given array.
+ */
+std::size_t guess_array_length(const Schema::Column&,
+                               const std::shared_ptr<arrow::Array>&);
 
 /******************************************************************************/
 /**
@@ -178,24 +220,12 @@ public:
   /// Decoding function.
   void decode(const std::shared_ptr<arrow::Array>& src, C& dst)
   {
-    if (!is_list_array(src)) {
-      std::string msg("expected an arrow list array but found: ");
-      msg += src->type()->name();
-      throw TypeError(msg);
-    }
-
-    std::shared_ptr<arrow::ListArray> casted =
-        std::static_pointer_cast<arrow::ListArray>(src);
-
-    for (int64_t i : std::views::iota(0, casted->length())) {
-      if (!casted->IsNull(i)) {
-        std::shared_ptr<arrow::Array> values(casted->value_slice(i));
-        value_type res;
-        res.reserve(values->length());
-        scalar_decoder_.decode(values, res);
-        this->push(dst, res);
-      }
-    }
+    visit(src, [&](int64_t, const std::shared_ptr<arrow::Array>& values) {
+      value_type res;
+      res.reserve(values->length());
+      scalar_decoder_.decode(values, res);
+      this->push(dst, res);
+    });
   }
 
 private:
@@ -207,8 +237,8 @@ private:
  * An array transformer that returns its argument unchanged.
  */
 struct IdentityTransform {
-  std::shared_ptr<arrow::Array>&& operator()(int64_t,
-                                             std::shared_ptr<arrow::Array>&& a) const
+  const std::shared_ptr<arrow::Array>&
+  operator()(int64_t, const std::shared_ptr<arrow::Array>& a) const
   {
     return a;
   }
@@ -267,40 +297,27 @@ public:
   /// Decoding function.
   void decode(const std::shared_ptr<arrow::Array>& src, Container& dst)
   {
-    if (!is_list_array(src)) {
-      std::string msg("expected an arrow list array but found: ");
-      msg += src->type()->name();
-      throw TypeError(msg);
-    }
+    index_ += visit(src, [&](int64_t i, const std::shared_ptr<arrow::Array>& elm) {
+      transform_result_type values(transformer_(index_ + i, elm));
 
-    std::shared_ptr<arrow::ListArray> casted =
-        std::static_pointer_cast<arrow::ListArray>(src);
+      std::visit(
+          [&](auto&& v) -> void {
+            using U = std::decay_t<decltype(v)>;
+            using P = std::pair<Value, std::shared_ptr<arrow::Array>>;
 
-    for (int64_t i : std::views::iota(0, casted->length())) {
-      if (casted->IsValid(i)) {
-        transform_result_type values(transformer_(index_, casted->value_slice(i)));
-
-        std::visit(
-            [&](auto&& v) -> void {
-              using U = std::decay_t<decltype(v)>;
-              using P = std::pair<Value, std::shared_ptr<arrow::Array>>;
-
-              if constexpr (std::is_same_v<U, std::shared_ptr<arrow::Array>>) {
-                scalar_decoder_.decode(v, dst);
-              } else if constexpr (std::is_same_v<U, P>) {
-                dst.push_back(v.first);
-                scalar_decoder_.decode(v.second, dst);
-              } else if constexpr (std::is_same_v<U, std::shared_ptr<Container>>) {
-                dst.insert(dst.end(), v->begin(), v->end());
-              } else {
-                static_assert(false_type<U>, "invalid transform result");
-              }
-            },
-            values);
-      }
-    }
-
-    ++index_;
+            if constexpr (std::is_same_v<U, std::shared_ptr<arrow::Array>>) {
+              scalar_decoder_.decode(v, dst);
+            } else if constexpr (std::is_same_v<U, P>) {
+              dst.push_back(v.first);
+              scalar_decoder_.decode(v.second, dst);
+            } else if constexpr (std::is_same_v<U, std::shared_ptr<Container>>) {
+              dst.insert(dst.end(), v->begin(), v->end());
+            } else {
+              static_assert(false_type<U>, "invalid transform result");
+            }
+          },
+          values);
+    });
   }
 
 private:

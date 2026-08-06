@@ -147,23 +147,7 @@ void Slice::array(const Column& field, V& v, T& t) const
     std::size_t size{};
 
     for (const auto& chunk : *chunks) {
-      if (Decoders::is_list_array(chunk)) {
-        // N.B. When decoding lists they often are accompanied by a
-        // starting value (i.e. chunk_start) that must also be
-        // accommodated.
-        //
-        // For example, both delta encoding and "basic" encoding
-        // result in an array that is one element longer than the one
-        // stored in Parquet.
-        //
-        // In the numpress case we'll over-allocate by a small amount.
-        // Perhaps this code needs to be made smarter or moved
-        // somewhere else so it has enough context to decide how many
-        // bytes to allocate.
-        size += std::static_pointer_cast<arrow::ListArray>(chunk)->length() + 1;
-      } else {
-        size += chunk->length();
-      }
+      size += Decoders::guess_array_length(field, chunk);
     }
 
     v.reserve(v.size() + size);
