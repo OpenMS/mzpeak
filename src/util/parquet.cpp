@@ -106,7 +106,8 @@ void Parquet::Impl::parse_schema()
   auto root = fmd->schema()->group_node();
   int32_t offset = 0;
 
-  std::shared_ptr<Schema::Group> root_group = std::make_shared<Schema::Group>(*root);
+  std::shared_ptr<Schema::Group> root_group =
+      std::make_shared<Schema::Group>(*root, file_);
 
   if (!root_group->fields().empty()) {
     (*groups_)[root_group->name()] = root_group;
@@ -120,7 +121,7 @@ void Parquet::Impl::parse_schema()
           std::static_pointer_cast<parquet::schema::GroupNode>(node);
 
       std::shared_ptr<Schema::Group> s =
-          std::make_shared<Schema::Group>(*group, i, offset);
+          std::make_shared<Schema::Group>(*group, file_, i, offset);
       (*groups_)[s->name()] = s;
       offset += group->field_count();
     }
