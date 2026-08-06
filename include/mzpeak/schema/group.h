@@ -14,6 +14,7 @@ top-level directory of this repository.
 #include <string>
 
 #include "mzpeak/schema/cv.h"
+#include "mzpeak/schema/file.h"
 #include "mzpeak/util/types.h"
 
 // Forward declarations.
@@ -136,10 +137,11 @@ public:
 
   /// Constructor for the root group to hold all of the top-level
   /// columns that are not in a separate struct/group.
-  explicit Group(const parquet::schema::GroupNode&);
+  explicit Group(const parquet::schema::GroupNode&, const Schema::File&);
 
   /// Constructor from a parquet schema descriptor.
   explicit Group(const parquet::schema::GroupNode&,
+                 const Schema::File&,
                  index_type index,
                  index_type offset);
 
@@ -190,7 +192,8 @@ public:
   std::string path(const Field&) const;
 
 private:
-  void make_fields(const parquet::schema::GroupNode& node, index_type offset);
+  void
+  make_fields(const parquet::schema::GroupNode&, const Schema::File&, index_type);
 
   std::string name_;
   bool is_root_;

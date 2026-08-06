@@ -17,6 +17,14 @@ top-level directory of this repository.
 namespace MzPeak::Schema {
 
 /******************************************************************************/
+template <typename T> std::optional<T> string_to_cv_child(std::string_view s)
+{
+  return CV::from_string(s).and_then([](const auto& cv) -> std::optional<T> {
+    return T(cv.code(), cv.accession());
+  });
+}
+
+/******************************************************************************/
 // clang doesn't support views::join yet :(
 std::string join_(auto begin, auto end)
 {
@@ -115,18 +123,19 @@ const std::optional<Util::Type>& Group::Field::type() const { return type_; }
 void Group::Field::type(Util::Type type) { type_ = type; }
 
 /******************************************************************************/
-Group::Group(const parquet::schema::GroupNode& node)
+Group::Group(const parquet::schema::GroupNode& node, const Schema::File& file)
     : name_("root")
     , is_root_(true)
     , index_(0)
     , fields_()
 {
   // This is the root group so only collect non-group top-level columns.
-  make_fields(node, 0);
+  make_fields(node, file, 0);
 }
 
 /******************************************************************************/
 Group::Group(const parquet::schema::GroupNode& node,
+             const Schema::File& file,
              index_type index,
              index_type offset)
     : name_(node.name())
@@ -134,19 +143,33 @@ Group::Group(const parquet::schema::GroupNode& node,
     , index_(index)
     , fields_()
 {
-  make_fields(node, offset);
+  make_fields(node, file, offset);
 }
 
 /******************************************************************************/
-void Group::make_fields(const parquet::schema::GroupNode& node, index_type offset)
+void Group::make_fields(const parquet::schema::GroupNode& node,
+                        const Schema::File& file,
+                        index_type offset)
 {
+  auto link = [&](std::shared_ptr<Field>& field) -> void {
+    fields_[field->name()] = field;
+
+    std::string col_path = path(*field);
+    const auto it = std::ranges::find(file.columns(), col_path, &File::Column::path);
+
+    if (it != file.columns().end()) {
+      field->cv_type_ = it->accession.and_then(&string_to_cv_child<CVType>);
+      field->cv_unit_ = it->unit.and_then(&string_to_cv_child<CVUnit>);
+    }
+  };
+
   for (index_type i : std::views::iota(0, node.field_count())) {
     auto child = node.field(i);
 
     if (child->is_primitive()) {
       std::shared_ptr<Field> field =
           std::make_shared<Field>(child->name(), i, offset + i);
-      fields_[field->name()] = field;
+      link(field);
 
       auto prim = std::static_pointer_cast<parquet::schema::PrimitiveNode>(child);
       field->kind_ = Field::Kind::Scalar;
@@ -157,7 +180,7 @@ void Group::make_fields(const parquet::schema::GroupNode& node, index_type offse
       if (grp->field_count() == 1) {
         std::shared_ptr<Field> field =
             std::make_shared<Field>(grp->name(), i, offset + i);
-        fields_[field->name()] = field;
+        link(field);
 
         auto grp_type = field_type_from_parquet(grp);
         field->kind_ = grp_type.first;
