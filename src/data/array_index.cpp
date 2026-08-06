@@ -44,7 +44,7 @@ ArrayIndex::ArrayIndex(EntityType entity_type, const json::object& obj)
 
   if (entries != obj.end() && entries->value().is_array()) {
     auto entries_ary(entries->value().as_array());
-    entries_.reserve(entries_ary.size() + 1);
+    entries_.reserve(entries_ary.size());
 
     for (const auto& entry_obj : entries_ary) {
       if (entry_obj.is_object()) {
