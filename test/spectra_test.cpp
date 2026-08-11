@@ -20,35 +20,54 @@ BOOST_AUTO_TEST_CASE(can_read_spectra)
 {
   using namespace MzPeak;
 
-  auto mzpeak = MzPeak::open("../test/files/small.dir");
-  auto spectra = mzpeak.spectra();
+  auto go = [](const std::string file_name) {
+    auto mzpeak = MzPeak::open("../test/files/" + file_name);
+    auto spectra = mzpeak.spectra();
 
-  BOOST_TEST((spectra.size() == 48));
+    BOOST_TEST_CONTEXT("while using the " << file_name << "file")
+    {
+      BOOST_TEST((spectra.size() == 48));
 
-  auto spectrum = spectra[0];
-  auto mz = spectrum.mz();
+      auto spectrum = spectra[0];
+      auto mz = spectrum.mz();
 
-  BOOST_TEST(mz.size() == 13589);
-  BOOST_TEST(mz[0] == 202.607, boost::test_tools::tolerance(0.001));
-  BOOST_TEST(mz[mz.size() - 1] == 1999.840, boost::test_tools::tolerance(0.001));
+      auto tolerance = boost::test_tools::tolerance(0.001);
 
-  // Test some NULL values.
-  BOOST_TEST(mz[7] == 202.608, boost::test_tools::tolerance(0.001));
-  BOOST_TEST(mz[8] == 202.609, boost::test_tools::tolerance(0.001));
-  BOOST_TEST(mz[14] == 204.761, boost::test_tools::tolerance(0.001));
-  BOOST_TEST(mz[15] == 204.762, boost::test_tools::tolerance(0.001));
+      if (file_name == "small.numpress.mzpeak") {
+        // Some numpress linear values are less precise than their
+        // matching point or delta values.
+        tolerance = boost::test_tools::tolerance(0.1);
+      }
 
-  // The m/z values should be monotonically increasing.
-  for (std::size_t i : std::views::iota(1ul, mz.size())) {
-    BOOST_TEST(mz[i] > mz[i - 1]);
-  }
+      BOOST_TEST(mz.size() == 13589);
+      BOOST_TEST(mz[0] == 202.607, tolerance);
+      BOOST_TEST(mz[mz.size() - 1] == 1999.840, tolerance);
 
-  auto intensity = spectrum.intensity();
-  BOOST_TEST((intensity.size() == mz.size()));
-  BOOST_TEST(intensity[0] == 0.0, boost::test_tools::tolerance(0.001));
-  BOOST_TEST(intensity[1] == 1938.12, boost::test_tools::tolerance(0.001));
-  BOOST_TEST(intensity[intensity.size() - 1] == 0.0,
-             boost::test_tools::tolerance(0.001));
+      // Test some NULL values.
+      BOOST_TEST_REQUIRE(mz[7] == 202.60831, tolerance);
+      BOOST_TEST_REQUIRE(mz[8] == 202.60856, tolerance);
+      BOOST_TEST_REQUIRE(mz[14] == 204.761, tolerance);
+      BOOST_TEST_REQUIRE(mz[15] == 204.762, tolerance);
 
-  BOOST_TEST(spectrum.ms_level() == 1u);
+      // The m/z values should be monotonically increasing.
+      for (std::size_t i : std::views::iota(1ul, mz.size())) {
+        BOOST_TEST_REQUIRE(mz[i] > mz[i - 1]);
+      }
+
+      auto intensity = spectrum.intensity();
+      BOOST_TEST_REQUIRE((intensity.size() == mz.size()));
+      BOOST_TEST_REQUIRE(intensity[0] == 0.0, tolerance);
+      BOOST_TEST_REQUIRE(intensity[1] == 1938.12, tolerance);
+      BOOST_TEST_REQUIRE(intensity[7] == 0.0, tolerance);
+      BOOST_TEST_REQUIRE(intensity[8] == 0.0, tolerance);
+      BOOST_TEST_REQUIRE(intensity[9] == 1422.17, tolerance);
+      BOOST_TEST_REQUIRE(intensity[intensity.size() - 1] == 0.0, tolerance);
+
+      BOOST_TEST_REQUIRE(spectrum.ms_level() == 1u);
+    }
+  };
+
+  go("small.mzpeak");
+  go("small.chunked.mzpeak");
+  go("small.numpress.mzpeak");
 }
