@@ -20,6 +20,20 @@ using decoder =
     std::move_only_function<void(const std::vector<uint8_t>&, std::vector<double>&)>;
 
 /******************************************************************************/
+std::optional<Type> type_from_column_name(const std::string& name)
+{
+  if (name.contains("numpress_linear")) {
+    return Util::Numpress::Linear;
+  } else if (name.contains("numpress_slof")) {
+    return Util::Numpress::SLOF;
+  } else if (name.contains("numpress_pic")) {
+    return Util::Numpress::PIC;
+  } else {
+    return {};
+  }
+}
+
+/******************************************************************************/
 std::size_t decoding_space_needed(std::size_t n, Type t)
 {
   switch (t) {

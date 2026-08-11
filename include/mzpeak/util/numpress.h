@@ -26,6 +26,12 @@ enum Type {
 };
 
 /**
+ * Attempt to infer the numpress method type from the name of a
+ * column.
+ */
+std::optional<Type> type_from_column_name(const std::string&);
+
+/**
  * Return the number of elements that should be reserved in order to
  * decode `n` bytes encoding with `Type` `t`.
  */

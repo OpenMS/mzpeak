@@ -125,11 +125,7 @@ void Group::Field::type(Util::Type type) { type_ = type; }
 /******************************************************************************/
 std::optional<Util::Numpress::Type> Group::Field::possibly_numpress() const
 {
-  if (schema_name_.contains("numpress_linear")) {
-    return Util::Numpress::Linear;
-  } else {
-    return {};
-  }
+  return Util::Numpress::type_from_column_name(schema_name_);
 }
 
 /******************************************************************************/
