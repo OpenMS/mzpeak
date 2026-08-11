@@ -204,13 +204,13 @@ public:
 
 private:
   // The entity type for the entire Parquet file.
-  EntityType entity_type_;
+  EntityType entity_type_ = EntityType::Other;
 
   // Root node.
   std::string prefix_ = "point";
 
   // Layout.
-  Layout layout_;
+  Layout layout_ = Layout::Unknown;
 
   // Entries;
   std::vector<Entry> entries_;
