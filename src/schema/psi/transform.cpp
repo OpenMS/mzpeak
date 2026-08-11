@@ -21,6 +21,10 @@ CV type_to_cv(Transform::Type t)
     return CV("MS", "1003901");
   case Transform::ZeroIntensityInterpolation:
     return CV("MS", "1003902");
+  case Transform::NumpressSLOF:
+    return CV("MS", "1002314");
+  case Transform::NumpressPIC:
+    return CV("MS", "1002313");
   }
 
   std::unreachable();
@@ -34,8 +38,13 @@ Transform::value_type to_value_type(const CV& cv)
       return Transform::ZeroIntensityTrim;
     } else if (cv.accession() == "1003902") {
       return Transform::ZeroIntensityInterpolation;
+    } else if (cv.accession() == "1002314") {
+      return Transform::NumpressSLOF;
+    } else if (cv.accession() == "1002313") {
+      return Transform::NumpressPIC;
     }
   }
+
   return cv;
 }
 
@@ -91,6 +100,10 @@ bool Transform::needs_delta_model() const noexcept
           return false;
         case ZeroIntensityInterpolation:
           return true;
+        case NumpressSLOF:
+          return false;
+        case NumpressPIC:
+          return false;
         }
 
         return {};
