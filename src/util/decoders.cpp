@@ -7,6 +7,7 @@ directory of this repository.
 */
 
 #include "mzpeak/util/decoders.h"
+#include "mzpeak/util/numpress.h"
 
 namespace MzPeak::Util::Decoders {
 
@@ -19,12 +20,7 @@ std::size_t guess_array_length(const Schema::Column& column,
   auto count =
       [&numpress](const std::shared_ptr<arrow::Array>& nums) -> std::size_t {
     if (numpress.has_value()) {
-      switch (numpress.value()) {
-      case Numpress::Linear:
-        return (nums->length() - 8) * 2;
-      }
-
-      std::unreachable();
+      return Numpress::decoding_space_needed(nums->length(), numpress.value());
     } else {
       return static_cast<std::size_t>(nums->length());
     }
