@@ -132,7 +132,23 @@ null_delta_decode(typename type_traits<T>::value_type start,
   };
 
   // N.B.: "The start point is *excluded* from the chunk-values array."
-  append({start});
+  //
+  // If the first value in the list is NULL then the initial starting
+  // value is ignored and the delta starts at 0.  However, if the
+  // first *two* values are NULL then we still treat the starting
+  // point as 0 but add the starting value as the first element in the
+  // results.
+  //
+  // This is due to delta encoding coming after null marking.
+  if (length > 0 && casted->IsNull(0)) {
+    if (length > 1 && casted->IsNull(1)) {
+      append({start});
+    }
+
+    last = {};
+  } else {
+    append({start});
+  }
 
   for (int64_t index : std::views::iota(0, length)) {
     if (casted->IsValid(index)) {
