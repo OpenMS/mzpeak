@@ -8,6 +8,7 @@ directory of this repository.
 
 #pragma once
 
+#include <arrow/builder.h>
 #include <arrow/type_fwd.h>
 #include <boost/type_index.hpp>
 #include <cstdint>
