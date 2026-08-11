@@ -147,6 +147,24 @@ int print_fmd_kv(MzPeak::Index& index,
 }
 
 /******************************************************************************/
+int dump_spectra(MzPeak::Index& index)
+{
+  auto spectra = index.spectra();
+
+  for (std::size_t spectrum_index : std::views::iota(0ul, spectra.size())) {
+    const auto& spectrum = spectra[spectrum_index];
+    const auto& mz = spectrum.mz();
+    const auto& intensity = spectrum.intensity();
+
+    for (std::size_t row : std::views::iota(0ul, mz.size())) {
+      std::println("{},{:.5f},{:.5f}", spectrum_index, mz[row], intensity[row]);
+    }
+  }
+
+  return 0;
+}
+
+/******************************************************************************/
 int main(int argc, char* argv[])
 {
   try {
@@ -168,6 +186,8 @@ int main(int argc, char* argv[])
 
     desc.add_options()("fmd-key", po::value<std::string>(),
                        "Used with --fmdkv to print the value of the given key");
+
+    desc.add_options()("spectra", "Print all m/z and intensity values");
 
     po::positional_options_description pops;
     pops.add("file", 1);
@@ -204,6 +224,8 @@ int main(int argc, char* argv[])
       }
 
       return print_fmd_kv(index, vmap["fmdkv"].as<std::string>(), key);
+    } else if (vmap.count("spectra")) {
+      dump_spectra(index);
     } else {
       std::println("WARN: no command given");
       return 1;

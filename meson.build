@@ -37,13 +37,16 @@ lib_sources = [
   'src/schema/file.cpp',
   'src/schema/group.cpp',
   'src/schema/psi/array_type.cpp',
+  'src/schema/psi/chunk_encoding.cpp',
   'src/schema/psi/data_type.cpp',
   'src/schema/psi/transform.cpp',
   'src/spectra.cpp',
   'src/spectrum.cpp',
   'src/util/arrow.cpp',
+  'src/util/decoders.cpp',
   'src/util/executor.cpp',
   'src/util/manager.cpp',
+  'src/util/numpress.cpp',
   'src/util/parquet.cpp',
   'src/util/planner.cpp',
   'src/util/projection.cpp',
@@ -59,6 +62,8 @@ install_headers([
   'include/mzpeak/data/encoding.h',
   'include/mzpeak/data/null_marking.h',
   'include/mzpeak/data/signals.h',
+  'include/mzpeak/data/transformer/primary.h',
+  'include/mzpeak/data/transformer/secondary.h',
   'include/mzpeak/exception.h',
   'include/mzpeak/index.h',
   'include/mzpeak/io/archive.h',
@@ -75,6 +80,7 @@ install_headers([
   'include/mzpeak/schema/file.h',
   'include/mzpeak/schema/group.h',
   'include/mzpeak/schema/psi/array_type.h',
+  'include/mzpeak/schema/psi/chunk_encoding.h',
   'include/mzpeak/schema/psi/data_type.h',
   'include/mzpeak/schema/psi/transform.h',
   'include/mzpeak/spectra.h',
@@ -87,6 +93,7 @@ install_headers([
   'include/mzpeak/util/enumerable_proxy.h',
   'include/mzpeak/util/executor.h',
   'include/mzpeak/util/manager.h',
+  'include/mzpeak/util/numpress.h',
   'include/mzpeak/util/parquet.h',
   'include/mzpeak/util/planner.h',
   'include/mzpeak/util/projection.h',
@@ -94,6 +101,9 @@ install_headers([
   'include/mzpeak/util/slice.h',
   'include/mzpeak/util/types.h',
 ], subdir : 'mzpeak')
+
+# Sub-projects:
+numpress = subproject('msnumpress')
 
 # Library and executable targets:
 include = include_directories('include')
@@ -117,6 +127,8 @@ deps = [
     dependency('parquet', # Part of Arrow above.
                version : arrow_ver_str,
                required : true),
+
+    numpress.get_variable('msnumpres_cpp_lib_so'),
 ]
 
 libmzpeak_so = library(
@@ -133,6 +145,7 @@ libmzpeak_a = static_library(
 
 # Testing
 test_names = [
+    'algorithm',
     'array_index',
     'arrow',
     'directory',

@@ -8,11 +8,15 @@ top-level directory of this repository.
 
 #pragma once
 
+#include <arrow/array.h>
+#include <arrow/builder.h>
 #include <boost/math/statistics/univariate_statistics.hpp>
 #include <functional>
 #include <iterator>
 #include <ranges>
 #include <vector>
+
+#include "mzpeak/util/types.h"
 
 namespace MzPeak::Util::Algorithm {
 
@@ -76,6 +80,94 @@ template <typename T> T median_delta(const std::vector<T>& values, T or_else)
   if (ds.empty()) return or_else;
 
   return boost::math::statistics::median(ds.begin(), ds.end());
+}
+
+/**
+ * Decode an Arrow array that was encoded with delta encoding.
+ *
+ * Parameters:
+ *
+ *   - start: The excluded starting value.
+ *
+ *   - src: The array to decode.
+ *
+ * Returns a newly allocated array containing the decoded values.
+ * Null values transferred from the source array to the returned array
+ * unchanged.
+ */
+template <Type T>
+std::shared_ptr<arrow::Array>
+null_delta_decode(typename type_traits<T>::value_type start,
+                  const std::shared_ptr<arrow::Array>& src)
+{
+  using ValueType = typename type_traits<T>::value_type;
+  ValueType zero = {};
+
+  std::optional<ValueType> last(start);
+  int64_t length = src->length();
+
+  using Builder = type_traits<T>::builder_type;
+  Builder builder;
+
+  // N.B.: "The start point is *excluded* from the chunk-values array."
+  if (!builder.Reserve(length + 1).ok()) {
+    throw AllocationError("unable to decode delta encoded array");
+  }
+
+  using ArrayType = typename type_traits<T>::array_type;
+  std::shared_ptr<ArrayType> casted = std::static_pointer_cast<ArrayType>(src);
+
+  auto append = [&](const std::optional<ValueType>& v) -> void {
+    arrow::Status status;
+
+    if (v.has_value()) {
+      status = builder.Append(v.value());
+    } else {
+      status = builder.AppendNull();
+    }
+
+    if (!status.ok()) {
+      throw AllocationError("unable to decode delta encoded element");
+    }
+  };
+
+  // N.B.: "The start point is *excluded* from the chunk-values array."
+  //
+  // If the first value in the list is NULL then the initial starting
+  // value is ignored and the delta starts at 0.  However, if the
+  // first *two* values are NULL then we still treat the starting
+  // point as 0 but add the starting value as the first element in the
+  // results.
+  //
+  // This is due to delta encoding coming after null marking.
+  if (length > 0 && casted->IsNull(0)) {
+    if (length > 1 && casted->IsNull(1)) {
+      append({start});
+    }
+
+    last = {};
+  } else {
+    append({start});
+  }
+
+  for (int64_t index : std::views::iota(0, length)) {
+    if (casted->IsValid(index)) {
+      ValueType delta = casted->Value(index);
+      last = last.value_or(zero) + delta;
+      append(last);
+    } else {
+      last = {};
+      append(last);
+    }
+  }
+
+  std::shared_ptr<arrow::Array> result;
+
+  if (!builder.Finish(&result).ok()) {
+    throw AllocationError("failed to decode delta encoded array");
+  }
+
+  return result;
 }
 
 } // namespace MzPeak::Util::Algorithm

@@ -31,6 +31,23 @@ using namespace MzPeak::Schema;
 class ArrayIndex final {
 public:
   /**
+   * How dimensions in the Parquet file are encoded.
+   */
+  enum class Layout {
+    /// Point layout uses one column per dimension.
+    Point,
+
+    /// Chunked layout differentiates between the main axis and
+    /// secondary axes.  Finding the correct column requires the
+    /// `buffer_format` member of the `Entry`.
+    Chunked,
+
+    /// The Parquet file uses an unknown layout and must be decoded
+    /// manually.
+    Unknown,
+  };
+
+  /**
    * A type to describe each entry in the index.
    */
   struct Entry {
@@ -88,6 +105,14 @@ public:
     /// denoted as a CURIE from the PSI-MS controlled vocabulary. Some
     /// values are only usable with the chunked layout.
     std::optional<Schema::PSI::Transform> transform = {};
+
+    /// Return `true` if this entry needs to be projected in a query
+    /// in order to properly decode the dimension it represents.
+    bool needed_for_decoding() const;
+
+    /// Return `true` if this entry stores values for the associated
+    /// dimension.
+    bool is_value_entry() const;
   };
 
   /**
@@ -109,11 +134,23 @@ public:
     /// The index entries that make up this dimension.
     std::vector<Entry> entries;
 
+    /// Is this dimension on the main axis?
+    bool is_main_axis() const;
+
     /// Does this dimension need a delta model for decoding?
     bool needs_delta_model() const;
 
     /// Return an associated Util::Type or throw an exception.
     Util::Type type_or_throw() const;
+
+    /// Return the entry that holds the (possibly encoded) values for
+    /// this dimension.  Throws an exception of the dimension is
+    /// malformed and thus doesn't include any of the expected
+    /// entries.
+    const Entry& values_entry() const;
+
+    /// Find the first entry with the given buffer format.
+    std::optional<Entry> entry_with(BufferFormat) const;
   };
 
   /// Default constructor.
@@ -134,6 +171,11 @@ public:
    * Get the path to the root node.
    */
   const std::string& prefix() const;
+
+  /**
+   * Return the file layout.
+   */
+  Layout layout() const;
 
   /**
    * Get a list of entry definitions.
@@ -162,10 +204,13 @@ public:
 
 private:
   // The entity type for the entire Parquet file.
-  EntityType entity_type_;
+  EntityType entity_type_ = EntityType::Other;
 
   // Root node.
   std::string prefix_ = "point";
+
+  // Layout.
+  Layout layout_ = Layout::Unknown;
 
   // Entries;
   std::vector<Entry> entries_;

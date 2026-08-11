@@ -15,6 +15,7 @@ top-level directory of this repository.
 
 #include "mzpeak/schema/cv.h"
 #include "mzpeak/schema/file.h"
+#include "mzpeak/util/numpress.h"
 #include "mzpeak/util/types.h"
 
 // Forward declarations.
@@ -118,6 +119,12 @@ public:
      * Update the field's data type.
      */
     void type(Util::Type);
+
+    /**
+     * Return the numpress method type if the column name indicates
+     * this is a numpress compressed column of `uint8_t`.
+     */
+    std::optional<Util::Numpress::Type> possibly_numpress() const;
 
   private:
     friend class Group;

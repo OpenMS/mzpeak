@@ -123,6 +123,12 @@ const std::optional<Util::Type>& Group::Field::type() const { return type_; }
 void Group::Field::type(Util::Type type) { type_ = type; }
 
 /******************************************************************************/
+std::optional<Util::Numpress::Type> Group::Field::possibly_numpress() const
+{
+  return Util::Numpress::type_from_column_name(schema_name_);
+}
+
+/******************************************************************************/
 Group::Group(const parquet::schema::GroupNode& node, const Schema::File& file)
     : name_("root")
     , is_root_(true)

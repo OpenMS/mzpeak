@@ -55,6 +55,12 @@ public:
 
   /**
    * Decode the first non-null value.
+   *
+   * Template Parameters:
+   *
+   *   - T: The Decoder class to use (see MzPeak::Util::Decoders)
+   *
+   *   - R: The destination object to update with the decoded value
    */
   template <typename T, typename R = std::optional<typename T::value_type>>
   void singleton(const Column&, R&, T&& = {}) const;
@@ -63,10 +69,21 @@ public:
    * Exact and decode an array.
    *
    * Use one of the decoders defined in `decoders.h`, or write your own.
+   *
+   * Template Parameters:
+   *
+   *   - T: The Decoder class to use (see MzPeak::Util::Decoders)
+   *
+   *   - V: The destination object to fill with decoded values
    */
   template <typename T, typename V = std::vector<typename T::value_type>>
     requires Decoders::from_arrow_array<T, V>
   void array(const Column&, V&, T&& = {}) const;
+
+  /****************************************************************************/
+  template <typename T, typename V = std::vector<typename T::value_type>>
+    requires Decoders::from_arrow_array<T, V>
+  void array(const Column&, V&, T&) const;
 
 private:
   friend class MzPeak::Util::Executor;
@@ -115,6 +132,14 @@ template <typename T, typename V>
   requires Decoders::from_arrow_array<T, V>
 void Slice::array(const Column& field, V& v, T&& t) const
 {
+  array(field, v, t);
+}
+
+/******************************************************************************/
+template <typename T, typename V>
+  requires Decoders::from_arrow_array<T, V>
+void Slice::array(const Column& field, V& v, T& t) const
+{
   std::shared_ptr<Raw> chunks = raw(field);
   if (chunks == nullptr) return;
 
@@ -122,7 +147,7 @@ void Slice::array(const Column& field, V& v, T&& t) const
     std::size_t size{};
 
     for (const auto& chunk : *chunks) {
-      size += chunk->length();
+      size += Decoders::guess_array_length(field, chunk);
     }
 
     v.reserve(v.size() + size);

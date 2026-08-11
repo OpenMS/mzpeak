@@ -13,6 +13,7 @@ top-level directory of this repository.
 #include <memory>
 #include <ranges>
 
+#include "mzpeak/schema/group.h"
 #include "mzpeak/util/compat.h" // IWYU pragma: keep
 #include "mzpeak/util/types.h"
 
@@ -33,10 +34,6 @@ concept scalar_or_container_of =
  * `T` is a type that has a `decode` function that can decode values
  * from an `arrow::Array` and place the result in `R`.  The `R` type
  * can be a container or scalar value.
- *
- * The `decode` function should return `true` to indicate it can
- * continue to decode values.  If it returns `false` the chunk
- * decoding will stop.
  */
 template <typename T, typename R>
 concept from_arrow_array =
@@ -45,6 +42,53 @@ concept from_arrow_array =
     requires(T t, const std::shared_ptr<arrow::Array>& a, R& r) {
       { t.decode(a, r) } -> std::same_as<void>;
     };
+
+/******************************************************************************/
+/**
+ * If the given array is a "list of lists" then visit each element of
+ * the outer list.  The given function is called on non-null elements
+ * and given the index to the list element.
+ *
+ * Returns the length of the outer list.
+ */
+template <typename F> int64_t visit(const std::shared_ptr<arrow::Array>& ary, F f)
+{
+  auto go = [&f]<typename L>(const std::shared_ptr<L>& list) -> int64_t {
+    for (int64_t index : std::views::iota(0, list->length())) {
+      if (list->IsValid(index)) {
+        std::invoke(f, index, list->value_slice(index));
+      }
+    }
+
+    return list->length();
+  };
+
+  auto type = ary->type_id();
+
+  if (type == arrow::Type::LIST) {
+    return go(std::static_pointer_cast<arrow::ListArray>(ary));
+  } else if (type == arrow::Type::FIXED_SIZE_LIST) {
+    return go(std::static_pointer_cast<arrow::FixedSizeListArray>(ary));
+  } else if (type == arrow::Type::LARGE_LIST) {
+    return go(std::static_pointer_cast<arrow::LargeListArray>(ary));
+  } else if (type == arrow::Type::LIST_VIEW) {
+    return go(std::static_pointer_cast<arrow::ListViewArray>(ary));
+  } else if (type == arrow::Type::LARGE_LIST_VIEW) {
+    return go(std::static_pointer_cast<arrow::LargeListViewArray>(ary));
+  } else {
+    std::string msg("expected an arrow list array but found: ");
+    msg += ary->type()->name();
+    throw TypeError(msg);
+  }
+}
+
+/******************************************************************************/
+/**
+ * Try to figure out how many bytes should be reserved to decode the
+ * given array.
+ */
+std::size_t guess_array_length(const Schema::Column&,
+                               const std::shared_ptr<arrow::Array>&);
 
 /******************************************************************************/
 /**
@@ -116,9 +160,6 @@ public:
   {
   }
 
-  /// Destructor.
-  ~Scalar() = default;
-
   /// Decoding function.
   void decode(const std::shared_ptr<arrow::Array>& src, C& dst)
   {
@@ -149,38 +190,140 @@ private:
 /**
  * A decoder where array elements are lists.
  *
- * NULL `ListArray` elements, and NULL elements inside the
- * `ListArray` are skipped.
+ * NULL `ListArray` elements are skipped.
+ *
+ * NULL elements inside the `ListArray` elements are decoded using the
+ * (optionally) provided null decoder.
  */
-template <typename V, typename C = std::vector<V>>
+template <typename V, typename C = std::vector<V>, typename N = NullSkip<V>>
   requires Decoders::scalar_or_container_of<C, V>
 class List final : Helper<List<V, C>> {
 public:
   /// Decodes vectors of type T.
   using value_type = std::vector<V>;
 
+  /// The range or scalar type.
+  using range_type = C;
+
+  /// The null decoder type.
+  using null_decoder_type = N;
+
   /// Constructor.
   List() {}
 
-  /// Destructor.
-  ~List() = default;
+  // Constructor where you can pass a null decoder to the scalar decoder.
+  List(const null_decoder_type& null_decoder)
+      : scalar_decoder_(null_decoder)
+  {
+  }
 
   /// Decoding function.
   void decode(const std::shared_ptr<arrow::Array>& src, C& dst)
   {
-    std::shared_ptr<arrow::ListArray> casted =
-        std::static_pointer_cast<arrow::ListArray>(src);
-
-    for (int64_t i : std::views::iota(0, casted->length())) {
-      if (!casted->IsNull(i)) {
-        std::shared_ptr<arrow::Array> values(casted->value_slice(i));
-        value_type res;
-        res.reserve(values->length());
-        Scalar<V, C>().decode(values, res);
-        this->push(dst, res);
-      }
-    }
+    visit(src, [&](int64_t, const std::shared_ptr<arrow::Array>& values) {
+      value_type res;
+      res.reserve(values->length());
+      scalar_decoder_.decode(values, res);
+      this->push(dst, res);
+    });
   }
+
+private:
+  Scalar<V, C, N> scalar_decoder_;
+};
+
+/******************************************************************************/
+/**
+ * An array transformer that returns its argument unchanged.
+ */
+struct IdentityTransform {
+  const std::shared_ptr<arrow::Array>&
+  operator()(int64_t, const std::shared_ptr<arrow::Array>& a) const
+  {
+    return a;
+  }
+};
+
+/******************************************************************************/
+/**
+ * A decoder that handles array elements that are lists, and the
+ * destination object is a list of scalar values.
+ *
+ * This class can decode null values in the lists, and also transform
+ * the lists using a helper object.  Once use of the transformer
+ * object is to decode delta encoding prior to null decoding.
+ *
+ * Transformers are called with two arguments:
+ *
+ *   - The index of the array element currently being decoded.
+ *
+ *   - The array element itself, as an Arrow Array.
+ *
+ * The transformer can return one of the following types:
+ *
+ *   - `std::shared_ptr<arrow::Array>` which contains the transformed
+ *      values that can then be decoded.
+ *
+ *   - A pair where the first element is a starting value that should
+ *     be inserted into the destination and the second element is an
+ *     Arrow array to decode.
+ *
+ *   - A container of decoded values when can be inserted into the
+ *     destination vector and further decoding can be skipped.
+ */
+template <typename Value,
+          typename Container = std::vector<Value>,
+          typename NullDecoder = NullSkip<Value>,
+          typename Transformer = IdentityTransform>
+  requires Decoders::scalar_or_container_of<Container, Value>
+class Flattened final : Helper<Flattened<Value, Container>> {
+public:
+  /// The types of values this decoder can decode.
+  using value_type = Value;
+
+  /// The type of return value allowed from transformers.
+  using transform_result_type =
+      std::variant<std::shared_ptr<arrow::Array>,
+                   std::pair<Value, std::shared_ptr<arrow::Array>>,
+                   std::shared_ptr<Container>>;
+
+  // Constructor where you can pass a null decoder to the scalar decoder.
+  Flattened(const NullDecoder& null_decoder, Transformer transformer = {})
+      : scalar_decoder_(null_decoder)
+      , transformer_(transformer)
+  {
+  }
+
+  /// Decoding function.
+  void decode(const std::shared_ptr<arrow::Array>& src, Container& dst)
+  {
+    index_ += visit(src, [&](int64_t i, const std::shared_ptr<arrow::Array>& elm) {
+      transform_result_type values(transformer_(index_ + i, elm));
+
+      std::visit(
+          [&](auto&& v) -> void {
+            using U = std::decay_t<decltype(v)>;
+            using P = std::pair<Value, std::shared_ptr<arrow::Array>>;
+
+            if constexpr (std::is_same_v<U, std::shared_ptr<arrow::Array>>) {
+              scalar_decoder_.decode(v, dst);
+            } else if constexpr (std::is_same_v<U, P>) {
+              dst.push_back(v.first);
+              scalar_decoder_.decode(v.second, dst);
+            } else if constexpr (std::is_same_v<U, std::shared_ptr<Container>>) {
+              dst.insert(dst.end(), v->begin(), v->end());
+            } else {
+              static_assert(false_type<U>, "invalid transform result");
+            }
+          },
+          values);
+    });
+  }
+
+private:
+  Scalar<Value, Container, NullDecoder> scalar_decoder_;
+  Transformer transformer_;
+  int64_t index_ = 0;
 };
 
 } // namespace MzPeak::Util::Decoders

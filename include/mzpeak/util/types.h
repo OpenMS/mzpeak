@@ -8,6 +8,7 @@ directory of this repository.
 
 #pragma once
 
+#include <arrow/builder.h>
 #include <arrow/type_fwd.h>
 #include <boost/type_index.hpp>
 #include <cstdint>
@@ -103,6 +104,7 @@ template <> struct type_traits<Type::Int8> {
   using value_type = int8_t;
   using parquet_type = parquet::Int32Type;
   using array_type = arrow::Int8Array;
+  using builder_type = arrow::Int8Builder;
 };
 
 template <> struct type_traits<Type::UInt8> {
@@ -110,6 +112,7 @@ template <> struct type_traits<Type::UInt8> {
   using value_type = uint8_t;
   using parquet_type = parquet::Int32Type;
   using array_type = arrow::UInt8Array;
+  using builder_type = arrow::UInt8Builder;
 };
 
 template <> struct type_traits<Type::Int32> {
@@ -117,6 +120,7 @@ template <> struct type_traits<Type::Int32> {
   using value_type = int32_t;
   using parquet_type = parquet::Int32Type;
   using array_type = arrow::Int32Array;
+  using builder_type = arrow::Int32Builder;
 };
 
 template <> struct type_traits<Type::UInt32> {
@@ -124,6 +128,7 @@ template <> struct type_traits<Type::UInt32> {
   using value_type = uint32_t;
   using parquet_type = parquet::Int32Type;
   using array_type = arrow::UInt32Array;
+  using builder_type = arrow::UInt32Builder;
 };
 
 template <> struct type_traits<Type::Int64> {
@@ -131,6 +136,7 @@ template <> struct type_traits<Type::Int64> {
   using value_type = int64_t;
   using parquet_type = parquet::Int64Type;
   using array_type = arrow::Int64Array;
+  using builder_type = arrow::Int64Builder;
 };
 
 template <> struct type_traits<Type::UInt64> {
@@ -138,6 +144,7 @@ template <> struct type_traits<Type::UInt64> {
   using value_type = uint64_t;
   using parquet_type = parquet::Int64Type;
   using array_type = arrow::UInt64Array;
+  using builder_type = arrow::UInt64Builder;
 };
 
 template <> struct type_traits<Type::Float32> {
@@ -145,6 +152,7 @@ template <> struct type_traits<Type::Float32> {
   using value_type = float;
   using parquet_type = parquet::FloatType;
   using array_type = arrow::FloatArray;
+  using builder_type = arrow::FloatBuilder;
 };
 
 template <> struct type_traits<Type::Float64> {
@@ -152,6 +160,7 @@ template <> struct type_traits<Type::Float64> {
   using value_type = double;
   using parquet_type = parquet::DoubleType;
   using array_type = arrow::DoubleArray;
+  using builder_type = arrow::DoubleBuilder;
 };
 
 template <> struct type_traits<Type::ByteArray> {
@@ -159,6 +168,7 @@ template <> struct type_traits<Type::ByteArray> {
   using value_type = std::string_view;
   using parquet_type = parquet::ByteArrayType;
   using array_type = arrow::StringArray;
+  using builder_type = arrow::StringBuilder;
 };
 
 /******************************************************************************/

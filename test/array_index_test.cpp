@@ -78,8 +78,8 @@ BOOST_AUTO_TEST_CASE(can_read_mz_array)
 
   Data::Signals data(std::move(parquet));
 
-  auto index_field = data.field("spectrum_index");
-  auto mz_column = data.field("mz");
+  auto index_field = data.column("spectrum_index");
+  auto mz_column = data.column("mz");
 
   BOOST_TEST(index_field.has_value());
   BOOST_TEST(mz_column.has_value());

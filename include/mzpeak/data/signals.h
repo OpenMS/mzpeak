@@ -52,11 +52,25 @@ public:
                                       const Util::Query&);
 
   /**
-   * Low-level interface for accessing a group field given its name.
+   * Low-level interface for accessing a column given its name.
    *
    * Useful if you need to manually construct queries.
    */
-  std::optional<Schema::Column> field(const std::string_view&) const;
+  std::optional<Schema::Column> column(const std::string_view&) const;
+
+  /**
+   * Low-level interface for accessing a column given an array index entry.
+   */
+  std::optional<Schema::Column> column(const ArrayIndex::Entry&) const;
+
+  /**
+   * Low-level interface for accessing a column given a dimension and
+   * a buffer format.
+   *
+   * Returns the first matching column.
+   */
+  std::optional<Schema::Column> column(const ArrayIndex::Dimension&,
+                                       Schema::BufferFormat) const;
 
   /**
    * Low-level interface for accessing the schema encoded as a map of
