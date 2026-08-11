@@ -16,6 +16,7 @@ top-level directory of this repository.
 #include "mzpeak/data/null_marking.h"
 #include "mzpeak/data/signals.h"
 #include "mzpeak/data/transformer/primary.h"
+#include "mzpeak/data/transformer/secondary.h"
 #include "mzpeak/exception.h"
 #include "mzpeak/schema/psi/data_type.h"
 #include "mzpeak/util/slice.h"
@@ -175,8 +176,10 @@ void Decoder<T>::decode_with_nulls(const ArrayIndex::Dimension& dim,
           null_decoder, std::move(transformer));
       go(decoder);
     } else {
-      // FIXME: Apply necessary transformations on the decoded array.
-      auto decoder = Util::Decoders::Flattened<V, std::vector<V>, N>(null_decoder);
+      using Transformer = Transformer::Secondary::Decoder<V>;
+      Transformer transformer(dim);
+      auto decoder = Util::Decoders::Flattened<V, std::vector<V>, N, Transformer>(
+          null_decoder, std::move(transformer));
       go(decoder);
     }
   }

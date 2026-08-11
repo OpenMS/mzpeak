@@ -63,6 +63,7 @@ install_headers([
   'include/mzpeak/data/null_marking.h',
   'include/mzpeak/data/signals.h',
   'include/mzpeak/data/transformer/primary.h',
+  'include/mzpeak/data/transformer/secondary.h',
   'include/mzpeak/exception.h',
   'include/mzpeak/index.h',
   'include/mzpeak/io/archive.h',
