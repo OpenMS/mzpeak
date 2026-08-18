@@ -84,8 +84,8 @@ private:
     fs::path path_;
 
   private:
-    Impl& operator=(const Impl&) = default;
-    Impl(const Impl&) = default;
+    Impl& operator=(const Impl&) = delete;
+    Impl(const Impl&) = delete;
   };
 
   std::shared_ptr<Impl> impl_;
