@@ -19,9 +19,9 @@ namespace MzPeak::Schema {
 class CV {
 public:
   /// Constructor.
-  CV(const std::string_view& code, const std::string_view& accession)
-      : code_(std::move(code))
-      , accession_(std::move(accession))
+  CV(std::string_view code, std::string_view accession)
+      : code_(code)
+      , accession_(accession)
   {
   }
 
@@ -29,7 +29,7 @@ public:
   ~CV() = default;
 
   /// Parse a string like "MS:1000511"
-  static std::optional<CV> from_string(const std::string_view&);
+  static std::optional<CV> from_string(std::string_view);
 
   /// Convert this CV term to a string like "MS:1000511"
   std::string to_string() const;

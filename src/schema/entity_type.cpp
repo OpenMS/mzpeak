@@ -29,7 +29,7 @@ std::string entity_type_to_string(EntityType et)
   return "other";
 }
 
-EntityType entity_type_from_string(const std::string_view& s)
+EntityType entity_type_from_string(std::string_view s)
 {
   using enum EntityType;
 

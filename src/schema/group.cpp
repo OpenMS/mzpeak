@@ -80,7 +80,7 @@ field_type_from_parquet(const std::shared_ptr<parquet::schema::GroupNode>& node)
 }
 
 /******************************************************************************/
-Group::Field::Field(const std::string_view& column_name,
+Group::Field::Field(std::string_view column_name,
                     index_type rel_index,
                     index_type abs_index)
     : rel_index_(rel_index)
@@ -208,7 +208,7 @@ Group::index_type Group::index() const { return index_; }
 
 /******************************************************************************/
 std::optional<std::shared_ptr<const Group::Field>>
-Group::field(const std::string_view&& name) const
+Group::field(std::string_view name) const
 {
   auto it = fields_.find(std::string{name});
 

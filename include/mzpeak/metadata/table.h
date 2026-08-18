@@ -31,7 +31,7 @@ public:
    * Return a group with the given name.  If the group does not
    * exist in the schema return `nullptr`.
    */
-  std::shared_ptr<Schema::Group> group(const std::string_view&) const;
+  std::shared_ptr<Schema::Group> group(std::string_view) const;
 
   /**
    * Read all rows from the given group where the index column

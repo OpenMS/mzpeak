@@ -61,6 +61,6 @@ std::string buffer_format_to_string(BufferFormat);
 /**
  * Parse an BufferFormat from a string.
  */
-BufferFormat buffer_format_from_string(const std::string_view&);
+BufferFormat buffer_format_from_string(std::string_view);
 
 } // namespace MzPeak::Schema

@@ -24,7 +24,7 @@ namespace MzPeak::Util {
 
 /******************************************************************************/
 std::optional<std::string> get_kv_string(const Parquet::file_metadata_t& fmd,
-                                         const std::string_view& key)
+                                         std::string_view key)
 {
   auto result(fmd->key_value_metadata()->Get(key));
 
@@ -37,7 +37,7 @@ std::optional<std::string> get_kv_string(const Parquet::file_metadata_t& fmd,
 
 /******************************************************************************/
 std::optional<std::size_t> get_kv_uint(const Parquet::file_metadata_t& fmd,
-                                       const std::string_view& key)
+                                       std::string_view key)
 {
   return get_kv_string(fmd, key).and_then(
       [](const std::string& s) -> std::optional<std::size_t> {
@@ -147,9 +147,8 @@ const std::shared_ptr<Schema::GroupMap>& Parquet::groups() const
 }
 
 /******************************************************************************/
-std::optional<Schema::Column>
-Parquet::field(const std::string_view& group_name,
-               const std::string_view& field_name) const
+std::optional<Schema::Column> Parquet::field(std::string_view group_name,
+                                             std::string_view field_name) const
 {
   auto group_ptr = impl_->groups_->find(std::string{group_name});
   if (group_ptr == impl_->groups_->end()) return {};
@@ -168,14 +167,14 @@ Parquet::file_metadata_t Parquet::file_metadata() const
 
 /******************************************************************************/
 std::optional<std::string> Parquet::kv_string(const file_metadata_t& fmd,
-                                              const std::string_view& key) const
+                                              std::string_view key) const
 {
   return get_kv_string(fmd, key);
 }
 
 /******************************************************************************/
 std::optional<std::size_t> Parquet::kv_size_t(const file_metadata_t& fmd,
-                                              const std::string_view& key) const
+                                              std::string_view key) const
 {
   return get_kv_uint(fmd, key);
 }

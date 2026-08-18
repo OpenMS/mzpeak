@@ -32,8 +32,7 @@ public:
   /**
    * Find a file given its name.
    */
-  std::vector<Schema::File>::const_iterator
-  find_file(const std::string_view& name) const;
+  std::vector<Schema::File>::const_iterator find_file(std::string_view name) const;
 
   /**
    * Open a Parquet file from the mzPeak archive.

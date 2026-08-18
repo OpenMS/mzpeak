@@ -11,7 +11,7 @@ top-level directory of this repository.
 namespace MzPeak::Schema {
 
 /******************************************************************************/
-std::optional<CV> CV::from_string(const std::string_view& s)
+std::optional<CV> CV::from_string(std::string_view s)
 {
   std::string_view::size_type sep_pos = s.find(':');
 

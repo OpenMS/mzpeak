@@ -43,7 +43,7 @@ public:
   /**
    * Project a column using a field name.
    */
-  Result project(const std::shared_ptr<Schema::Group>&, const std::string_view&&);
+  Result project(const std::shared_ptr<Schema::Group>&, std::string_view);
 
   /**
    * Look up a CV type and project that.

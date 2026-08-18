@@ -32,7 +32,7 @@ std::string data_kind_to_string(DataKind dk)
 }
 
 /******************************************************************************/
-DataKind data_kind_from_string(const std::string_view& s)
+DataKind data_kind_from_string(std::string_view s)
 {
   using enum DataKind;
 

@@ -38,7 +38,7 @@ std::string buffer_format_to_string(BufferFormat v)
 }
 
 /******************************************************************************/
-BufferFormat buffer_format_from_string(const std::string_view& s)
+BufferFormat buffer_format_from_string(std::string_view s)
 {
   using enum BufferFormat;
 

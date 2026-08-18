@@ -50,7 +50,7 @@ Table::Table(std::unique_ptr<Util::Parquet> parquet)
 Table::~Table() = default;
 
 /******************************************************************************/
-std::shared_ptr<Schema::Group> Table::group(const std::string_view& name) const
+std::shared_ptr<Schema::Group> Table::group(std::string_view name) const
 {
   const std::shared_ptr<Schema::GroupMap>& map = impl_->parquet_->groups();
   auto it = map->find(std::string(name));
