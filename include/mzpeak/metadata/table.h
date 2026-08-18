@@ -28,8 +28,7 @@ public:
   ~Table();
 
   /**
-   * Return a group with the given name.  If the group does not
-   * exist in the schema return `nullptr`.
+   * Return a group with the given name.
    */
   std::shared_ptr<Schema::Group> group(std::string_view) const;
 

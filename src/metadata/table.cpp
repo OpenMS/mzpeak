@@ -33,7 +33,7 @@ Table::Impl::Impl(std::unique_ptr<Util::Parquet> parquet)
 
   if (file.data_kind() != Schema::DataKind::Metadata) {
     std::string msg("file is not a metadata file: " + file.file_name());
-    throw ParquetError(msg);
+    throw InvalidFormatError(msg);
   }
 }
 
@@ -56,8 +56,8 @@ std::shared_ptr<Schema::Group> Table::group(std::string_view name) const
   auto it = map->find(std::string(name));
 
   if (it == map->end()) {
-    // FIXME: Replace with the InvalidFormat exception.
-    throw ParquetError("schema is missing the " + std::string(name) + " group");
+    throw InvalidFormatError("schema is missing the " + std::string(name) +
+                             " group");
   } else {
     return it->second;
   }
