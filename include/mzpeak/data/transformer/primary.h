@@ -71,7 +71,7 @@ Decoder<T>::Decoder(std::shared_ptr<Signals> signals,
       throw InvalidFormatError(msg);
     }
 
-    slice->array(*column, dest, Util::Decoders::Scalar<U>());
+    slice->array(column.value(), dest, Util::Decoders::Scalar<U>());
   };
 
   // Decode the `chunk_encoding` column.
@@ -86,7 +86,7 @@ Decoder<T>::Decoder(std::shared_ptr<Signals> signals,
       throw InvalidFormatError("invalid chunk encoding CV: " + std::string(s));
     }
 
-    chunk_encoding_.emplace_back(*cv);
+    chunk_encoding_.emplace_back(cv.value());
   }
 
   // Decode the `chunk_start` column.
