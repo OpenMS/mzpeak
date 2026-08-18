@@ -9,6 +9,7 @@ directory of this repository.
 #pragma once
 
 #include <memory>
+#include <string_view>
 #include <vector>
 
 namespace MzPeak {
