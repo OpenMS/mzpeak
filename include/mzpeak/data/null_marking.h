@@ -171,7 +171,8 @@ std::optional<T> Decoder<T, U>::operator()(int64_t index)
     prior_.index = index;
 
     if (range.size() == 1) {
-      prior_.value = array_->Value(range.begin);
+      prior_.value =
+          Decoders::unsafe_array_value<enum_type_v<T>>(array_, range.begin);
       prior_.delta = estimator_.predict(prior_.value);
     } else {
       auto slice = array_->Slice(range.begin, range.size());
@@ -182,7 +183,8 @@ std::optional<T> Decoder<T, U>::operator()(int64_t index)
       Decoders::Scalar<T> decoder;
       decoder.decode(slice, values);
 
-      prior_.value = array_->Value(range.anchor(index));
+      prior_.value =
+          Decoders::unsafe_array_value<enum_type_v<T>>(array_, range.anchor(index));
       prior_.delta = Algorithm::median_delta(values, zero_);
     }
 

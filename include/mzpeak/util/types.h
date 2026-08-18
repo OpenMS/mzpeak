@@ -14,9 +14,11 @@ directory of this repository.
 #include <cstdint>
 #include <optional>
 #include <parquet/types.h>
+#include <type_traits>
 #include <variant>
 
 #include "mzpeak/exception.h"
+#include "mzpeak/util/compat.h" // IWYU pragma: keep
 
 namespace parquet::schema {
 class PrimitiveNode;
@@ -36,7 +38,7 @@ concept supported_type = std::same_as<std::remove_cvref_t<T>, int8_t> ||
                          std::same_as<std::remove_cvref_t<T>, uint64_t> ||
                          std::same_as<std::remove_cvref_t<T>, float> ||
                          std::same_as<std::remove_cvref_t<T>, double> ||
-                         std::same_as<std::remove_cvref_t<T>, std::string_view>;
+                         std::same_as<std::remove_cvref_t<T>, std::string>;
 
 /// A variant that can hold any supported type.
 using any_value_type = std::variant<int8_t,
@@ -47,7 +49,7 @@ using any_value_type = std::variant<int8_t,
                                     uint64_t,
                                     float,
                                     double,
-                                    std::string_view>;
+                                    std::string>;
 
 /// A variant that can hold pairs of any supported type.
 using any_pair_type = std::variant<std::pair<int8_t, int8_t>,
@@ -58,7 +60,7 @@ using any_pair_type = std::variant<std::pair<int8_t, int8_t>,
                                    std::pair<uint64_t, uint64_t>,
                                    std::pair<float, float>,
                                    std::pair<double, double>,
-                                   std::pair<std::string_view, std::string_view>>;
+                                   std::pair<std::string, std::string>>;
 
 /// Enum of supported data types for tracking at run time.
 enum class Type {
@@ -165,7 +167,7 @@ template <> struct type_traits<Type::Float64> {
 
 template <> struct type_traits<Type::ByteArray> {
   static constexpr const char* name = "bytes";
-  using value_type = std::string_view;
+  using value_type = std::string;
   using parquet_type = parquet::ByteArrayType;
   using array_type = arrow::StringArray;
   using builder_type = arrow::StringBuilder;
@@ -209,13 +211,37 @@ template <> struct type_from_value_type<double> {
   static constexpr Type enum_type = Type::Float64;
 };
 
-template <> struct type_from_value_type<std::string_view> {
+template <> struct type_from_value_type<std::string> {
   static constexpr Type enum_type = Type::ByteArray;
 };
 
 /// Helper to use the above map.
 template <supported_type T>
 inline constexpr Type enum_type_v = type_from_value_type<T>::enum_type;
+
+/**
+ * Cast or convert a value from one type (usually Type::parquet_type)
+ * to another (usually Type::value_type).
+ *
+ * This is needed because Parquet/Arrow uses std::string_view for byte
+ * arrays, but that means that the original arrow array needs to
+ * remain resident in memory.  Therefore we need to copy the memory
+ * referenced by a std::string_view into a std::string.
+ */
+template <typename To, typename From> To safe_cast_or_copy(From value)
+{
+  using from_t = std::remove_cvref_t<From>;
+  using to_t = std::remove_cvref_t<To>;
+
+  if constexpr (std::is_convertible_v<From, To>) {
+    return value;
+  } else if constexpr (std::is_same_v<to_t, std::string> &&
+                       std::is_same_v<from_t, parquet::ByteArray>) {
+    return parquet::ByteArrayToString(value);
+  } else {
+    static_assert(false_type<From, To>, "no conversion available");
+  }
+}
 
 /**
  * Return a type for the given parquet node.

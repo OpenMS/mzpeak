@@ -275,14 +275,16 @@ struct ColMinMax final {
     if (index_ != nullptr) {
       using Index = parquet::TypedColumnIndex<P>;
       std::shared_ptr<Index> index = std::static_pointer_cast<Index>(index_);
-      return R(std::make_pair(static_cast<V>(index->min_values()[page_index_]),
-                              static_cast<V>(index->max_values()[page_index_])));
+      V min = safe_cast_or_copy<V>(index->min_values()[page_index_]);
+      V max = safe_cast_or_copy<V>(index->max_values()[page_index_]);
+      return R(std::make_pair(min, max));
     } else if (stats_ != nullptr) {
       using Stats = parquet::TypedStatistics<P>;
       if (!stats_->HasMinMax()) return R::skip();
       std::shared_ptr<Stats> stats = std::static_pointer_cast<Stats>(stats_);
-      return R(std::make_pair(static_cast<V>(stats->min()),
-                              static_cast<V>(stats->max())));
+      V min = safe_cast_or_copy<V>(stats->min());
+      V max = safe_cast_or_copy<V>(stats->max());
+      return R(std::make_pair(min, max));
     } else {
       return R::skip();
     }

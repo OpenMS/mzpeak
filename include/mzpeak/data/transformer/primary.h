@@ -75,7 +75,7 @@ Decoder<T>::Decoder(std::shared_ptr<Signals> signals,
   };
 
   // Decode the `chunk_encoding` column.
-  std::vector<std::string_view> encodings;
+  std::vector<std::string> encodings;
   decode(Schema::BufferFormat::ChunkEncoding, encodings);
   chunk_encoding_.reserve(encodings.size());
 
