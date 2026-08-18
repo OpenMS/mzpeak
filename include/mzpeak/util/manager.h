@@ -9,6 +9,8 @@ directory of this repository.
 #pragma once
 
 #include <memory>
+#include <string_view>
+#include <vector>
 
 #include "mzpeak/io/archive.h"
 #include "mzpeak/schema/file.h"
