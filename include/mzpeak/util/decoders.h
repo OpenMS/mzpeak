@@ -45,6 +45,29 @@ concept from_arrow_array =
 
 /******************************************************************************/
 /**
+ * Read a value from an array without checking bounds or if it is NULL.
+ *
+ * This is needed because Parquet/Arrow uses std::string_view for byte
+ * arrays, but that means that the original arrow array needs to
+ * remain resident in memory.  Therefore we need to copy the memory
+ * referenced by a std::string_view into a std::string.
+ */
+template <Type T>
+type_traits<T>::value_type
+unsafe_array_value(const std::shared_ptr<typename type_traits<T>::array_type>& ary,
+                   int64_t index)
+{
+  using A = type_traits<T>::array_type;
+
+  if constexpr (std::is_same_v<A, arrow::StringArray>) {
+    return ary->GetString(index);
+  } else {
+    return ary->Value(index);
+  }
+}
+
+/******************************************************************************/
+/**
  * If the given array is a "list of lists" then visit each element of
  * the outer list.  The given function is called on non-null elements
  * and given the index to the list element.
@@ -177,7 +200,8 @@ public:
         std::optional<V> value = std::invoke(null_decoder_, i);
         if (value.has_value()) this->push(dst, std::move(*value));
       } else {
-        this->push(dst, std::move(casted->Value(i)));
+        V value = unsafe_array_value<enum_type_v<V>>(casted, i);
+        this->push(dst, std::move(value));
       }
     }
   }

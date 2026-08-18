@@ -77,7 +77,8 @@ Query::Result<Query::value_t> Executor::Impl::ArrayValueHelper::operator()()
   }
 
   auto casted = std::static_pointer_cast<typename type_traits<T>::array_type>(a);
-  return Query::Result<Query::value_t>(casted->Value(row_index_));
+  auto value = Decoders::unsafe_array_value<T>(casted, row_index_);
+  return Query::Result<Query::value_t>(value);
 }
 
 /******************************************************************************/
