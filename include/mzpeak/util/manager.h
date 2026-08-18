@@ -19,7 +19,7 @@ directory of this repository.
 namespace MzPeak::Util {
 
 /**
- * FIXME: Write documentation!
+ * File manager for parquet files.
  */
 class Manager final {
 public:
