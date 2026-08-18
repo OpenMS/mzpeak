@@ -52,14 +52,16 @@ bool Slice::has_column(const Column& column) const
 }
 
 /******************************************************************************/
-std::shared_ptr<Slice::Raw> Slice::raw(const Column& field) const
+std::shared_ptr<Slice::Raw> Slice::raw(const Column& field)
 {
   auto it = impl_->arrays_.find(impl_->key(field));
 
   if (it == impl_->arrays_.end()) {
     return nullptr;
   } else {
-    return it->second;
+    auto sp = it->second;
+    impl_->arrays_.erase(it);
+    return sp;
   }
 }
 

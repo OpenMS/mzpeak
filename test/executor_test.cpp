@@ -47,9 +47,7 @@ BOOST_AUTO_TEST_CASE(can_find_spectrum)
   Util::Executor executor = parquet->executor(projection);
   const auto& slice = executor.execute(plan);
   BOOST_TEST((slice->fields() == projection.get()));
-
-  auto raw = slice->raw(*mz_field);
-  BOOST_TEST((raw != nullptr));
+  BOOST_TEST(slice->has_column(mz_field.value()));
 
   // Decode, dropping null values.
   std::vector<double> mz;
@@ -88,10 +86,9 @@ BOOST_AUTO_TEST_CASE(can_read_uint8_t)
 
   Util::Executor executor = parquet->executor(projection);
   const auto& slice = executor.execute(plan);
-  BOOST_TEST((slice->fields() == projection.get()));
 
-  auto raw = slice->raw(*ms_level);
-  BOOST_TEST((raw != nullptr));
+  BOOST_TEST((slice->fields() == projection.get()));
+  BOOST_TEST(slice->has_column(ms_level.value()));
 
   std::vector<uint8_t> levels;
   slice->array<Util::Decoders::Scalar<uint8_t>>(*ms_level, levels);

@@ -48,13 +48,18 @@ public:
   /**
    * Return the raw array for the given field.
    *
+   * The returned raw array is removed from the internal storage
+   * therefore calling this method again with the same column will
+   * fail.
+   *
    * NOTE: If you request a field that does not exist in the slice
    * this function will return a nullptr.
    */
-  std::shared_ptr<Raw> raw(const Column&) const;
+  std::shared_ptr<Raw> raw(const Column&);
 
   /**
-   * Decode the first non-null value.
+   * Decode the first non-null value from the given column.  The
+   * column is then removed from internal storage.
    *
    * Template Parameters:
    *
@@ -63,10 +68,11 @@ public:
    *   - R: The destination object to update with the decoded value
    */
   template <typename T, typename R = std::optional<typename T::value_type>>
-  void singleton(const Column&, R&, T&& = {}) const;
+  void singleton(const Column&, R&, T&& = {});
 
   /**
-   * Exact and decode an array.
+   * Extract and decode an array.  The array is then removed from the
+   * internal storage.
    *
    * Use one of the decoders defined in `decoders.h`, or write your own.
    *
@@ -78,12 +84,12 @@ public:
    */
   template <typename T, typename V = std::vector<typename T::value_type>>
     requires Decoders::from_arrow_array<T, V>
-  void array(const Column&, V&, T&& = {}) const;
+  void array(const Column&, V&, T&& = {});
 
   /****************************************************************************/
   template <typename T, typename V = std::vector<typename T::value_type>>
     requires Decoders::from_arrow_array<T, V>
-  void array(const Column&, V&, T&) const;
+  void array(const Column&, V&, T&);
 
 private:
   friend class MzPeak::Util::Executor;
@@ -100,7 +106,7 @@ private:
 
 /******************************************************************************/
 template <typename T, typename R>
-void Slice::singleton(const Column& field, R& dst, T&& t) const
+void Slice::singleton(const Column& field, R& dst, T&& t)
 {
   std::shared_ptr<Raw> chunks = raw(field);
 
@@ -130,7 +136,7 @@ void Slice::singleton(const Column& field, R& dst, T&& t) const
 /******************************************************************************/
 template <typename T, typename V>
   requires Decoders::from_arrow_array<T, V>
-void Slice::array(const Column& field, V& v, T&& t) const
+void Slice::array(const Column& field, V& v, T&& t)
 {
   array(field, v, t);
 }
@@ -138,7 +144,7 @@ void Slice::array(const Column& field, V& v, T&& t) const
 /******************************************************************************/
 template <typename T, typename V>
   requires Decoders::from_arrow_array<T, V>
-void Slice::array(const Column& field, V& v, T& t) const
+void Slice::array(const Column& field, V& v, T& t)
 {
   std::shared_ptr<Raw> chunks = raw(field);
   if (chunks == nullptr) return;
