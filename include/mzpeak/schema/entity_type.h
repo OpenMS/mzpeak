@@ -38,6 +38,6 @@ std::string entity_type_to_string(EntityType);
 /**
  * Parse an EntityType from a string view.
  */
-EntityType entity_type_from_string(const std::string_view&);
+EntityType entity_type_from_string(std::string_view);
 
 } // namespace MzPeak::Schema

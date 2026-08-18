@@ -46,6 +46,6 @@ std::string data_kind_to_string(DataKind);
 /**
  * Parse a DataKind from a string view.
  */
-DataKind data_kind_from_string(const std::string_view&);
+DataKind data_kind_from_string(std::string_view);
 
 } // namespace MzPeak::Schema

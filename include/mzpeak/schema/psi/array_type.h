@@ -150,6 +150,6 @@ std::string array_type_to_string(ArrayType);
 /**
  * Parse an ArrayType from a string.
  */
-ArrayType array_type_from_string(const std::string_view&);
+ArrayType array_type_from_string(std::string_view);
 
 } // namespace MzPeak::Schema::PSI

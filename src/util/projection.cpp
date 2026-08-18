@@ -41,7 +41,7 @@ Projection::Result Projection::project(
 
 /******************************************************************************/
 Projection::Result Projection::project(const std::shared_ptr<Schema::Group>& group,
-                                       const std::string_view&& name)
+                                       std::string_view name)
 {
   return project(group, group->field(std::move(name)));
 }

@@ -66,7 +66,7 @@ const std::vector<Schema::File>& Manager::files() const { return files_; }
 
 /******************************************************************************/
 std::vector<Schema::File>::const_iterator
-Manager::find_file(const std::string_view& name) const
+Manager::find_file(std::string_view name) const
 {
   return std::ranges::find(files_, name, &Schema::File::file_name);
 }

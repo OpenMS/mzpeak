@@ -56,7 +56,7 @@ public:
    *
    * Useful if you need to manually construct queries.
    */
-  std::optional<Schema::Column> column(const std::string_view&) const;
+  std::optional<Schema::Column> column(std::string_view) const;
 
   /**
    * Low-level interface for accessing a column given an array index entry.

@@ -73,7 +73,7 @@ public:
     };
 
     /// Constructor from an encoded column name.
-    explicit Field(const std::string_view& column_name,
+    explicit Field(std::string_view column_name,
                    index_type rel_index,
                    index_type abs_index);
 
@@ -171,7 +171,7 @@ public:
    * NOTE: For metadata groups this is the cleaned name, not the raw
    * schema node name.
    */
-  std::optional<std::shared_ptr<const Field>> field(const std::string_view&&) const;
+  std::optional<std::shared_ptr<const Field>> field(std::string_view) const;
 
   /**
    * Find a field given its CV type.

@@ -43,7 +43,7 @@ public:
   /**
    * Find a file in the mzPeak archive with the given name.
    */
-  std::vector<Schema::File>::const_iterator find(const std::string_view&) const;
+  std::vector<Schema::File>::const_iterator find(std::string_view) const;
 
   /**
    * Access the spectra in the file.

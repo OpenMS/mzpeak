@@ -27,8 +27,7 @@ Index::Index(std::unique_ptr<MzPeak::IO::Archive> archive)
 const std::vector<Schema::File>& Index::files() const { return manager_->files(); }
 
 /******************************************************************************/
-std::vector<Schema::File>::const_iterator
-Index::find(const std::string_view& name) const
+std::vector<Schema::File>::const_iterator Index::find(std::string_view name) const
 {
   return manager_->find_file(name);
 }

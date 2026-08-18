@@ -64,7 +64,7 @@ std::string array_type_to_string(ArrayType v)
 }
 
 /******************************************************************************/
-ArrayType array_type_from_string(const std::string_view& s)
+ArrayType array_type_from_string(std::string_view s)
 {
   using enum ArrayType;
 

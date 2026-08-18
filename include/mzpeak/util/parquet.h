@@ -45,8 +45,7 @@ public:
   /**
    * Return a Group and Field matching the given names.
    */
-  std::optional<Schema::Column> field(const std::string_view&,
-                                      const std::string_view&) const;
+  std::optional<Schema::Column> field(std::string_view, std::string_view) const;
 
   /**
    * Access the file metadata.
@@ -57,13 +56,13 @@ public:
    * Fetch a string value from the metadata key-value store.
    */
   std::optional<std::string> kv_string(const file_metadata_t&,
-                                       const std::string_view&) const;
+                                       std::string_view) const;
 
   /**
    * Fetch a std::size_t value from the metadata key-value store.
    */
   std::optional<std::size_t> kv_size_t(const file_metadata_t&,
-                                       const std::string_view&) const;
+                                       std::string_view) const;
 
   /**
    * Directly access the FileReader.  This reference is only valid

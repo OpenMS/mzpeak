@@ -102,7 +102,7 @@ std::size_t Signals::record_count() const
 }
 
 /******************************************************************************/
-std::optional<Schema::Column> Signals::column(const std::string_view& name) const
+std::optional<Schema::Column> Signals::column(std::string_view name) const
 {
   return impl_->parquet_->field(impl_->array_index_->prefix(), name);
 }
