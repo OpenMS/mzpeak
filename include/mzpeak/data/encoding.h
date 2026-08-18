@@ -122,7 +122,6 @@ void Decoder<T>::remap(const ArrayIndex::Dimension& dim, std::vector<V>& v) cons
   } else {
     std::vector<F> tmp;
     decode<F>(dim, tmp);
-    v.reserve(tmp.size());
     v.insert(v.end(), tmp.begin(), tmp.end());
   }
 }
