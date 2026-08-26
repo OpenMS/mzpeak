@@ -35,11 +35,6 @@ public:
   /// Conversion from JSON.
   explicit File(const json::object&);
 
-  /// Return `true` if this file is associated with the given file.
-  /// For example, if this file is a DataArray and the other file is a
-  /// Metadata file with a similar name.
-  bool is_associated_with(const File&) const;
-
   /// Equality operator.
   bool operator==(const File&) const;
 
