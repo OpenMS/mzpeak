@@ -56,7 +56,7 @@ File::File(const std::string& name)
 /******************************************************************************/
 File::File(const json::object& o)
     : file_name_(o.at("name").as_string())
-    , data_kind_(data_kind_from_string(o.at("data_kind").as_string()))
+    , data_kind_(o.at("data_kind").as_string())
     , entity_type_(entity_type_from_string(o.at("entity_type").as_string()))
     , columns_()
 {
