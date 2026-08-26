@@ -72,6 +72,16 @@ Manager::find_file(std::string_view name) const
 }
 
 /******************************************************************************/
+std::vector<Schema::File>::const_iterator
+Manager::find_file(Schema::EntityType et, Schema::DataKind::Type dkt) const
+{
+  return std::ranges::find_if(files_, [&et, &dkt](const auto& file) -> bool {
+    auto type = file.data_kind().type();
+    return file.entity_type() == et && type.has_value() && type.value() == dkt;
+  });
+}
+
+/******************************************************************************/
 std::unique_ptr<Util::Parquet> Manager::parquet(const Schema::File& file) const
 {
   std::unique_ptr<IO::File> data(archive_->read_file(file.file_name()));

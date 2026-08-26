@@ -64,6 +64,7 @@ BOOST_AUTO_TEST_CASE(can_read_spectra)
       BOOST_TEST_REQUIRE(intensity[intensity.size() - 1] == 0.0, tolerance);
 
       BOOST_TEST_REQUIRE(spectrum.ms_level() == 1u);
+      BOOST_TEST_REQUIRE(spectrum.scan_time() == 0.004935, tolerance);
     }
   };
 
