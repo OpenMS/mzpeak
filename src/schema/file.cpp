@@ -68,23 +68,6 @@ File::File(const json::object& o)
 }
 
 /******************************************************************************/
-bool File::is_associated_with(const File& other) const
-{
-  std::string::size_type underscore(file_name_.find("_"));
-  if (underscore == std::string::npos) return false;
-  if (other.file_name_.size() < underscore) return false;
-
-  if (file_name_.compare(0, underscore, other.file_name_, 0, underscore) != 0) {
-    return false;
-  }
-
-  return (data_kind_ == DataKind::DataArray &&
-          other.data_kind_ == DataKind::Metadata) ||
-         (data_kind_ == DataKind::Metadata &&
-          other.data_kind_ == DataKind::DataArray);
-}
-
-/******************************************************************************/
 bool File::operator==(const File& other) const
 {
   return file_name_ == other.file_name_;
