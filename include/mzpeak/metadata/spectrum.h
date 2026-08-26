@@ -40,8 +40,14 @@ public:
    */
   const std::vector<double>& delta_model() const { return delta_model_; }
 
+  /**
+   * The scan time in minutes.
+   */
+  std::optional<double> scan_time() const { return scan_time_; };
+
 private:
   std::optional<uint8_t> ms_level_;
+  std::optional<double> scan_time_;
   std::vector<double> delta_model_;
 };
 

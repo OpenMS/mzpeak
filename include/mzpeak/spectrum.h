@@ -12,6 +12,7 @@ top-level directory of this repository.
 #include <vector>
 
 #include "mzpeak/data/array_index.h"
+#include "mzpeak/metadata/scans.h"
 
 namespace MzPeak {
 
@@ -50,6 +51,22 @@ public:
    */
   uint8_t ms_level() const;
 
+  /**
+   * Scan time in minutes.
+   *
+   * If the scan time was not stored in the spectra metadata then it
+   * will be fetched from the scans array.
+   *
+   * If the scan metadata is also empty then this method will return
+   * 0.0.
+   */
+  double scan_time();
+
+  /**
+   * Return scan details.
+   */
+  const Metadata::Scans& scans();
+
 protected:
   friend class Spectra;
 
@@ -66,6 +83,8 @@ private:
   std::vector<double> mz_;
   std::vector<float> intensity_;
   uint8_t ms_level_;
+  std::optional<double> scan_time_;
+  std::optional<Metadata::Scans> scans_;
 };
 
 } // namespace MzPeak

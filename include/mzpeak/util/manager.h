@@ -34,7 +34,13 @@ public:
   /**
    * Find a file given its name.
    */
-  std::vector<Schema::File>::const_iterator find_file(std::string_view name) const;
+  std::vector<Schema::File>::const_iterator find_file(std::string_view) const;
+
+  /**
+   * Find a file given its `EntityType` and `DataKind`.
+   */
+  std::vector<Schema::File>::const_iterator find_file(Schema::EntityType,
+                                                      Schema::DataKind::Type) const;
 
   /**
    * Open a Parquet file from the mzPeak archive.

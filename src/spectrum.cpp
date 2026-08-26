@@ -30,6 +30,8 @@ Spectrum::Spectrum(uint64_t index,
     , mz_()
     , intensity_()
     , ms_level_(0)
+    , scan_time_()
+    , scans_()
 {
   auto meta_it = manager_->find_file(PRIMARY_METADATA_FILE);
 
@@ -40,6 +42,7 @@ Spectrum::Spectrum(uint64_t index,
 
   Metadata::Spectrum meta(manager_->parquet(*meta_it), index_);
   ms_level_ = meta.ms_level().value_or(0);
+  scan_time_ = meta.scan_time();
 
   Data::Encoding::Decoder<double> decoder(
       std::move(data), std::move(slice),
@@ -65,5 +68,43 @@ const std::vector<float>& Spectrum::intensity() const { return intensity_; }
 
 /******************************************************************************/
 uint8_t Spectrum::ms_level() const { return ms_level_; }
+
+/******************************************************************************/
+double Spectrum::scan_time()
+{
+  if (scan_time_.has_value()) {
+    return scan_time_.value();
+  } else {
+    auto raw = scans().raw();
+
+    if (!raw.scan_start_time.empty()) {
+      scan_time_ = raw.scan_start_time.front();
+      return scan_time_.value();
+    } else {
+      return {};
+    }
+  }
+}
+
+/******************************************************************************/
+const Metadata::Scans& Spectrum::scans()
+{
+  using namespace Schema;
+
+  if (scans_.has_value()) {
+    return scans_.value();
+  } else {
+    auto file = manager_->find_file(EntityType::Spectrum, DataKind::Type::Scans);
+
+    if (file == manager_->files().end()) {
+      // No scans.
+      scans_ = Metadata::Scans();
+      return scans_.value();
+    }
+
+    scans_ = Metadata::Scans(manager_->parquet(*file), index_);
+    return scans_.value();
+  }
+}
 
 } // namespace MzPeak
