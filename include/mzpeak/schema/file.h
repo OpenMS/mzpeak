@@ -57,7 +57,7 @@ public:
 
 private:
   std::string file_name_;
-  DataKind data_kind_ = DataKind::Other;
+  DataKind data_kind_ = DataKind("other");
   EntityType entity_type_ = EntityType::Other;
   std::vector<Column> columns_;
 };
