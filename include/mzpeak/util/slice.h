@@ -71,6 +71,24 @@ public:
   void singleton(const Column&, R&, T&& = {});
 
   /**
+   * A helper function that calls the `singleton` method with the
+   * scalar decoder.
+   */
+  template <typename T> void scalar(const Schema::Column&, T&);
+
+  /// Overload that resets the destination type if column is nullopt.
+  template <typename T> void scalar(const std::optional<Schema::Column>&, T&);
+
+  /**
+   * A helper function that calls the `singleton` method with the list
+   * decoder.
+   */
+  template <typename T> void list(const Schema::Column&, T&);
+
+  /// Overload that resets the destination type if column is nullopt.
+  template <typename T> void list(const std::optional<Schema::Column>&, T&);
+
+  /**
    * Extract and decode an array.  The array is then removed from the
    * internal storage.
    *
@@ -86,10 +104,24 @@ public:
     requires Decoders::from_arrow_array<T, V>
   void array(const Column&, V&, T&& = {});
 
-  /****************************************************************************/
+  /// Override that takes an optional column.
+  template <typename T, typename V = std::vector<typename T::value_type>>
+    requires Decoders::from_arrow_array<T, V>
+  void array(const std::optional<Column>&, V&, T&& = {});
+
+  /// Override that takes a reference to a decoder.
   template <typename T, typename V = std::vector<typename T::value_type>>
     requires Decoders::from_arrow_array<T, V>
   void array(const Column&, V&, T&);
+
+  /**
+   * A helper function that calls `array` with a scalar decoder that
+   * skips null values.
+   */
+  template <typename T> void non_null(const Column&, std::vector<T>&);
+
+  /// Override that takes an optional column.
+  template <typename T> void non_null(const std::optional<Column>&, std::vector<T>&);
 
 private:
   friend class MzPeak::Util::Executor;
@@ -106,7 +138,7 @@ private:
 
 /******************************************************************************/
 template <typename T, typename R>
-void Slice::singleton(const Column& field, R& dst, T&& t)
+void Slice::singleton(const Column& field, R& dst, T&& decoder)
 {
   std::shared_ptr<Raw> chunks = raw(field);
 
@@ -117,11 +149,11 @@ void Slice::singleton(const Column& field, R& dst, T&& t)
           std::shared_ptr<arrow::Array> sliced = chunk->Slice(i, 1);
 
           if constexpr (std::is_same_v<R, typename T::value_type>) {
-            t.decode(sliced, dst);
+            decoder.decode(sliced, dst);
             return;
           } else {
             typename T::value_type val{};
-            t.decode(sliced, val);
+            decoder.decode(sliced, val);
             dst = {std::move(val)};
             return;
           }
@@ -134,11 +166,62 @@ void Slice::singleton(const Column& field, R& dst, T&& t)
 }
 
 /******************************************************************************/
+template <typename T> void Slice::scalar(const Schema::Column& field, T& dst)
+{
+  if constexpr (requires { typename T::value_type; }) {
+    using V = typename T::value_type;
+    singleton<Decoders::Scalar<V, V>, T>(field, dst);
+  } else {
+    singleton<Decoders::Scalar<T, T>, T>(field, dst);
+  }
+}
+
+/******************************************************************************/
+template <typename T>
+void Slice::scalar(const std::optional<Schema::Column>& field, T& dst)
+{
+  if (field.has_value()) {
+    scalar(field.value(), dst);
+  } else {
+    dst = {};
+  }
+}
+
+/******************************************************************************/
+template <typename T> void Slice::list(const Schema::Column& field, T& dst)
+{
+  using V = T::value_type;
+  using D = Decoders::List<V>;
+  singleton<D, T>(field, dst);
+}
+
+/******************************************************************************/
+template <typename T>
+void Slice::list(const std::optional<Schema::Column>& field, T& dst)
+{
+  if (field.has_value()) {
+    list(field.value(), dst);
+  } else {
+    dst = {};
+  }
+}
+
+/******************************************************************************/
 template <typename T, typename V>
   requires Decoders::from_arrow_array<T, V>
 void Slice::array(const Column& field, V& v, T&& t)
 {
   array(field, v, t);
+}
+
+/******************************************************************************/
+template <typename T, typename V>
+  requires Decoders::from_arrow_array<T, V>
+void Slice::array(const std::optional<Column>& field, V& v, T&& t)
+{
+  if (field.has_value()) {
+    array(field.value(), v, t);
+  }
 }
 
 /******************************************************************************/
@@ -161,6 +244,22 @@ void Slice::array(const Column& field, V& v, T& t)
 
   for (const auto& chunk : *chunks) {
     t.decode(chunk, v);
+  }
+}
+
+/******************************************************************************/
+template <typename T> void Slice::non_null(const Column& field, std::vector<T>& dst)
+{
+  using D = Decoders::Scalar<T, std::vector<T>, Decoders::NullSkip<T>>;
+  array<D>(field, dst);
+}
+
+/******************************************************************************/
+template <typename T>
+void Slice::non_null(const std::optional<Column>& field, std::vector<T>& dst)
+{
+  if (field.has_value()) {
+    non_null(field.value(), dst);
   }
 }
 
