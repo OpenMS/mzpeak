@@ -24,7 +24,7 @@ class Scans final {
 public:
   /// Data for all scans.
   struct Raw {
-    std::vector<float> scan_start_time;
+    std::vector<double> scan_start_time;
   };
 
   /// Default constructor;
