@@ -46,6 +46,12 @@ public:
     return code_ == other.code_ && accession_ == other.accession_;
   }
 
+  /// Less than.
+  bool operator<(const CV& other) const
+  {
+    return code_ < other.code_ && accession_ < other.accession_;
+  }
+
 private:
   std::string code_;
   std::string accession_;

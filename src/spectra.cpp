@@ -38,6 +38,18 @@ Spectrum Spectra::fetch(uint64_t index)
       }) |
       std::ranges::to<std::vector<Data::ArrayIndex::Dimension>>();
 
+  // Sort so that arrays with buffer priority come first.
+  std::ranges::sort(dims, [](auto& a, auto& b) {
+    return a.array_type < b.array_type && a.buffer_priority > b.buffer_priority;
+  });
+
+  // Remove duplicates (on buffer priority).
+  const auto to_erase = std::ranges::unique(dims, [](const auto& a, const auto& b) {
+    return a.array_type == b.array_type;
+  });
+
+  dims.erase(to_erase.begin(), to_erase.end());
+
   std::unique_ptr<Util::Slice> slice = data_->select(dims, data_->index().eq(index));
   return Spectrum(index, manager_, data_, dims, std::move(slice));
 }
