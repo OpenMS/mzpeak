@@ -23,7 +23,7 @@ namespace po = boost::program_options;
 std::unique_ptr<MzPeak::Util::Parquet> open_parquet_file(MzPeak::Index& index,
                                                          const std::string& file)
 {
-  auto it = index.find(file);
+  auto it = index.manager()->find_file(file);
 
   if (it == index.files().end()) {
     std::println(stderr, "file \"{}\" is not in the mzPeak file index", file);
@@ -41,7 +41,7 @@ int print_array_index(MzPeak::Index& index, const std::string& file)
 
   auto fmd = parquet->file_metadata();
   auto et = parquet->index_file().entity_type();
-  auto key = MzPeak::Schema::entity_type_to_string(et) + "_array_index";
+  auto key = et.array_index_name();
   auto json = parquet->kv_string(fmd, key);
 
   if (!json.has_value()) {

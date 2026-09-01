@@ -38,10 +38,10 @@ std::shared_ptr<ArrayIndex> Signals::Impl::parse_array_index() const
   Util::Parquet::file_metadata_t fmd(parquet_->file_metadata());
   EntityType entity_type = parquet_->index_file().entity_type();
 
-  std::string num_key(Schema::entity_type_to_string(entity_type) + "_count");
+  std::string num_key(entity_type.metadata_count_key());
   std::optional<std::size_t> num_entities(parquet_->kv_size_t(fmd, num_key));
 
-  std::string index_key(Schema::entity_type_to_string(entity_type) + "_array_index");
+  std::string index_key(entity_type.array_index_name());
   auto index_str(parquet_->kv_string(fmd, index_key));
   if (!index_str.has_value()) throw ParquetError("missing array_index");
 
@@ -131,7 +131,7 @@ const std::shared_ptr<Schema::GroupMap>& Signals::groups() const
 Util::Query::Builder Signals::index() const
 {
   auto entity_type = impl_->array_index_->entity_type();
-  auto field_name = Schema::entity_type_to_string(entity_type) + "_index";
+  auto field_name = entity_type.index_column_name();
   auto index_field = column(field_name);
 
   if (!index_field.has_value()) {

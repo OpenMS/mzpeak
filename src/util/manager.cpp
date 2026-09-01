@@ -73,11 +73,14 @@ Manager::find_file(std::string_view name) const
 
 /******************************************************************************/
 std::vector<Schema::File>::const_iterator
-Manager::find_file(Schema::EntityType et, Schema::DataKind::Type dkt) const
+Manager::find_file(Schema::EntityType::Type et, Schema::DataKind::Type dkt) const
 {
   return std::ranges::find_if(files_, [&et, &dkt](const auto& file) -> bool {
-    auto type = file.data_kind().type();
-    return file.entity_type() == et && type.has_value() && type.value() == dkt;
+    auto et_type = file.entity_type().type();
+    auto dk_type = file.data_kind().type();
+
+    return et_type.has_value() && et_type.value() == et && dk_type.has_value() &&
+           dk_type.value() == dkt;
   });
 }
 

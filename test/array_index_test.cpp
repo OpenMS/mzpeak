@@ -20,8 +20,8 @@ BOOST_AUTO_TEST_CASE(can_get_array_index)
 
   auto mzpeak = MzPeak::open("../test/files/small.mzpeak");
 
-  auto entry = std::ranges::find(mzpeak.files(), Schema::EntityType::Spectrum,
-                                 &Schema::File::entity_type);
+  auto entry = mzpeak.find_file(Schema::EntityType::Type::Spectrum,
+                                Schema::DataKind::DataArray);
 
   BOOST_TEST((entry != mzpeak.files().end()));
 
@@ -41,7 +41,7 @@ BOOST_AUTO_TEST_CASE(can_get_array_index)
   const Schema::PSI::DataType f64(Schema::PSI::DataType::Float64);
 
   BOOST_TEST((mz_it->buffer_format == Schema::BufferFormat::Point));
-  BOOST_TEST((mz_it->context == Schema::EntityType::Spectrum));
+  BOOST_TEST((mz_it->context.type() == Schema::EntityType::Spectrum));
   BOOST_TEST((mz_it->path == "point.mz"));
   BOOST_TEST((mz_it->data_type == f64));
   BOOST_TEST((mz_it->array_type == Schema::PSI::ArrayType::Mz));
@@ -69,8 +69,9 @@ BOOST_AUTO_TEST_CASE(can_read_mz_array)
   using namespace MzPeak;
 
   auto mzpeak = MzPeak::open("../test/files/small.mzpeak");
-  auto entry = std::ranges::find(mzpeak.files(), Schema::EntityType::Spectrum,
-                                 &Schema::File::entity_type);
+
+  auto entry = mzpeak.find_file(Schema::EntityType::Type::Spectrum,
+                                Schema::DataKind::DataArray);
 
   BOOST_TEST((entry != mzpeak.files().end()));
 

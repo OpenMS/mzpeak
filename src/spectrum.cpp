@@ -17,9 +17,6 @@ top-level directory of this repository.
 namespace MzPeak {
 
 /******************************************************************************/
-const static char* PRIMARY_METADATA_FILE = "spectra_metadata.parquet";
-
-/******************************************************************************/
 Spectrum::Spectrum(uint64_t index,
                    std::shared_ptr<Util::Manager> manager,
                    std::shared_ptr<Data::Signals> data,
@@ -33,11 +30,11 @@ Spectrum::Spectrum(uint64_t index,
     , scan_time_()
     , scans_()
 {
-  auto meta_it = manager_->find_file(PRIMARY_METADATA_FILE);
+  auto meta_it =
+      manager_->find_file(Schema::EntityType::Spectrum, Schema::DataKind::Metadata);
 
   if (meta_it == manager_->files().end()) {
-    throw ParquetError("missing necessary mzpeak file: " +
-                       std::string(PRIMARY_METADATA_FILE));
+    throw InvalidFormatError("missing necessary mzpeak file: spectra metadata");
   }
 
   Metadata::Spectrum meta(manager_->parquet(*meta_it), index_);
