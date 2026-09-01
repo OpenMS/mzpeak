@@ -111,4 +111,10 @@ bool DataType::operator==(const DataType& other) const
   return val_ == other.val_ && as_type_ == other.as_type_;
 }
 
+/******************************************************************************/
+bool DataType::operator<(const DataType& other) const
+{
+  return as_type() < other.as_type();
+}
+
 } // namespace MzPeak::Schema::PSI

@@ -128,6 +128,9 @@ public:
     /// The type of elements stored in this dimension.
     Schema::PSI::ArrayType array_type;
 
+    /// Is this the primary dimension for array type?
+    bool buffer_priority;
+
     /// Transformation information for this dimension.
     std::optional<Schema::PSI::Transform> transform;
 

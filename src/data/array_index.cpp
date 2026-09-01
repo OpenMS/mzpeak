@@ -17,6 +17,27 @@ directory of this repository.
 namespace MzPeak::Data {
 
 /******************************************************************************/
+// How to compare entries.  Must match EntryChunkFn below.
+//
+// TODO: Unify these two types.
+struct EntryCmpFn {
+  bool operator()(const ArrayIndex::Entry& a, const ArrayIndex::Entry& b) const
+  {
+    return a.array_name < b.array_name && a.array_type < b.array_type &&
+           a.data_type < b.data_type && a.buffer_priority > b.buffer_priority;
+  }
+};
+
+// How to chunk entries.  Must match EntryCmpFn above.
+struct EntryChunkFn {
+  bool operator()(const ArrayIndex::Entry& a, const ArrayIndex::Entry& b) const
+  {
+    return a.array_name == b.array_name && a.array_type == b.array_type &&
+           a.data_type == b.data_type && a.buffer_priority == b.buffer_priority;
+  }
+};
+
+/******************************************************************************/
 ArrayIndex::Layout group_name_to_layout(const std::string& name)
 {
   if (name == "point") {
@@ -248,7 +269,7 @@ ArrayIndex::ArrayIndex(EntityType entity_type, const json::object& obj)
     }
   }
 
-  std::ranges::sort(entries_, {}, &Entry::array_name);
+  std::ranges::sort(entries_, EntryCmpFn());
 }
 
 /******************************************************************************/
@@ -279,10 +300,7 @@ std::optional<std::size_t> ArrayIndex::num_entities() const { return num_entitie
 std::vector<ArrayIndex::Dimension> ArrayIndex::dimensions() const
 {
   std::vector<std::vector<Entry>> groups =
-      entries_ | std::views::chunk_by([](auto& a, auto& b) {
-        return a.array_name == b.array_name && a.data_type == b.data_type &&
-               a.array_type == b.array_type;
-      }) |
+      entries_ | std::views::chunk_by(EntryChunkFn()) |
       std::ranges::to<std::vector<std::vector<Entry>>>();
 
   std::vector<Dimension> result;
@@ -292,8 +310,8 @@ std::vector<ArrayIndex::Dimension> ArrayIndex::dimensions() const
     if (group.empty()) continue;
     auto& head = group[0];
 
-    result.push_back({head.name, head.data_type, head.array_type, head.transform,
-                      std::move(group)});
+    result.push_back({head.name, head.data_type, head.array_type,
+                      head.buffer_priority, head.transform, std::move(group)});
   }
 
   return result;

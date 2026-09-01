@@ -95,6 +95,9 @@ public:
   /// Equality.
   bool operator==(const DataType& other) const;
 
+  /// Less than (for sorting).
+  bool operator<(const DataType& other) const;
+
 private:
   value_type val_;
   std::optional<Util::Type> as_type_;
