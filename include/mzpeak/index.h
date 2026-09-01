@@ -9,17 +9,14 @@ directory of this repository.
 #pragma once
 
 #include <memory>
-#include <string_view>
 #include <vector>
+
+#include "mzpeak/schema/file.h"
 
 namespace MzPeak {
 
 namespace IO {
 class Archive;
-}
-
-namespace Schema {
-class File;
 }
 
 namespace Util {
@@ -42,9 +39,10 @@ public:
   const std::vector<Schema::File>& files() const;
 
   /**
-   * Find a file in the mzPeak archive with the given name.
+   * Find a file given its `EntityType` and `DataKind`.
    */
-  std::vector<Schema::File>::const_iterator find(std::string_view) const;
+  std::vector<Schema::File>::const_iterator find_file(Schema::EntityType::Type,
+                                                      Schema::DataKind::Type) const;
 
   /**
    * Access the spectra in the file.

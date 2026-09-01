@@ -22,8 +22,8 @@ BOOST_AUTO_TEST_CASE(can_find_spectrum)
   using namespace MzPeak;
   auto index = MzPeak::open("../test/files/small.mzpeak");
 
-  auto entry = std::ranges::find(index.files(), Schema::EntityType::Spectrum,
-                                 &Schema::File::entity_type);
+  auto entry = index.find_file(Schema::EntityType::Type::Spectrum,
+                               Schema::DataKind::DataArray);
 
   BOOST_TEST((entry != index.files().end()));
 

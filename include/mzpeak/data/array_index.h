@@ -62,7 +62,7 @@ public:
     BufferFormat buffer_format = BufferFormat::Point;
 
     /// The entity type this column belongs to.
-    EntityType context = EntityType::Other;
+    EntityType context = EntityType("other");
 
     /// The path from the *root* of the Parquet file's schema to this
     /// column.
@@ -207,7 +207,7 @@ public:
 
 private:
   // The entity type for the entire Parquet file.
-  EntityType entity_type_ = EntityType::Other;
+  EntityType entity_type_ = EntityType("other");
 
   // Root node.
   std::string prefix_ = "point";

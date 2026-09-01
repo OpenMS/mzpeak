@@ -215,7 +215,7 @@ ArrayIndex::ArrayIndex(EntityType entity_type, const json::object& obj)
         entry.array_name = eo.at("array_name").as_string();
         entry.buffer_format =
             buffer_format_from_string(eo.at("buffer_format").as_string());
-        entry.context = entity_type_from_string(eo.at("context").as_string());
+        entry.context = EntityType(eo.at("context").as_string());
         entry.path = eo.at("path").as_string();
         entry.name = entry.path.substr(prefix_.size() + 1);
 

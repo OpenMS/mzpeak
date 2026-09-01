@@ -19,7 +19,7 @@ BOOST_AUTO_TEST_CASE(can_load_all_groups)
   using namespace MzPeak::Util;
   auto mzpeak = MzPeak::open("../test/files/small.mzpeak");
 
-  auto entry = mzpeak.find("spectra_metadata.parquet");
+  auto entry = mzpeak.manager()->find_file("spectra_metadata.parquet");
   BOOST_TEST((entry != mzpeak.files().end()));
 
   auto parquet = mzpeak.manager()->parquet(*entry);

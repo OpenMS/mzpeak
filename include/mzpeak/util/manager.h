@@ -39,7 +39,7 @@ public:
   /**
    * Find a file given its `EntityType` and `DataKind`.
    */
-  std::vector<Schema::File>::const_iterator find_file(Schema::EntityType,
+  std::vector<Schema::File>::const_iterator find_file(Schema::EntityType::Type,
                                                       Schema::DataKind::Type) const;
 
   /**
