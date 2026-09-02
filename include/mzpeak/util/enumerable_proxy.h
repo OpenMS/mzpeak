@@ -101,7 +101,7 @@ public:
         const_cast<Iterator*>(this)->cache_ = std::make_pair<>(n_, fetch_(n_));
         return cache_->second;
       } else {
-        throw InvalidIterator("attempt to dereference an invalid iterator");
+        throw InvalidIteratorError("attempt to dereference an invalid iterator");
       }
     }
 

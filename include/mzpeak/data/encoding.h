@@ -159,7 +159,8 @@ void Decoder<T>::decode_with_nulls(const ArrayIndex::Dimension& dim,
   auto col = signals_->column(primary_entry);
 
   if (!col.has_value()) {
-    throw ParquetError("unable to decode dimension, not in schema: " + dim.name);
+    throw InvalidFormatError("unable to decode dimension, not in schema: " +
+                             dim.name);
   } else if (!slice_->has_column(col.value())) {
     return; // No data to decode so we can exit early.
   }

@@ -8,6 +8,7 @@ directory of this repository.
 
 #include <zip.h>
 
+#include "mzpeak/exception.h"
 #include "mzpeak/io/zip.h"
 
 namespace MzPeak::IO {
@@ -130,7 +131,7 @@ struct Zip::Impl {
     }
 
     m += zip_error_strerror(error_ptr);
-    throw(std::invalid_argument(m));
+    throw(InvalidFormatError(m));
   }
 
   /**************************************************************************/
