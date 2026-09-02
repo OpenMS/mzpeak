@@ -9,6 +9,7 @@ top-level directory of this repository.
 #pragma once
 
 #include <any>
+#include <boost/compat/function_ref.hpp>
 #include <functional>
 #include <variant>
 
@@ -192,12 +193,14 @@ public:
 
   /// A function that when given an column type, should return a single value.
   /// If this isn't possible it should return `Result<value_t>::skip()`.
-  using eval_callback_t = std::function<Result<value_t>(Schema::Column)>;
+  using eval_callback_t =
+      boost::compat::function_ref<Result<value_t>(Schema::Column)>;
 
   /// A func ion that when given an column type should return a min
   /// and max.  If this isn't possible it should return
   /// `Result<range_t>::skip()`.
-  using eval_range_callback_t = std::function<Result<range_t>(Schema::Column)>;
+  using eval_range_callback_t =
+      boost::compat::function_ref<Result<range_t>(Schema::Column)>;
 
   /**
    * Evaluate a query.
