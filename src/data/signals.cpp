@@ -43,7 +43,7 @@ std::shared_ptr<ArrayIndex> Signals::Impl::parse_array_index() const
 
   std::string index_key(entity_type.array_index_name());
   auto index_str(parquet_->kv_string(fmd, index_key));
-  if (!index_str.has_value()) throw ParquetError("missing array_index");
+  if (!index_str.has_value()) throw InvalidFormatError("missing array_index");
 
   namespace json = boost::json;
   boost::system::error_code ec;
@@ -98,7 +98,7 @@ std::size_t Signals::record_count() const
   // }
 
   // FIXME: Should we scan the file at this point?
-  throw ParquetError("no num_entities cache and no column statistics!");
+  throw InvalidFormatError("no num_entities cache and no column statistics!");
 }
 
 /******************************************************************************/
@@ -135,7 +135,8 @@ Util::Query::Builder Signals::index() const
   auto index_field = column(field_name);
 
   if (!index_field.has_value()) {
-    throw ParquetError("parquet file is missing the index column: " + field_name);
+    throw InvalidFormatError("parquet file is missing the index column: " +
+                             field_name);
   }
 
   return Util::Query::Builder(index_field.value());
@@ -155,7 +156,7 @@ Signals::select(const std::vector<ArrayIndex::Dimension>& projection,
       auto field =
           impl_->array_index_->entry_column(*impl_->parquet_->groups(), entry);
       if (!field.has_value()) {
-        throw ParquetError("array entry not present in schema: " + entry.name);
+        throw InvalidFormatError("array entry not present in schema: " + entry.name);
       } else {
         columns.project(field.value());
       }

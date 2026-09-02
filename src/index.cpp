@@ -39,7 +39,7 @@ Spectra Index::spectra() const
   auto data_it = manager_->find_file("spectra_data.parquet");
 
   if (data_it == manager_->files().end()) {
-    throw ParquetError("missing files: spectra_data.parquet");
+    throw InvalidFormatError("missing files: spectra_data.parquet");
   }
 
   std::unique_ptr<Data::Signals> data =

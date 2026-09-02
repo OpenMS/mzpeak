@@ -142,7 +142,7 @@ std::optional<T> Decoder<T, U>::operator()(int64_t index)
 {
   // Sanity check.
   if (array_ == nullptr) {
-    throw("FIXME: assertion failed");
+    throw(Exception("while decoding null marking an nullptr was encountered"));
   };
 
   if (index != 0 && prior_.index == index - 1) {
@@ -200,7 +200,7 @@ std::optional<T> Decoder<T, U>::operator()(int64_t index)
     return prior_.value;
   } else {
     // Shouldn't happen.
-    throw("FIXME: failed to decode NULL marking value");
+    throw(Exception("failed to decode NULL marking value"));
   }
 }
 

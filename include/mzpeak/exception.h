@@ -92,16 +92,16 @@ public:
 /**
  * Attempt to access an invalid iterator.
  */
-class InvalidIterator final : public Exception {
+class InvalidIteratorError final : public Exception {
 public:
   /// Constructor.
-  InvalidIterator(const std::string& msg)
+  InvalidIteratorError(const std::string& msg)
       : Exception(msg)
   {
   }
 
   /// Destructor.
-  ~InvalidIterator() = default;
+  ~InvalidIteratorError() = default;
 };
 
 /**
