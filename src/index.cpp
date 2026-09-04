@@ -7,6 +7,7 @@ directory of this repository.
 */
 
 #include <memory>
+#include <utility>
 
 #include "mzpeak/data/signals.h"
 #include "mzpeak/exception.h"
@@ -16,6 +17,21 @@ directory of this repository.
 #include "mzpeak/util/manager.h"
 
 namespace MzPeak {
+
+/******************************************************************************/
+std::string source_to_file_name(Index::SpectraSource source)
+{
+  using enum Index::SpectraSource;
+
+  switch (source) {
+  case Data:
+    return "spectra_data.parquet";
+  case Peaks:
+    return "spectra_peaks.parquet";
+  }
+
+  std::unreachable();
+}
 
 /******************************************************************************/
 Index::Index(std::unique_ptr<MzPeak::IO::Archive> archive)
@@ -34,12 +50,20 @@ Index::find_file(Schema::EntityType::Type et, Schema::DataKind::Type dk) const
 }
 
 /******************************************************************************/
-Spectra Index::spectra() const
+bool Index::has_spectra(SpectraSource source) const
 {
-  auto data_it = manager_->find_file("spectra_data.parquet");
+  auto data_it = manager_->find_file(source_to_file_name(source));
+  return data_it != manager_->files().end();
+}
+
+/******************************************************************************/
+Spectra Index::spectra(SpectraSource source) const
+{
+  std::string file_name(source_to_file_name(source));
+  auto data_it = manager_->find_file(file_name);
 
   if (data_it == manager_->files().end()) {
-    throw InvalidFormatError("missing files: spectra_data.parquet");
+    throw InvalidFormatError("missing file spectra file: " + file_name);
   }
 
   std::unique_ptr<Data::Signals> data =
