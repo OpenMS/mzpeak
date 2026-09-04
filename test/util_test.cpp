@@ -13,18 +13,30 @@ directory of this repository.
 
 #include "mzpeak/util/enumerable_proxy.h"
 
+namespace {
+struct EPTest : public MzPeak::Util::EnumerableProxy<int, int> {
+  EPTest()
+      : EnumerableProxy(0)
+  {
+    resize(v.size());
+  }
+
+  std::vector<int> v{0, 1, 2, 3, 4, 5};
+  int fetch(uint64_t i) { return v[i]; }
+};
+} // namespace
+
 /******************************************************************************/
 BOOST_AUTO_TEST_CASE(enumerable_proxy_simple)
 {
-  std::vector<int> v1{0, 1, 2, 3, 4, 5}, v2;
-  v2.reserve(v1.size());
+  EPTest ep_test;
+  std::vector<int> v;
+  v.reserve(ep_test.v.size());
 
-  MzPeak::Util::EnumerableProxy<int, int> ep(v1.size(),
-                                             [v1](std::size_t n) { return v1[n]; });
-
-  for (auto i : ep) {
-    v2.push_back(i);
+  for (auto i : ep_test) {
+    v.push_back(i);
   }
 
-  BOOST_TEST(v1 == v2);
+  BOOST_TEST(ep_test.v.size() == v.size());
+  BOOST_TEST(ep_test.v == v);
 }

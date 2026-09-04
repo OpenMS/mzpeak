@@ -43,14 +43,11 @@ std::vector<Data::ArrayIndex::Dimension> initial_dims(const Data::Signals& data)
 /******************************************************************************/
 Spectra::Spectra(std::unique_ptr<Data::Signals> data,
                  std::shared_ptr<Util::Manager> manager)
-    : EnumerableProxy(
-          0, std::bind(std::mem_fn(&Spectra::fetch), this, std::placeholders::_1))
+    : EnumerableProxy(data->record_count())
     , data_(std::move(data))
     , manager_(std::move(manager))
     , default_dims_(initial_dims(*data_))
 {
-  // Update the record count.
-  resize(data_->record_count());
 }
 
 /******************************************************************************/

@@ -10,7 +10,7 @@ directory of this repository.
 
 #include <boost/range/detail/common.hpp>
 #include <cstddef>
-#include <functional>
+#include <cstdint>
 #include <iterator>
 #include <optional>
 #include <utility>
@@ -22,9 +22,6 @@ namespace MzPeak::Util {
 template <typename T, typename V = T>
 class EnumerableProxy : public std::ranges::view_interface<EnumerableProxy<T>> {
 public:
-  /// A function that can fetch the requested value.
-  using fetch_t = std::function<V(std::size_t)>;
-
   /// The iterator type.
   class Iterator {
   public:
@@ -32,9 +29,9 @@ public:
     using value_type = V;
 
     /// Constructor for a valid iterator.
-    Iterator(std::size_t n, fetch_t fetch)
+    Iterator(std::size_t n, EnumerableProxy<T, V>* owner)
         : n_(n)
-        , fetch_(fetch)
+        , owner_(owner)
         , cache_()
     {
     }
@@ -42,7 +39,7 @@ public:
     /// Constructor for an invalid iterator.
     Iterator(std::size_t n)
         : n_(n)
-        , fetch_(nullptr)
+        , owner_(nullptr)
         , cache_()
     {
     }
@@ -50,6 +47,8 @@ public:
     /// Default construction also invalid;
     Iterator()
         : n_(0)
+        , owner_(nullptr)
+        , cache_()
     {
     }
 
@@ -97,8 +96,9 @@ public:
     {
       if (cache_.has_value() && cache_->first == n_) {
         return cache_->second;
-      } else if (fetch_ != nullptr) {
-        const_cast<Iterator*>(this)->cache_ = std::make_pair<>(n_, fetch_(n_));
+      } else if (owner_ != nullptr) {
+        auto* self = const_cast<Iterator*>(this);
+        self->cache_ = std::make_pair<>(n_, self->owner_->fetch(n_));
         return cache_->second;
       } else {
         throw InvalidIteratorError("attempt to dereference an invalid iterator");
@@ -107,7 +107,7 @@ public:
 
   private:
     std::size_t n_;
-    fetch_t fetch_;
+    EnumerableProxy<T, V>* owner_;
     std::optional<std::pair<std::size_t, value_type>> cache_;
   };
 
@@ -124,9 +124,8 @@ public:
   ~EnumerableProxy() = default;
 
   /// Meaningful constructor.
-  EnumerableProxy(std::size_t count, fetch_t fetch)
+  EnumerableProxy(std::size_t count)
       : count_(count)
-      , fetch_(fetch)
   {
   }
 
@@ -134,21 +133,28 @@ public:
   std::size_t size() const { return count_; }
 
   /// Iterator to the first element.
-  Iterator begin() const { return Iterator(0, fetch_); }
+  Iterator begin() const
+  {
+    return Iterator(0, const_cast<EnumerableProxy<T, V>*>(this));
+  }
 
   /// Iterator/sentinel representing one element beyond the last.
   Iterator end() const { return Iterator(count_); }
 
   // Access an element by its index.
-  V operator[](std::size_t n) { return fetch_(n); }
+  V operator[](std::size_t n) { return fetch(n); }
 
 protected:
+  friend class Iterator;
+
   /// Update the internal count of records.
   void resize(std::size_t n) { count_ = n; }
 
+  /// The function to call to get a specific element.
+  virtual V fetch(uint64_t) = 0;
+
 private:
   std::size_t count_ = 0;
-  fetch_t fetch_ = nullptr;
 };
 
 } // namespace MzPeak::Util
