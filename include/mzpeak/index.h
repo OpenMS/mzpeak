@@ -45,9 +45,31 @@ public:
                                                       Schema::DataKind::Type) const;
 
   /**
-   * Access the spectra in the file.
+   * Indicates which source to fetch spectra data from.
    */
-  Spectra spectra() const;
+  enum class SpectraSource {
+    /// Use the `spectra_data.parquet` file which may contain profile
+    /// or centroid spectra data.
+    Data,
+
+    /// Use the `spectra_peaks.parquet` file which is optional and may
+    /// not exist.
+    Peaks,
+  };
+
+  /**
+   * Returns `true` if the give source file exists.
+   */
+  bool has_spectra(SpectraSource) const;
+
+  /**
+   * Access the spectra in the file.
+   *
+   * Throws an exception if `SpectraSource::Peaks` is request and does
+   * not exist.  Use the `has_spectra` function to check for a peaks
+   * source before call this function.
+   */
+  Spectra spectra(SpectraSource source = SpectraSource::Data) const;
 
   /**
    * Access the low-level MzPeak Manager object.
