@@ -16,23 +16,11 @@ top-level directory of this repository.
 namespace MzPeak {
 
 /******************************************************************************/
-Spectra::Spectra(std::unique_ptr<Data::Signals> data,
-                 std::shared_ptr<Util::Manager> manager)
-    : EnumerableProxy(
-          0, std::bind(std::mem_fn(&Spectra::fetch), this, std::placeholders::_1))
-    , data_(std::move(data))
-    , manager_(std::move(manager))
-{
-  // Update the record count.
-  resize(data_->record_count());
-}
-
-/******************************************************************************/
-Spectrum Spectra::fetch(uint64_t index)
+std::vector<Data::ArrayIndex::Dimension> initial_dims(const Data::Signals& data)
 {
   // These are the dimensions we'll project by default.
   std::vector<Data::ArrayIndex::Dimension> dims =
-      data_->array_index()->dimensions() | std::views::filter([](auto& d) {
+      data.array_index()->dimensions() | std::views::filter([](auto& d) {
         return d.array_type == Schema::PSI::ArrayType::Mz ||
                d.array_type == Schema::PSI::ArrayType::Intensity;
       }) |
@@ -49,9 +37,29 @@ Spectrum Spectra::fetch(uint64_t index)
   });
 
   dims.erase(to_erase.begin(), to_erase.end());
+  return dims;
+}
 
-  std::unique_ptr<Util::Slice> slice = data_->select(dims, data_->index().eq(index));
-  return Spectrum(index, manager_, data_, dims, std::move(slice));
+/******************************************************************************/
+Spectra::Spectra(std::unique_ptr<Data::Signals> data,
+                 std::shared_ptr<Util::Manager> manager)
+    : EnumerableProxy(
+          0, std::bind(std::mem_fn(&Spectra::fetch), this, std::placeholders::_1))
+    , data_(std::move(data))
+    , manager_(std::move(manager))
+    , default_dims_(initial_dims(*data_))
+{
+  // Update the record count.
+  resize(data_->record_count());
+}
+
+/******************************************************************************/
+Spectrum Spectra::fetch(uint64_t index)
+{
+  std::unique_ptr<Util::Slice> slice =
+      data_->select(default_dims_, data_->index().eq(index));
+
+  return Spectrum(index, manager_, data_, default_dims_, std::move(slice));
 }
 
 } // namespace MzPeak

@@ -34,6 +34,7 @@ private:
   // Internal data access.
   std::shared_ptr<Data::Signals> data_;
   std::shared_ptr<Util::Manager> manager_;
+  std::vector<Data::ArrayIndex::Dimension> default_dims_;
 
   // Function to fetch a specific spectrum.
   Spectrum fetch(uint64_t);
