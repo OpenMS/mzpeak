@@ -8,6 +8,7 @@ top-level directory of this repository.
 
 #include <arrow/util/key_value_metadata.h>
 #include <boost/program_options.hpp>
+#include <charconv>
 #include <iostream>
 #include <memory>
 #include <print>
@@ -18,6 +19,35 @@ top-level directory of this repository.
 
 /******************************************************************************/
 namespace po = boost::program_options;
+
+/******************************************************************************/
+std::pair<std::size_t, std::size_t> parse_ids(std::string_view s)
+{
+  auto to_size_t = [](std::string_view str) -> std::size_t {
+    std::size_t n{};
+    auto r = std::from_chars(str.data(), str.data() + str.size(), n);
+
+    if (r.ec != std::errc()) {
+      throw MzPeak::Exception("unable to parse --ids, should be N or N,M");
+    }
+
+    return n;
+  };
+
+  auto pos = s.find(',');
+
+  if (pos != std::string_view::npos) {
+    auto n_str = s.substr(0, pos);
+    auto m_str = s.substr(pos + 1);
+
+    return std::make_pair<std::size_t, std::size_t>(to_size_t(n_str),
+                                                    to_size_t(m_str));
+  } else {
+    std::size_t n(to_size_t(s));
+    std::size_t m = n;
+    return std::make_pair<std::size_t, std::size_t>(std::move(n), std::move(m));
+  }
+}
 
 /******************************************************************************/
 std::unique_ptr<MzPeak::Util::Parquet> open_parquet_file(MzPeak::Index& index,
@@ -147,11 +177,23 @@ int print_fmd_kv(MzPeak::Index& index,
 }
 
 /******************************************************************************/
-int dump_spectra(MzPeak::Index& index, MzPeak::Index::SpectraSource source)
+int dump_spectra(MzPeak::Index& index,
+                 MzPeak::Index::SpectraSource source,
+                 std::optional<std::pair<std::size_t, std::size_t>> ids)
 {
   auto spectra = index.spectra(source);
 
-  for (std::size_t spectrum_index : std::views::iota(0ul, spectra.size())) {
+  if (!ids.has_value()) {
+    ids = std::make_pair<std::size_t, std::size_t>(0, spectra.size() - 1);
+  } else {
+    std::println(stderr, "printing spectra IDs {} through {}", ids.value().first,
+                 ids.value().second);
+  }
+
+  std::size_t begin = std::max(0ul, ids.value().first);
+  std::size_t end = std::min(spectra.size(), ids.value().second + 1);
+
+  for (std::size_t spectrum_index : std::views::iota(begin, end)) {
     const auto& spectrum = spectra[spectrum_index];
     const auto& mz = spectrum.mz();
     const auto& intensity = spectrum.intensity();
@@ -187,8 +229,12 @@ int main(int argc, char* argv[])
     desc.add_options()("fmd-key", po::value<std::string>(),
                        "Used with --fmdkv to print the value of the given key");
 
+    desc.add_options()("ids", po::value<std::string>(),
+                       "Limit some operations to a single ID or a range of N,M");
+
     desc.add_options()("spectra", "Print all m/z and intensity values");
-    desc.add_options()("peaks", "Like --spectra but read from spectra_peaks.parquet");
+    desc.add_options()("peaks",
+                       "Like --spectra but read from spectra_peaks.parquet");
 
     po::positional_options_description pops;
     pops.add("file", 1);
@@ -210,6 +256,11 @@ int main(int argc, char* argv[])
     }
 
     MzPeak::Index index = MzPeak::open(vmap["file"].as<std::string>());
+    std::optional<std::pair<std::size_t, std::size_t>> ids;
+
+    if (vmap.count("ids")) {
+      ids = parse_ids(vmap["ids"].as<std::string>());
+    }
 
     if (vmap.count("array-index")) {
       return print_array_index(index, vmap["array-index"].as<std::string>());
@@ -226,9 +277,9 @@ int main(int argc, char* argv[])
 
       return print_fmd_kv(index, vmap["fmdkv"].as<std::string>(), key);
     } else if (vmap.count("spectra")) {
-      dump_spectra(index, MzPeak::Index::SpectraSource::Data);
+      dump_spectra(index, MzPeak::Index::SpectraSource::Data, ids);
     } else if (vmap.count("peaks")) {
-      dump_spectra(index, MzPeak::Index::SpectraSource::Peaks);
+      dump_spectra(index, MzPeak::Index::SpectraSource::Peaks, ids);
     } else {
       std::println("WARN: no command given");
       return 1;
