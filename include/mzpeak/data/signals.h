@@ -23,7 +23,7 @@ namespace MzPeak::Data {
 class Signals {
 public:
   /// Constructor.
-  Signals(std::unique_ptr<Util::Parquet> parquet);
+  Signals(std::shared_ptr<Util::Parquet> parquet);
 
   /// Destructor.
   ~Signals();

@@ -16,6 +16,7 @@ top-level directory of this repository.
 #include "mzpeak.h"
 #include "mzpeak/schema/group.h"
 #include "mzpeak/util/manager.h" // IWYU pragma: keep
+#include "mzpeak/util/parquet.h" // IWYU pragma: keep
 
 /******************************************************************************/
 namespace po = boost::program_options;
@@ -50,7 +51,7 @@ std::pair<std::size_t, std::size_t> parse_ids(std::string_view s)
 }
 
 /******************************************************************************/
-std::unique_ptr<MzPeak::Util::Parquet> open_parquet_file(MzPeak::Index& index,
+std::shared_ptr<MzPeak::Util::Parquet> open_parquet_file(MzPeak::Index& index,
                                                          const std::string& file)
 {
   auto it = index.manager()->find_file(file);

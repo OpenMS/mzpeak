@@ -22,7 +22,7 @@ namespace MzPeak::Metadata {
 class Table final {
 public:
   /// Constructor.
-  Table(std::unique_ptr<Util::Parquet>);
+  Table(std::shared_ptr<Util::Parquet>);
 
   /// Destructor.
   ~Table();

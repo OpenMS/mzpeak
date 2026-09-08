@@ -20,7 +20,7 @@ namespace MzPeak::Data {
 
 /******************************************************************************/
 struct Signals::Impl {
-  Impl(std::unique_ptr<Util::Parquet> parquet)
+  Impl(std::shared_ptr<Util::Parquet> parquet)
       : parquet_(std::move(parquet))
       , array_index_(parse_array_index())
   {
@@ -28,7 +28,7 @@ struct Signals::Impl {
 
   std::shared_ptr<ArrayIndex> parse_array_index() const;
 
-  std::unique_ptr<Util::Parquet> parquet_;
+  std::shared_ptr<Util::Parquet> parquet_;
   std::shared_ptr<ArrayIndex> array_index_;
 };
 
@@ -60,7 +60,7 @@ std::shared_ptr<ArrayIndex> Signals::Impl::parse_array_index() const
 }
 
 /******************************************************************************/
-Signals::Signals(std::unique_ptr<Util::Parquet> parquet)
+Signals::Signals(std::shared_ptr<Util::Parquet> parquet)
     : impl_(std::make_unique<Impl>(std::move(parquet)))
 {
 }

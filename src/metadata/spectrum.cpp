@@ -20,7 +20,7 @@ using namespace MzPeak::Schema;
 using namespace MzPeak::Util;
 
 /******************************************************************************/
-Spectrum::Spectrum(std::unique_ptr<Util::Parquet> parquet, uint64_t index)
+Spectrum::Spectrum(std::shared_ptr<Util::Parquet> parquet, uint64_t index)
     : ms_level_()
     , scan_time_()
     , delta_model_()
