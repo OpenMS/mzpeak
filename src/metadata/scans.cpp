@@ -24,7 +24,7 @@ Scans::Scans()
 }
 
 /******************************************************************************/
-Scans::Scans(std::unique_ptr<Util::Parquet> parquet, uint64_t index)
+Scans::Scans(std::shared_ptr<Util::Parquet> parquet, uint64_t index)
     : raw_()
 {
   Table table(std::move(parquet));

@@ -14,9 +14,10 @@ directory of this repository.
 
 #include "mzpeak/io/archive.h"
 #include "mzpeak/schema/file.h"
-#include "mzpeak/util/parquet.h"
 
 namespace MzPeak::Util {
+
+class Parquet;
 
 /**
  * File manager for parquet files.
@@ -25,6 +26,9 @@ class Manager final {
 public:
   /// Constructor.
   Manager(std::unique_ptr<MzPeak::IO::Archive>);
+
+  /// Destructor.
+  ~Manager();
 
   /**
    * Return a vector of files that are located in the mzPeak archive.
@@ -45,11 +49,16 @@ public:
   /**
    * Open a Parquet file from the mzPeak archive.
    */
-  std::unique_ptr<Util::Parquet> parquet(const Schema::File&) const;
+  std::shared_ptr<Parquet> parquet(const Schema::File&);
+
+  /**
+   * Reset and clear the internal cache.
+   */
+  void clear();
 
 private:
-  std::shared_ptr<MzPeak::IO::Archive> archive_;
-  std::vector<Schema::File> files_;
+  struct Impl;
+  std::unique_ptr<Impl> impl_;
 };
 
 } // namespace MzPeak::Util
