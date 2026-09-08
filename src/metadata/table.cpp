@@ -17,15 +17,15 @@ namespace MzPeak::Metadata {
 
 /******************************************************************************/
 struct Table::Impl {
-  Impl(std::unique_ptr<Util::Parquet> parquet);
+  Impl(std::shared_ptr<Util::Parquet> parquet);
   ~Impl();
 
-  std::unique_ptr<Util::Parquet> parquet_;
+  std::shared_ptr<Util::Parquet> parquet_;
   std::string index_field_name_;
 };
 
 /******************************************************************************/
-Table::Impl::Impl(std::unique_ptr<Util::Parquet> parquet)
+Table::Impl::Impl(std::shared_ptr<Util::Parquet> parquet)
     : parquet_(std::move(parquet))
     , index_field_name_("index")
 {
@@ -60,7 +60,7 @@ Table::Impl::Impl(std::unique_ptr<Util::Parquet> parquet)
 Table::Impl::~Impl() = default;
 
 /******************************************************************************/
-Table::Table(std::unique_ptr<Util::Parquet> parquet)
+Table::Table(std::shared_ptr<Util::Parquet> parquet)
     : impl_(std::make_unique<Impl>(std::move(parquet)))
 {
 }

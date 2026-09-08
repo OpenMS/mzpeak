@@ -24,7 +24,7 @@ namespace MzPeak::Metadata {
 class Spectrum final {
 public:
   /// Constructor.
-  Spectrum(std::unique_ptr<Util::Parquet>, uint64_t);
+  Spectrum(std::shared_ptr<Util::Parquet>, uint64_t);
 
   /**
    * Return the spectrum level (MS:1000511).

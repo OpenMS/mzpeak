@@ -31,7 +31,7 @@ public:
   Scans();
 
   /// Constructor.
-  Scans(std::unique_ptr<Util::Parquet>, uint64_t);
+  Scans(std::shared_ptr<Util::Parquet>, uint64_t);
 
   /**
    * Return the raw table data for all scans.
