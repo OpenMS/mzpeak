@@ -15,6 +15,9 @@ namespace MzPeak::Util {
 const static char* INDEX_FILE_NAME = "mzpeak_index.json";
 
 /******************************************************************************/
+static constexpr std::size_t default_metadata_cache_size = 10 * 1024 * 1024;
+
+/******************************************************************************/
 namespace json = boost::json;
 
 /******************************************************************************/
@@ -59,6 +62,8 @@ struct Manager::Impl {
   Impl(std::unique_ptr<MzPeak::IO::Archive> archive)
       : archive_(std::move(archive))
       , files_()
+      , cache_()
+      , metadata_cache_size_(default_metadata_cache_size)
   {
     parse_index(archive_, files_);
   }
@@ -66,6 +71,7 @@ struct Manager::Impl {
   std::shared_ptr<MzPeak::IO::Archive> archive_;
   std::vector<Schema::File> files_;
   std::map<std::string, std::shared_ptr<Parquet>> cache_;
+  std::size_t metadata_cache_size_;
 };
 
 /******************************************************************************/
@@ -114,5 +120,14 @@ std::shared_ptr<Parquet> Manager::parquet(const Schema::File& file)
     return parquet;
   }
 }
+
+/******************************************************************************/
+std::size_t Manager::metadata_cache_size() const
+{
+  return impl_->metadata_cache_size_;
+}
+
+/******************************************************************************/
+void Manager::clear() { impl_->cache_.clear(); }
 
 } // namespace MzPeak::Util

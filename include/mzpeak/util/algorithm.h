@@ -171,4 +171,12 @@ null_delta_decode(typename type_traits<T>::value_type start,
   return result;
 }
 
+/**
+ * Return a range `[begin, end)` of indexes to read if you want a
+ * specific index.
+ */
+std::pair<std::size_t, std::size_t> range_to_request(std::size_t cache_size,
+                                                     std::size_t record_size,
+                                                     std::size_t index_wanted);
+
 } // namespace MzPeak::Util::Algorithm
