@@ -228,7 +228,7 @@ std::optional<std::size_t> Parquet::kv_size_t(const file_metadata_t& fmd,
 parquet::arrow::FileReader& Parquet::reader() const { return *impl_->reader_; }
 
 /******************************************************************************/
-void Parquet::read(Reader fn, const Projection& proj) const
+void Parquet::read(const Projection& proj, const Filter& filter, Reader fn) const
 {
   std::shared_ptr<arrow::RecordBatchReader> batch =
       impl_->check_result(impl_->reader_->GetRecordBatchReader());
@@ -244,6 +244,12 @@ void Parquet::read(Reader fn, const Projection& proj) const
   impl_->check_status(builder->Project(columns));
   // impl_->check_status(builder->UseThreads());
 
+  auto expr = filter.expression();
+
+  if (expr.has_value()) {
+    impl_->check_status(builder->Filter(expr.value()));
+  }
+
   std::shared_ptr<arrow::dataset::Scanner> scanner =
       impl_->check_result(builder->Finish());
 
@@ -254,6 +260,12 @@ void Parquet::read(Reader fn, const Projection& proj) const
     auto batch = Batch(impl_->check_result(batch_r));
     if (!fn(batch)) break;
   }
+}
+
+/******************************************************************************/
+void Parquet::read(const Projection& proj, Reader fn) const
+{
+  read(proj, {}, std::move(fn));
 }
 
 /******************************************************************************/

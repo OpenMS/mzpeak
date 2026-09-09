@@ -18,6 +18,7 @@ directory of this repository.
 #include "mzpeak/util/batch.h"
 #include "mzpeak/util/compat.h" // IWYU pragma: keep
 #include "mzpeak/util/executor.h"
+#include "mzpeak/util/filter.h"
 #include "mzpeak/util/query.h"
 
 namespace MzPeak::Util {
@@ -83,7 +84,12 @@ public:
   /**
    * Read all rows from a table.
    */
-  void read(Reader, const Projection&) const;
+  void read(const Projection&, Reader) const;
+
+  /**
+   * Read a subset of a table using a filter.
+   */
+  void read(const Projection&, const Filter&, Reader) const;
 
   /**
    * Return a planner for the given query.

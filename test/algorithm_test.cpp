@@ -49,3 +49,23 @@ BOOST_AUTO_TEST_CASE(null_delta_decode_with_no_nulls)
   std::vector<int64_t> expected = {2, 3, 5, 8};
   BOOST_TEST(decoded == expected);
 }
+
+/******************************************************************************/
+BOOST_AUTO_TEST_CASE(range_to_request)
+{
+  using namespace MzPeak::Util;
+
+  auto r = Algorithm::range_to_request(10, 2, 4);
+  BOOST_TEST(r.first == 0);
+  BOOST_TEST(r.second == 5);
+
+  r = Algorithm::range_to_request(10, 2, 5);
+  BOOST_TEST(r.first == 5);
+  BOOST_TEST(r.second == 10);
+
+  // import itertools
+  // list(filter(lambda x: 8511 in x, itertools.batched(range(10_332), 492)))
+  r = Algorithm::range_to_request(10332, 10332 / 492, 8511);
+  BOOST_TEST(r.first == 8364);
+  BOOST_TEST(r.second == 8856);
+}
