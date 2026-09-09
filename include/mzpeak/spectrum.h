@@ -13,6 +13,7 @@ top-level directory of this repository.
 
 #include "mzpeak/data/array_index.h"
 #include "mzpeak/metadata/scans.h"
+#include "mzpeak/metadata/spectra.h"
 
 namespace MzPeak {
 
@@ -74,6 +75,7 @@ protected:
   Spectrum(uint64_t index,
            std::shared_ptr<Util::Manager>,
            std::shared_ptr<Data::Signals>,
+           const Metadata::Spectra::Metadata&,
            const std::vector<Data::ArrayIndex::Dimension>&,
            std::unique_ptr<Util::Slice>);
 

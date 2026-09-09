@@ -6,20 +6,27 @@ top-level directory of this repository.
 
 */
 
-#include "mzpeak/open.h"
-
+#include <arrow/compute/initialize.h>
 #include <filesystem>
 #include <memory>
 #include <stdexcept>
 
 #include "mzpeak/io/directory.h"
 #include "mzpeak/io/zip.h"
+#include "mzpeak/open.h"
 
 namespace MzPeak {
 
 /******************************************************************************/
+// FIXME: This is a temporary hack until I figure out how this should
+// fit into the API.
+void init() { auto _ = arrow::compute::Initialize(); }
+
+/******************************************************************************/
 MzPeak::Index open(const fs::path& path)
 {
+  init();
+
   std::unique_ptr<MzPeak::IO::Archive> archive;
 
   if (fs::exists(path)) {
