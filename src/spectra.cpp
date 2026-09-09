@@ -9,9 +9,9 @@ top-level directory of this repository.
 #include <memory>
 
 #include "mzpeak/data/signals.h"
+#include "mzpeak/metadata/spectra.h"
 #include "mzpeak/spectra.h"
 #include "mzpeak/spectrum.h"
-#include "mzpeak/util/enumerable_proxy.h"
 
 namespace MzPeak {
 
@@ -46,6 +46,7 @@ Spectra::Spectra(std::unique_ptr<Data::Signals> data,
     : EnumerableProxy(data->record_count())
     , data_(std::move(data))
     , manager_(std::move(manager))
+    , metadata_(std::make_shared<Metadata::Spectra>(manager_))
     , default_dims_(initial_dims(*data_))
 {
 }
@@ -56,7 +57,8 @@ Spectrum Spectra::fetch(uint64_t index)
   std::unique_ptr<Util::Slice> slice =
       data_->select(default_dims_, data_->index().eq(index));
 
-  return Spectrum(index, manager_, data_, default_dims_, std::move(slice));
+  const Metadata::Spectra::Metadata& md = metadata_->get(index);
+  return Spectrum(index, manager_, data_, md, default_dims_, std::move(slice));
 }
 
 } // namespace MzPeak

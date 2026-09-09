@@ -8,12 +8,15 @@ directory of this repository.
 
 #pragma once
 
+#include <functional>
 #include <parquet/metadata.h>
 #include <parquet/statistics.h>
 
 #include "mzpeak/io/file.h"
 #include "mzpeak/schema/file.h"
 #include "mzpeak/schema/group.h"
+#include "mzpeak/util/batch.h"
+#include "mzpeak/util/compat.h" // IWYU pragma: keep
 #include "mzpeak/util/executor.h"
 #include "mzpeak/util/query.h"
 
@@ -69,6 +72,18 @@ public:
    * while this Parquet object exists.
    */
   parquet::arrow::FileReader& reader() const;
+
+  /**
+   * A function that accepts one batch at a time.  It should return
+   * `true` to indicate it wants more batches or `false` to stop
+   * feeding batches.
+   */
+  using Reader = std::move_only_function<bool(const Batch&)>;
+
+  /**
+   * Read all rows from a table.
+   */
+  void read(Reader, const Projection&) const;
 
   /**
    * Return a planner for the given query.

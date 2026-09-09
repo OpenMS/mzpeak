@@ -68,6 +68,32 @@ unsafe_array_value(const std::shared_ptr<typename type_traits<T>::array_type>& a
 
 /******************************************************************************/
 /**
+ * Lift a function over a concrete arrow list type.
+ */
+template <typename F>
+decltype(auto) lift_list_array(const std::shared_ptr<arrow::Array>& ary, F fn)
+{
+  auto type = ary->type_id();
+
+  if (type == arrow::Type::LIST) {
+    return fn(std::static_pointer_cast<arrow::ListArray>(ary));
+  } else if (type == arrow::Type::FIXED_SIZE_LIST) {
+    return fn(std::static_pointer_cast<arrow::FixedSizeListArray>(ary));
+  } else if (type == arrow::Type::LARGE_LIST) {
+    return fn(std::static_pointer_cast<arrow::LargeListArray>(ary));
+  } else if (type == arrow::Type::LIST_VIEW) {
+    return fn(std::static_pointer_cast<arrow::ListViewArray>(ary));
+  } else if (type == arrow::Type::LARGE_LIST_VIEW) {
+    return fn(std::static_pointer_cast<arrow::LargeListViewArray>(ary));
+  } else {
+    std::string msg("expected an arrow list array but found: ");
+    msg += ary->type()->name();
+    throw TypeError(msg);
+  }
+}
+
+/******************************************************************************/
+/**
  * If the given array is a "list of lists" then visit each element of
  * the outer list.  The given function is called on non-null elements
  * and given the index to the list element.
@@ -86,23 +112,7 @@ template <typename F> int64_t visit(const std::shared_ptr<arrow::Array>& ary, F 
     return list->length();
   };
 
-  auto type = ary->type_id();
-
-  if (type == arrow::Type::LIST) {
-    return go(std::static_pointer_cast<arrow::ListArray>(ary));
-  } else if (type == arrow::Type::FIXED_SIZE_LIST) {
-    return go(std::static_pointer_cast<arrow::FixedSizeListArray>(ary));
-  } else if (type == arrow::Type::LARGE_LIST) {
-    return go(std::static_pointer_cast<arrow::LargeListArray>(ary));
-  } else if (type == arrow::Type::LIST_VIEW) {
-    return go(std::static_pointer_cast<arrow::ListViewArray>(ary));
-  } else if (type == arrow::Type::LARGE_LIST_VIEW) {
-    return go(std::static_pointer_cast<arrow::LargeListViewArray>(ary));
-  } else {
-    std::string msg("expected an arrow list array but found: ");
-    msg += ary->type()->name();
-    throw TypeError(msg);
-  }
+  return lift_list_array(ary, go);
 }
 
 /******************************************************************************/

@@ -7,6 +7,7 @@ directory of this repository.
 */
 
 #include <arrow/array.h>
+#include <arrow/dataset/scanner.h>
 #include <arrow/record_batch.h>
 #include <arrow/util/key_value_metadata.h>
 #include <boost/json.hpp>
@@ -15,6 +16,7 @@ directory of this repository.
 #include <parquet/api/reader.h>
 #include <parquet/arrow/reader.h>
 #include <ranges>
+#include <utility>
 
 #include "mzpeak/exception.h"
 #include "mzpeak/util/arrow.h"
@@ -90,8 +92,31 @@ struct Parquet::Impl {
     throw ParquetError(msg);
   }
 
+  /// Helper to check a result and throw an error if necessary.
+  template <typename T> T check_result(arrow::Result<T> r)
+  {
+    if (r.ok()) {
+      return std::move(r.ValueOrDie());
+    } else {
+      error(r.status().ToString());
+      std::unreachable();
+    }
+  }
+
+  /// Helper to assert an arrow status.
+  void check_status(const arrow::Status& s)
+  {
+    if (!s.ok()) {
+      error(s.ToString());
+    }
+  }
+
   /// Load the schema.
   void parse_schema();
+
+  /// Return the array associated with the given column.
+  std::shared_ptr<arrow::Array> array(std::shared_ptr<arrow::RecordBatch>&,
+                                      const Schema::Column&);
 
   Schema::File file_;
   std::unique_ptr<Arrow> arrow_;
@@ -124,6 +149,26 @@ void Parquet::Impl::parse_schema()
           std::make_shared<Schema::Group>(*group, file_, i, offset);
       (*groups_)[s->name()] = s;
       offset += group->field_count();
+    }
+  }
+}
+
+/******************************************************************************/
+std::shared_ptr<arrow::Array>
+Parquet::Impl::array(std::shared_ptr<arrow::RecordBatch>& batch,
+                     const Schema::Column& column)
+{
+  if (column.first->is_root()) {
+    return batch->column(column.second->absolute_index());
+  } else {
+    std::shared_ptr<arrow::Array> ary(batch->column(column.first->index()));
+
+    if (ary && ary->type_id() == arrow::Type::STRUCT) {
+      auto sa = std::static_pointer_cast<arrow::StructArray>(ary);
+      return sa->field(column.second->relative_index());
+    } else {
+      error("column not in batch: " + column.first->path(*column.second));
+      std::unreachable();
     }
   }
 }
@@ -181,6 +226,35 @@ std::optional<std::size_t> Parquet::kv_size_t(const file_metadata_t& fmd,
 
 /******************************************************************************/
 parquet::arrow::FileReader& Parquet::reader() const { return *impl_->reader_; }
+
+/******************************************************************************/
+void Parquet::read(Reader fn, const Projection& proj) const
+{
+  std::shared_ptr<arrow::RecordBatchReader> batch =
+      impl_->check_result(impl_->reader_->GetRecordBatchReader());
+
+  std::shared_ptr<arrow::dataset::ScannerBuilder> builder =
+      arrow::dataset::ScannerBuilder::FromRecordBatchReader(batch);
+
+  std::vector<std::string> columns =
+      proj.get() |
+      std::views::transform([](auto& col) { return col.first->path(*col.second); }) |
+      std::ranges::to<std::vector>();
+
+  impl_->check_status(builder->Project(columns));
+  // impl_->check_status(builder->UseThreads());
+
+  std::shared_ptr<arrow::dataset::Scanner> scanner =
+      impl_->check_result(builder->Finish());
+
+  std::shared_ptr<arrow::RecordBatchReader> reader =
+      impl_->check_result(scanner->ToRecordBatchReader());
+
+  for (const auto& batch_r : *reader) {
+    auto batch = Batch(impl_->check_result(batch_r));
+    if (!fn(batch)) break;
+  }
+}
 
 /******************************************************************************/
 Planner Parquet::planner(const Query& q) { return Planner(*impl_->reader_, q); }

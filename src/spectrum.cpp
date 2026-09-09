@@ -10,7 +10,6 @@ top-level directory of this repository.
 #include <vector>
 
 #include "mzpeak/data/encoding.h"
-#include "mzpeak/metadata/spectrum.h"
 #include "mzpeak/spectrum.h"
 #include "mzpeak/util/manager.h"
 
@@ -20,30 +19,20 @@ namespace MzPeak {
 Spectrum::Spectrum(uint64_t index,
                    std::shared_ptr<Util::Manager> manager,
                    std::shared_ptr<Data::Signals> data,
+                   const Metadata::Spectra::Metadata& metadata,
                    const std::vector<Data::ArrayIndex::Dimension>& dims,
                    std::unique_ptr<Util::Slice> slice)
     : index_(index)
     , manager_(std::move(manager))
     , mz_()
     , intensity_()
-    , ms_level_(0)
-    , scan_time_()
+    , ms_level_(metadata.ms_level.value_or(0))
+    , scan_time_(metadata.scan_time)
     , scans_()
 {
-  auto meta_it =
-      manager_->find_file(Schema::EntityType::Spectrum, Schema::DataKind::Metadata);
-
-  if (meta_it == manager_->files().end()) {
-    throw InvalidFormatError("missing necessary mzpeak file: spectra metadata");
-  }
-
-  Metadata::Spectrum meta(manager_->parquet(*meta_it), index_);
-  ms_level_ = meta.ms_level().value_or(0);
-  scan_time_ = meta.scan_time();
-
   Data::Encoding::Decoder<double> decoder(
       std::move(data), std::move(slice),
-      Util::DeltaEstimator<double>(meta.delta_model()));
+      Util::DeltaEstimator<double>(metadata.delta_model));
 
   for (auto& dim : dims) {
     if (dim.array_type == Schema::PSI::ArrayType::Mz) {
