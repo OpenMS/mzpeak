@@ -22,6 +22,7 @@ class Array;
 namespace MzPeak::Util {
 
 class Parquet;
+class Slice;
 
 /**
  * Simple interface for Arrow record batches.
@@ -44,6 +45,11 @@ public:
    */
   template <supported_type T, typename Container = std::optional<T>>
   Container scalar(int64_t, const std::optional<Schema::Column>&) const;
+
+  /**
+   * Append all batched columns into the given slice.
+   */
+  void collect(Slice&) const;
 
   /**
    * Return the number of rows.

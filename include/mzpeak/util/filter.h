@@ -27,6 +27,11 @@ public:
   static arrow::compute::Expression field(const Schema::Column&);
 
   /**
+   * An expression where a column is *equal* to a literal value.
+   */
+  template <supported_type T> static Filter eq(const Schema::Column&, T&&);
+
+  /**
    * An expression where a column is *greater than or equal* to a literal value.
    */
   template <supported_type T> static Filter ge(const Schema::Column&, T&&);
@@ -53,17 +58,32 @@ public:
   std::optional<arrow::compute::Expression> expression() const;
 
 private:
+  enum Op {
+    EQ,
+    GE,
+    LT,
+  };
+
+  // Create a filter from a column, operator, and expression.
+  static Filter column_op(const Schema::Column&, Op, arrow::compute::Expression&&);
+
   std::optional<arrow::compute::Expression> expr_;
 };
+
+/******************************************************************************/
+template <supported_type T>
+Filter Filter::eq(const Schema::Column& column, T&& literal)
+{
+  namespace ac = arrow::compute;
+  return column_op(column, EQ, ac::literal<T>(std::forward<T>(literal)));
+}
 
 /******************************************************************************/
 template <supported_type T>
 Filter Filter::ge(const Schema::Column& column, T&& literal)
 {
   namespace ac = arrow::compute;
-  ac::Expression lhs(field(column));
-  ac::Expression rhs(ac::literal<T>(std::forward<T>(literal)));
-  return Filter(ac::greater_equal(lhs, rhs));
+  return column_op(column, GE, ac::literal<T>(std::forward<T>(literal)));
 }
 
 /******************************************************************************/
@@ -71,9 +91,7 @@ template <supported_type T>
 Filter Filter::lt(const Schema::Column& column, T&& literal)
 {
   namespace ac = arrow::compute;
-  ac::Expression lhs(field(column));
-  ac::Expression rhs(ac::literal<T>(std::forward<T>(literal)));
-  return Filter(ac::less(lhs, rhs));
+  return column_op(column, LT, ac::literal<T>(std::forward<T>(literal)));
 }
 
 } // namespace MzPeak::Util

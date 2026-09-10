@@ -242,7 +242,7 @@ void Parquet::read(const Projection& proj, const Filter& filter, Reader fn) cons
       std::ranges::to<std::vector>();
 
   impl_->check_status(builder->Project(columns));
-  // impl_->check_status(builder->UseThreads());
+  impl_->check_status(builder->UseThreads(true));
 
   auto expr = filter.expression();
 
