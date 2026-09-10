@@ -16,8 +16,28 @@ arrow::compute::Expression Filter::field(const Schema::Column& column)
   if (column.first->is_root()) {
     return arrow::compute::field_ref(column.second->name());
   } else {
-    return arrow::compute::field_ref(column.first->path(*column.second));
+    arrow::FieldRef ref(column.first->name(), column.second->name());
+    return arrow::compute::field_ref(ref);
   }
+}
+
+/******************************************************************************/
+Filter
+Filter::column_op(const Schema::Column& col, Op op, arrow::compute::Expression&& lit)
+{
+  namespace ac = arrow::compute;
+  ac::Expression lhs(field(col));
+
+  switch (op) {
+  case EQ:
+    return Filter(ac::equal(lhs, lit));
+  case GE:
+    return Filter(ac::greater_equal(lhs, lit));
+  case LT:
+    return Filter(ac::less(lhs, lit));
+  }
+
+  std::unreachable();
 }
 
 /******************************************************************************/

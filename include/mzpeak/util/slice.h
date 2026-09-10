@@ -32,8 +32,14 @@ public:
   /// Raw, chunked arrays from Parquet.
   using Raw = std::vector<std::shared_ptr<arrow::Array>>;
 
+  /// Constructor.
+  explicit Slice(const std::vector<Column>&);
+
   /// Destructor.
   ~Slice();
+
+  /// Add an array chunk.
+  void append(const Column&, std::shared_ptr<arrow::Array>);
 
   /**
    * Return a list of fields that can be extracted from this slice.
@@ -124,14 +130,6 @@ public:
   template <typename T> void non_null(const std::optional<Column>&, std::vector<T>&);
 
 private:
-  friend class MzPeak::Util::Executor;
-
-  /// Constructor.
-  Slice(const std::vector<Column>&);
-
-  /// Add an array chunk.
-  void append(const Column&, std::shared_ptr<arrow::Array>);
-
   struct Impl;
   std::unique_ptr<Impl> impl_;
 };
