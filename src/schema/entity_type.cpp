@@ -23,7 +23,7 @@ std::string entity_type_to_string(EntityType::Type t)
   case Chromatogram:
     return "chromatogram";
   case WavelengthSpectrum:
-    return "wavelength spectrum";
+    return "wavelength_spectrum";
   }
 
   std::unreachable();
@@ -38,7 +38,7 @@ EntityType::value_type entity_type_from_string(std::string_view s)
     return Spectrum;
   } else if (s == "chromatogram") {
     return Chromatogram;
-  } else if (s == "wavelength spectrum") {
+  } else if (s == "wavelength_spectrum") {
     return WavelengthSpectrum;
   } else {
     return std::string(s);
