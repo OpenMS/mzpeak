@@ -23,8 +23,10 @@ namespace MzPeak::Data {
 struct EntryCmpFn {
   bool operator()(const ArrayIndex::Entry& a, const ArrayIndex::Entry& b) const
   {
-    return a.array_name < b.array_name && a.array_type < b.array_type &&
-           a.data_type < b.data_type && a.buffer_priority > b.buffer_priority;
+    if (a.array_name != b.array_name) return a.array_name < b.array_name;
+    if (a.array_type != b.array_type) return a.array_type < b.array_type;
+    if (a.data_type != b.data_type) return a.data_type < b.data_type;
+    return a.buffer_priority > b.buffer_priority;
   }
 };
 
