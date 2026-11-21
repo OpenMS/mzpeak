@@ -38,16 +38,12 @@ BOOST_AUTO_TEST_CASE(can_locate_correct_rows)
   };
 
   for (auto& query : queries) {
-    Util::Planner planner = parquet->planner(query);
-    auto plan = planner.plan();
+    auto plan = parquet->plan(query);
+    auto rgs = plan.materalize_as_vector();
 
     // Ug, this file is too small to exercise the planner.
-    BOOST_TEST(plan.ranges.size() == 1ul);
-
-    auto first = plan.ranges[0];
-    BOOST_TEST(first.row_group == 0);
-    BOOST_TEST(first.offset == 0);
-    BOOST_TEST(first.length == 217710);
+    BOOST_TEST_REQUIRE(rgs.size() == 1ul);
+    BOOST_TEST(rgs[0] == 0);
   }
 }
 
@@ -74,14 +70,10 @@ BOOST_AUTO_TEST_CASE(can_use_two_columns)
                    .eq<uint64_t>(3)
                    .and_then(Util::Query::Builder(*start_time_field).gt<float>(0.0));
 
-  Util::Planner planner = parquet->planner(query);
-
-  auto plan = planner.plan();
-  BOOST_TEST(plan.ranges.size() == 1ul);
+  auto plan = parquet->plan(query);
+  auto rgs = plan.materalize_as_vector();
 
   // Ug, this file is too small to exercise the planner.
-  auto first = plan.ranges[0];
-  BOOST_TEST(first.row_group == 0);
-  BOOST_TEST(first.offset == 0);
-  BOOST_TEST(first.length == 48);
+  BOOST_TEST_REQUIRE(rgs.size() == 1ul);
+  BOOST_TEST(rgs[0] == 0);
 }

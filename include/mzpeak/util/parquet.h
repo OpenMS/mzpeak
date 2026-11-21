@@ -71,9 +71,9 @@ public:
   parquet::arrow::FileReader& reader() const;
 
   /**
-   * Return a planner for the given query.
+   * Return a plan for the given query.
    */
-  Planner planner(const Query&);
+  Plan plan(const Query&) const;
 
   /**
    * Return an executor that will capture the requested fields.

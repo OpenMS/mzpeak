@@ -10,10 +10,10 @@ top-level directory of this repository.
 
 #include <any>
 #include <boost/compat/function_ref.hpp>
-#include <functional>
 #include <variant>
 
 #include "mzpeak/schema/group.h"
+#include "mzpeak/util/plan.h"
 #include "mzpeak/util/types.h"
 
 namespace MzPeak::Util {
@@ -30,11 +30,15 @@ namespace MzPeak::Util {
  * functions.
  */
 class Query final {
-private:
-  struct Predicate;
-  enum class Op { EQ, GT, LT, GE, LE };
-
 public:
+  // A predicate that can be tested against a value.
+  struct Predicate final {
+    enum Op { EQ, GT, LT, GE, LE };
+    Schema::Column dest;
+    Op op;
+    any_value_type val;
+  };
+
   /**
    * This class is used to construct a Query object using two inputs:
    *
@@ -64,7 +68,7 @@ public:
      */
     template <supported_type T> Query eq(T val) const
     {
-      return validate({dest_, Op::EQ, val});
+      return validate({dest_, Predicate::EQ, val});
     }
 
     /**
@@ -72,7 +76,7 @@ public:
      */
     template <supported_type T> Query gt(T val) const
     {
-      return validate({dest_, Op::GT, val});
+      return validate({dest_, Predicate::GT, val});
     }
 
     /**
@@ -80,7 +84,7 @@ public:
      */
     template <supported_type T> Query lt(T val) const
     {
-      return validate({dest_, Op::LT, val});
+      return validate({dest_, Predicate::LT, val});
     }
 
     /**
@@ -88,7 +92,7 @@ public:
      */
     template <supported_type T> Query ge(T val) const
     {
-      return validate({dest_, Op::GE, val});
+      return validate({dest_, Predicate::GE, val});
     }
 
     /**
@@ -96,13 +100,13 @@ public:
      */
     template <supported_type T> Query le(T val) const
     {
-      return validate({dest_, Op::LE, val});
+      return validate({dest_, Predicate::LE, val});
     }
 
     /**
      * Low-level function for build a query with an operator.
      */
-    template <supported_type T> Query via(T val, Op op) const
+    template <supported_type T> Query via(T val, Predicate::Op op) const
     {
       return validate({dest_, op, val});
     }
@@ -151,6 +155,9 @@ public:
     /// value, and that value is the given value.
     bool is(T) const;
 
+    /// See `Result.is`.
+    explicit operator bool() const noexcept;
+
     /// Convert to another type while preserving failure and NULL
     /// status.  That is, U is ignored if the current result is NULL.
     template <typename U> Result<U> to(U) const;
@@ -187,20 +194,15 @@ public:
   // Column types that can be used in a query.
   using value_t = any_value_type; // From types.h
 
-  // Like value_t, but instead of a single value this type is used for
-  // evaluating a query on a min/max range.
-  using range_t = any_pair_type; // From types.h
-
   /// A function that when given an column type, should return a single value.
   /// If this isn't possible it should return `Result<value_t>::skip()`.
   using eval_callback_t =
       boost::compat::function_ref<Result<value_t>(Schema::Column)>;
 
-  /// A func ion that when given an column type should return a min
-  /// and max.  If this isn't possible it should return
-  /// `Result<range_t>::skip()`.
-  using eval_range_callback_t =
-      boost::compat::function_ref<Result<range_t>(Schema::Column)>;
+  /// A function that when given a `Predicate` returns a `Plan` that
+  /// can be used to fetch rows to fulfill that predicate.
+  using plan_callback_t =
+      boost::compat::function_ref<Result<Plan>(const Predicate&)>;
 
   /**
    * Evaluate a query.
@@ -208,23 +210,13 @@ public:
   Result<bool> eval(eval_callback_t) const;
 
   /**
-   * Evaluate a range query.
-   *
-   * Range queries test to see if the query would match a value within
-   * a min or max range.
+   * Evaluate a query and return a Plan.
    */
-  Result<bool> eval(eval_range_callback_t) const;
+  std::optional<Plan> plan(plan_callback_t) const;
 
 private:
   friend class Builder;
-  template <typename Fn, typename V> friend struct EvalHelper;
-
-  // A predicate that can be tested against a value.
-  struct Predicate {
-    Schema::Column dest;
-    Op op;
-    value_t val;
-  };
+  template <typename T, typename Fn> friend struct Visitor;
 
   // A logical node with a connective.
   struct Node {
@@ -274,6 +266,19 @@ template <typename T> bool Query::Result<T>::is(T t) const
 }
 
 /******************************************************************************/
+template <typename T> Query::Result<T>::operator bool() const noexcept
+{
+  if constexpr (std::is_same_v<T, bool>) {
+    return is(true);
+  } else if constexpr (requires(T t) { t.operator bool(); }) {
+    if (failed_) return false;
+    return has_value() && value();
+  } else {
+    static_assert(false_type<T>, "type has no boolean operator");
+  }
+}
+
+/******************************************************************************/
 template <typename T>
 template <typename U>
 Query::Result<U> Query::Result<T>::to(U u) const
@@ -291,7 +296,14 @@ Query::Result<T> Query::Result<T>::and_then(const Query::Result<T>& other)
   if (other.failed_) return other;
   if (!result_.has_value()) return *this;
   if (!other.result_.has_value()) return other;
-  return Result(result_.value() && other.result_.value());
+
+  if constexpr (std::is_same_v<T, bool>) {
+    return Result(result_.value() && other.result_.value());
+  } else if constexpr (requires(T a, T b) { a.logical_and(b)->T; }) {
+    return Result(result_.value().logical_and(other.result_.value()));
+  } else {
+    static_assert(false_type<T>, "type has no logical_and method");
+  }
 }
 
 /******************************************************************************/
@@ -302,14 +314,31 @@ Query::Result<T> Query::Result<T>::or_else(const Query::Result<T>& other)
   if (other.failed_) return other;
   if (!result_.has_value()) return other;
   if (!other.result_.has_value()) return *this;
-  return Result(result_.value() || other.result_.value());
+
+  if constexpr (std::is_same_v<T, bool>) {
+    return Result(result_.value() || other.result_.value());
+  } else if constexpr (requires(T a, T b) { a.logical_or(b)->T; }) {
+    return Result(result_.value().logical_or(other.result_.value()));
+  } else {
+    static_assert(false_type<T>, "type has no logical_or method");
+  }
 }
 
 /******************************************************************************/
 template <typename T> Query::Result<T> Query::Result<T>::negate()
 {
   Result r = *this;
-  r.result_ = r.result_.and_then([](auto& v) -> std::optional<T> { return !v; });
+
+  r.result_ = r.result_.and_then([](auto& v) -> std::optional<T> {
+    if constexpr (std::is_same_v<T, bool>) {
+      return !v;
+    } else if constexpr (requires(T a) { a.logical_not(); }) {
+      return v.logical_not();
+    } else {
+      static_assert(false_type<T>, "type has no logical_not method");
+    }
+  });
+
   return r;
 }
 

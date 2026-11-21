@@ -14,6 +14,45 @@ directory of this repository.
 namespace MzPeak::Util {
 
 /******************************************************************************/
+boost::json::value avt_to_json(const any_value_type& avt)
+{
+  auto to_obj = [](std::string_view t, auto&& v) -> boost::json::value {
+    return boost::json::object{
+        {"type", t},
+        {"value", v},
+    };
+  };
+
+  return std::visit(
+      [&](auto&& v) -> boost::json::value {
+        using T = std::decay_t<decltype(v)>;
+
+        if constexpr (std::is_same_v<T, int8_t>) {
+          return to_obj("int8_t", v);
+        } else if constexpr (std::is_same_v<T, uint8_t>) {
+          return to_obj("uint8_t", v);
+        } else if constexpr (std::is_same_v<T, int32_t>) {
+          return to_obj("int32_t", v);
+        } else if constexpr (std::is_same_v<T, uint32_t>) {
+          return to_obj("uint32_t", v);
+        } else if constexpr (std::is_same_v<T, int64_t>) {
+          return to_obj("int64_t", v);
+        } else if constexpr (std::is_same_v<T, uint64_t>) {
+          return to_obj("uint64_t", v);
+        } else if constexpr (std::is_same_v<T, float>) {
+          return to_obj("float", v);
+        } else if constexpr (std::is_same_v<T, double>) {
+          return to_obj("double", v);
+        } else if constexpr (std::is_same_v<T, std::string>) {
+          return to_obj("string", v);
+        } else {
+          static_assert(false_type<T>, "unhanded variant");
+        }
+      },
+      avt);
+}
+
+/******************************************************************************/
 std::optional<Type> type_from_parquet(const parquet::schema::PrimitiveNode& node)
 {
   using enum Type;

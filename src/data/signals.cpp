@@ -163,11 +163,9 @@ Signals::select(const std::vector<ArrayIndex::Dimension>& projection,
     }
   }
 
-  Util::Planner planner = impl_->parquet_->planner(query);
-  auto plan = planner.plan();
-
+  auto plan = impl_->parquet_->plan(query);
   Util::Executor executor = impl_->parquet_->executor(columns);
-  return executor.execute(plan);
+  return executor.execute(query, plan);
 }
 
 } // namespace MzPeak::Data

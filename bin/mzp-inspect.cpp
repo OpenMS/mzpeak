@@ -105,11 +105,13 @@ int print_groups(MzPeak::Index& index, const std::string& file)
       *parquet->groups() | std::views::values | std::ranges::to<std::vector>();
   std::ranges::sort(groups, {}, &MzPeak::Schema::Group::index);
 
-  for (const auto& s : groups) {
-    std::println("{} [index:{}, fields:{}]", s->name(), s->index(),
-                 s->fields().size());
+  auto print_group = [](this auto self, std::string_view prefix,
+                        const MzPeak::Schema::Group& group) -> void {
+    std::println("{}{} [index:{}, fields:{} size:{}]", prefix, group.name(),
+                 group.index(), group.fields().size(), group.size());
 
-    auto fields = s->fields() | std::views::values | std::ranges::to<std::vector>();
+    auto fields =
+        group.fields() | std::views::values | std::ranges::to<std::vector>();
     std::ranges::sort(fields, {}, &MzPeak::Schema::Group::Field::relative_index);
 
     for (const auto& field : fields) {
@@ -121,11 +123,14 @@ int print_groups(MzPeak::Index& index, const std::string& file)
       case Scalar:
         kind = "scalar";
         break;
+      case Group:
+        kind = "group";
+        break;
       case List:
         kind = "list";
         break;
-      case Params:
-        kind = "params";
+      case ListOfGroups:
+        kind = "list[group]";
         break;
       case Unknown:
         kind = "unknown";
@@ -139,10 +144,18 @@ int print_groups(MzPeak::Index& index, const std::string& file)
                                 });
       }
 
-      std::println("  | {} [rel_idx:{}, abs_idx: {}, kind: {}, type:{}]",
+      std::println("{}  | {} [rel_idx:{}, abs_idx: {}, kind: {}, type:{}]", prefix,
                    field->name(), field->relative_index(), field->absolute_index(),
                    kind, type);
+
+      if (auto nested = field->nested(); nested != nullptr) {
+        self(std::string(prefix) + "  |   ", *nested);
+      }
     }
+  };
+
+  for (const auto& s : groups) {
+    print_group("", *s);
   }
 
   return 0;

@@ -34,7 +34,7 @@ public:
   /**
    * Execute a query and extract the requested projection.
    */
-  std::unique_ptr<Slice> execute(const Planner::Plan&);
+  std::unique_ptr<Slice> execute(const Query&, const Plan&);
 
 private:
   friend class Parquet;

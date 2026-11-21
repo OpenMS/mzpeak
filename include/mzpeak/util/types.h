@@ -10,6 +10,7 @@ directory of this repository.
 
 #include <arrow/builder.h>
 #include <arrow/type_fwd.h>
+#include <boost/json.hpp>
 #include <boost/type_index.hpp>
 #include <cstdint>
 #include <optional>
@@ -51,16 +52,8 @@ using any_value_type = std::variant<int8_t,
                                     double,
                                     std::string>;
 
-/// A variant that can hold pairs of any supported type.
-using any_pair_type = std::variant<std::pair<int8_t, int8_t>,
-                                   std::pair<uint8_t, uint8_t>,
-                                   std::pair<int32_t, int32_t>,
-                                   std::pair<uint32_t, uint32_t>,
-                                   std::pair<int64_t, int64_t>,
-                                   std::pair<uint64_t, uint64_t>,
-                                   std::pair<float, float>,
-                                   std::pair<double, double>,
-                                   std::pair<std::string, std::string>>;
+/// Convert an `any_value_type` to a JSON value.
+boost::json::value avt_to_json(const any_value_type&);
 
 /// Enum of supported data types for tracking at run time.
 enum class Type {
