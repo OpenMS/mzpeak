@@ -97,8 +97,8 @@ Table::indexed(uint64_t index,
   auto column = std::make_pair(group, index_field.value());
   Util::Query q = Util::Query::Builder(column).eq(index);
 
-  auto plan = impl_->parquet_->planner(q).plan();
-  return impl_->parquet_->executor(projection).execute(plan);
+  auto plan = impl_->parquet_->plan(q);
+  return impl_->parquet_->executor(projection).execute(q, plan);
 }
 
 } // namespace MzPeak::Metadata

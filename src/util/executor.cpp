@@ -42,8 +42,7 @@ struct Executor::Impl {
 
   /// Run a query on the given record batch and return a vector
   /// indicating which rows should be kept.
-  std::vector<bool> filter(const Planner::Plan&,
-                           std::shared_ptr<arrow::RecordBatch>&);
+  std::vector<bool> filter(const Query&, std::shared_ptr<arrow::RecordBatch>&);
 
   /// Capture the requested columns.
   void project(std::shared_ptr<arrow::RecordBatch>&);
@@ -82,7 +81,7 @@ Query::Result<Query::value_t> Executor::Impl::ArrayValueHelper::operator()()
 }
 
 /******************************************************************************/
-std::vector<bool> Executor::Impl::filter(const Planner::Plan& plan,
+std::vector<bool> Executor::Impl::filter(const Query& q,
                                          std::shared_ptr<arrow::RecordBatch>& batch)
 {
   std::vector<bool> want_rows(batch->num_rows(), true);
@@ -99,8 +98,7 @@ std::vector<bool> Executor::Impl::filter(const Planner::Plan& plan,
   };
 
   for (int64_t i : std::views::iota(0, batch->num_rows())) {
-    Query::Result<bool> res =
-        plan.query.eval(std::bind(get_value, i, std::placeholders::_1));
+    Query::Result<bool> res = q.eval(std::bind(get_value, i, std::placeholders::_1));
     want_rows[i] = !res.is(false);
   }
 
@@ -121,7 +119,7 @@ Executor::Impl::array(std::shared_ptr<arrow::RecordBatch>& batch,
                       const Schema::Column& field)
 {
   if (field.first->is_root()) {
-    return batch->column(field.second->absolute_index());
+    return batch->column(field.second->relative_index());
   } else {
     std::shared_ptr<arrow::Array> col(batch->column(field.first->index()));
 
@@ -145,21 +143,8 @@ Executor::Executor(std::shared_ptr<parquet::arrow::FileReader> reader,
 Executor::~Executor() = default;
 
 /******************************************************************************/
-std::unique_ptr<Executor::Slice> Executor::execute(const Planner::Plan& plan)
+std::unique_ptr<Executor::Slice> Executor::execute(const Query& q, const Plan& plan)
 {
-  impl_->slice_ = std::unique_ptr<Slice>(new Slice(impl_->projection_.get()));
-  std::map<Schema::Group::index_type, std::vector<Planner::Range>> ranges;
-
-  for (const auto& range : plan.ranges) {
-    auto it = ranges.find(range.row_group);
-
-    if (it != ranges.end()) {
-      it->second.push_back(range);
-    } else {
-      ranges[range.row_group] = {range};
-    }
-  }
-
   // Reduce a batch to just those rows that were selected by the query
   // and then capture the projected columns.
   auto project_wanted = [&](std::size_t i, std::size_t j,
@@ -172,34 +157,23 @@ std::unique_ptr<Executor::Slice> Executor::execute(const Planner::Plan& plan)
     impl_->project(sliced);
   };
 
-  for (const auto& row_group : ranges) {
-    int64_t row_group_start = 0;
+  impl_->slice_ = std::unique_ptr<Slice>(new Slice(impl_->projection_.get()));
+  std::unique_ptr<arrow::RecordBatchReader> batch_reader = nullptr;
 
-    auto batch_reader =
-        impl_->check("invalid batch reader",
-                     impl_->reader_->GetRecordBatchReader({row_group.first}));
+  if (plan.is_full_scan()) {
+    // FIXME: We should emit a warning here.
+    batch_reader =
+        impl_->check("invalid batch reader", impl_->reader_->GetRecordBatchReader());
+  } else {
+    batch_reader = impl_->check(
+        "invalid batch reader",
+        impl_->reader_->GetRecordBatchReader(plan.materalize_as_vector()));
+  }
 
-    for (auto batch_r : *batch_reader) {
-      auto batch = impl_->check("invalid record batch", batch_r);
-      int64_t rows = batch->num_rows();
-
-      for (const auto& range : row_group.second) {
-        // Is this batch within this range?
-        if (range.offset + range.length <= row_group_start ||
-            range.offset >= row_group_start + rows) {
-          continue;
-        }
-
-        int64_t offset = std::max(range.offset - row_group_start, int64_t{});
-        int64_t length = std::min(range.length - row_group_start, rows);
-
-        auto sliced = batch->Slice(offset, length);
-        auto want_rows = impl_->filter(plan, sliced);
-        Algorithm::spans(want_rows, project_wanted, sliced);
-      }
-
-      row_group_start += batch->num_rows();
-    }
+  for (auto batch_r : *batch_reader) {
+    auto batch = impl_->check("invalid record batch", batch_r);
+    auto want_rows = impl_->filter(q, batch);
+    Algorithm::spans(want_rows, project_wanted, batch);
   }
 
   return std::move(impl_->slice_);

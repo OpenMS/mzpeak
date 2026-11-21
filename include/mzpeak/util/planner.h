@@ -8,7 +8,6 @@ top-level directory of this repository.
 
 #pragma once
 
-#include <cstdint>
 #include <memory>
 
 #include "mzpeak/util/query.h"
@@ -20,6 +19,7 @@ class FileReader;
 namespace MzPeak::Util {
 
 class Parquet;
+class Index;
 
 /**
  * Create a plan for the most efficient way to execute a query against
@@ -27,32 +27,22 @@ class Parquet;
  */
 class Planner final {
 public:
-  /// How to limit table reads.
-  struct Range {
-    int32_t row_group; /// The row group to request.
-    int64_t offset;    /// The first row to read.
-    int64_t length;    /// The number of rows to read.
-  };
-
-  /// Information about how to carry out a query.
-  struct Plan {
-    Query query;
-    std::vector<Range> ranges;
-  };
+  /**
+   * Construct a query plan.
+   */
+  Plan plan(const Query&) const;
 
   /// Destructor.
   ~Planner();
 
-  /**
-   * Construct a query plan.
-   */
-  const Plan& plan() const;
+  /// Read-only access to the index.  Useful for debugging.
+  const Index& index() const;
 
 private:
   friend class Parquet;
 
   /// Constructor.
-  Planner(parquet::arrow::FileReader&, const Query&);
+  Planner(parquet::arrow::FileReader&, std::shared_ptr<Schema::GroupMap> groups_);
 
   class Impl;
   std::unique_ptr<Impl> impl_;

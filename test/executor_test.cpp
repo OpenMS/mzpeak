@@ -36,16 +36,14 @@ BOOST_AUTO_TEST_CASE(can_find_spectrum)
   BOOST_TEST(mz_field.has_value());
 
   auto query = Util::Query::Builder(index_field.value()).eq<uint64_t>(1ul);
-
-  Util::Planner planner = parquet->planner(query);
-  auto plan = planner.plan();
-  BOOST_TEST(plan.ranges.size() == 1ul);
+  auto plan = parquet->plan(query);
+  BOOST_TEST(plan.materalize().size() == 1ul);
 
   Util::Projection projection;
   projection.project(mz_field.value());
 
   Util::Executor executor = parquet->executor(projection);
-  const auto& slice = executor.execute(plan);
+  const auto& slice = executor.execute(query, plan);
   BOOST_TEST((slice->fields() == projection.get()));
   BOOST_TEST(slice->has_column(mz_field.value()));
 
@@ -77,15 +75,14 @@ BOOST_AUTO_TEST_CASE(can_read_uint8_t)
   BOOST_TEST(ms_level.has_value());
 
   auto query = Util::Query::Builder(index_field.value()).eq<uint64_t>(0ul);
-  Util::Planner planner = parquet->planner(query);
-  auto plan = planner.plan();
-  BOOST_TEST(plan.ranges.size() == 1ul);
+  auto plan = parquet->plan(query);
+  BOOST_TEST(plan.materalize().size() == 1ul);
 
   Util::Projection projection;
   projection.project(ms_level.value());
 
   Util::Executor executor = parquet->executor(projection);
-  const auto& slice = executor.execute(plan);
+  const auto& slice = executor.execute(query, plan);
 
   BOOST_TEST((slice->fields() == projection.get()));
   BOOST_TEST(slice->has_column(ms_level.value()));

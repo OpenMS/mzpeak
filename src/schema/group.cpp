@@ -7,6 +7,7 @@ top-level directory of this repository.
 */
 
 #include <memory>
+#include <numeric>
 #include <parquet/schema.h>
 #include <parquet/types.h>
 #include <ranges>
@@ -38,6 +39,39 @@ std::string join_(auto begin, auto end)
 }
 
 /******************************************************************************/
+bool nested(Group::Field::Kind k)
+{
+  using enum Group::Field::Kind;
+
+  switch (k) {
+  case Scalar:
+    return false;
+  case List:
+    return false;
+  case ListOfGroups:
+    return true;
+  case Group:
+    return true;
+  case Unknown:
+    return false;
+  }
+
+  std::unreachable();
+}
+
+/******************************************************************************/
+/// Remove nesting until you get to the bottom group.
+std::shared_ptr<parquet::schema::GroupNode>
+resolve_group(std::shared_ptr<parquet::schema::GroupNode> node)
+{
+  while (node->field_count() == 1 && node->field(0)->is_group()) {
+    node = std::static_pointer_cast<parquet::schema::GroupNode>(node->field(0));
+  }
+
+  return node;
+}
+
+/******************************************************************************/
 // Try to find a nested primitive node assuming that all fields will
 // use the same type (i.e. homogeneous list).
 std::shared_ptr<parquet::schema::PrimitiveNode>
@@ -46,7 +80,7 @@ find_homogeneous_primitive(std::shared_ptr<parquet::schema::Node> node)
   while (node != nullptr && node->is_group()) {
     auto group = std::static_pointer_cast<parquet::schema::GroupNode>(node);
 
-    if (group->field_count() > 0) {
+    if (group->field_count() == 1) {
       node = group->field(0);
     } else {
       node = nullptr;
@@ -64,19 +98,19 @@ find_homogeneous_primitive(std::shared_ptr<parquet::schema::Node> node)
 std::pair<Group::Field::Kind, std::optional<Util::Type>>
 field_type_from_parquet(const std::shared_ptr<parquet::schema::GroupNode>& node)
 {
-  if (node->logical_type()->type() == parquet::LogicalType::Type::LIST) {
+  if (node->logical_type()->is_list()) {
     // If the list is a homogeneous collection of scalars...
     if (auto prim = find_homogeneous_primitive(
             std::static_pointer_cast<parquet::schema::Node>(node));
         prim != nullptr) {
       return std::make_pair(Group::Field::Kind::List,
                             Util::type_from_parquet(*prim));
-    } else {
-      return std::make_pair(Group::Field::Kind::List, std::nullopt);
     }
+
+    return std::make_pair(Group::Field::Kind::ListOfGroups, std::nullopt);
   }
 
-  return std::make_pair(Group::Field::Kind::Unknown, std::nullopt);
+  return std::make_pair(Group::Field::Kind::Group, std::nullopt);
 }
 
 /******************************************************************************/
@@ -123,6 +157,9 @@ const std::optional<Util::Type>& Group::Field::type() const { return type_; }
 void Group::Field::type(Util::Type type) { type_ = type; }
 
 /******************************************************************************/
+std::shared_ptr<Group> Group::Field::nested() const { return nested_; }
+
+/******************************************************************************/
 std::optional<Util::Numpress::Type> Group::Field::possibly_numpress() const
 {
   return Util::Numpress::type_from_column_name(schema_name_);
@@ -157,6 +194,7 @@ void Group::make_fields(const parquet::schema::GroupNode& node,
                         const Schema::File& file,
                         index_type offset)
 {
+
   auto link = [&](std::shared_ptr<Field>& field) -> void {
     fields_[field->name()] = field;
 
@@ -169,39 +207,52 @@ void Group::make_fields(const parquet::schema::GroupNode& node,
     }
   };
 
+  index_type rel{};
+
+  auto new_field = [&](const auto& name) -> std::shared_ptr<Field> {
+    auto field = std::make_shared<Field>(name, rel, rel + offset);
+    link(field);
+    ++rel;
+    return field;
+  };
+
+  auto nest = [&](auto& field, auto& group) {
+    auto nested = resolve_group(group);
+    auto ri = field->relative_index();
+    auto ai = field->absolute_index();
+    field->nested_ = std::make_shared<Group>(*nested, file, ri, ai);
+    field->nested_->name(field->name());
+    offset += field->nested_->size() - 1;
+  };
+
   for (index_type i : std::views::iota(0, node.field_count())) {
     auto child = node.field(i);
 
     if (child->is_primitive()) {
-      std::shared_ptr<Field> field =
-          std::make_shared<Field>(child->name(), i, offset + i);
-      link(field);
-
+      auto field(new_field(child->name()));
       auto prim = std::static_pointer_cast<parquet::schema::PrimitiveNode>(child);
       field->kind_ = Field::Kind::Scalar;
       field->type_ = Util::type_from_parquet(*prim);
     } else if (child->is_group()) {
       auto grp = std::static_pointer_cast<parquet::schema::GroupNode>(child);
-
-      if (grp->field_count() == 1) {
-        std::shared_ptr<Field> field =
-            std::make_shared<Field>(grp->name(), i, offset + i);
-        link(field);
-
-        auto grp_type = field_type_from_parquet(grp);
-        field->kind_ = grp_type.first;
-        field->type_ = grp_type.second;
-
-        if (field->name() == "parameters") {
-          field->kind_ = Group::Field::Kind::Params;
-        }
-      }
+      auto grp_type = field_type_from_parquet(grp);
+      auto field = new_field(grp->name());
+      field->kind_ = grp_type.first;
+      field->type_ = grp_type.second;
+      if (nested(field->kind_)) nest(field, grp);
+    } else {
+      std::string msg(child->name());
+      msg += " is neither a primitive nor a group";
+      throw ParquetError("invalid schema: " + msg);
     }
   }
 }
 
 /******************************************************************************/
 const std::string& Group::name() const { return name_; }
+
+/******************************************************************************/
+void Group::name(std::string_view s) { name_ = s; }
 
 /******************************************************************************/
 Group::index_type Group::index() const { return index_; }
@@ -241,6 +292,25 @@ Group::field(const CVType&& cvt) const
 const Group::field_map_t& Group::fields() const { return fields_; }
 
 /******************************************************************************/
+Group::field_map_t& Group::fields() { return fields_; }
+
+/******************************************************************************/
+std::size_t Group::size() const
+{
+  std::size_t count{};
+
+  for (const auto& field : fields_) {
+    if (field.second->nested_) {
+      count += field.second->nested_->size();
+    } else {
+      ++count;
+    }
+  }
+
+  return count;
+}
+
+/******************************************************************************/
 bool Group::is_root() const { return is_root_; }
 
 /******************************************************************************/
@@ -251,6 +321,46 @@ std::string Group::path(const Field& field) const
   } else {
     return name() + "." + field.name();
   }
+}
+
+/******************************************************************************/
+std::vector<Column> flatten_group_map(const GroupMap& gm)
+{
+  std::vector<Column> res;
+
+  auto add = [&res](this auto self, const std::shared_ptr<Group>& group) -> void {
+    for (const auto& field : group->fields()) {
+      if (field.second->nested()) {
+        self(field.second->nested());
+      } else {
+        res.push_back({group, field.second});
+      }
+    }
+  };
+
+  res.reserve(std::accumulate(gm.begin(), gm.end(), 0, [](auto acc, auto f) {
+    return acc + f.second->size();
+  }));
+
+  for (const auto& group : gm) {
+    add(group.second);
+  }
+
+  std::ranges::sort(res, {},
+                    [](const auto& c) { return c.second->absolute_index(); });
+
+  // Spot check:
+  if (!res.empty()) {
+    Group::index_type last = static_cast<Group::index_type>(res.size() - 1);
+
+    if (res[0].second->absolute_index() != 0 ||
+        res[last].second->absolute_index() != last) {
+      throw ParquetError(
+          "while flattening schema: column indices are not sequential");
+    }
+  }
+
+  return res;
 }
 
 } // namespace MzPeak::Schema

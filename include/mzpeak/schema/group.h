@@ -65,8 +65,11 @@ public:
       /// Elements are a list of scalars.
       List,
 
-      /// Metadata parameters,
-      Params,
+      /// A list of groups.
+      ListOfGroups,
+
+      /// A nested group.
+      Group,
 
       /// No clue.
       Unknown,
@@ -121,6 +124,14 @@ public:
     void type(Util::Type);
 
     /**
+     * If this field represents a nested group then this method will
+     * return a pointer to that group.
+     *
+     * NOTE: May return `nullptr`.
+     */
+    std::shared_ptr<Group> nested() const;
+
+    /**
      * Return the numpress method type if the column name indicates
      * this is a numpress compressed column of `uint8_t`.
      */
@@ -136,6 +147,7 @@ public:
     std::optional<CVUnit> cv_unit_;
     std::optional<Util::Type> type_;
     Kind kind_ = Kind::Scalar;
+    std::shared_ptr<Group> nested_;
   };
 
 public:
@@ -161,6 +173,11 @@ public:
   const std::string& name() const;
 
   /**
+   * Change the name of this group.
+   */
+  void name(std::string_view);
+
+  /**
    * Return the schema column index of this group.
    */
   index_type index() const;
@@ -182,6 +199,16 @@ public:
    * Return a map of all fields.
    */
   const field_map_t& fields() const;
+
+  /**
+   * Return a (mutable) map of all fields.
+   */
+  field_map_t& fields();
+
+  /**
+   * Return the total number of fields, including from nested groups.
+   */
+  std::size_t size() const;
 
   /**
    * Return true if this is the root group.
@@ -219,5 +246,11 @@ using GroupMap = std::map<std::string, std::shared_ptr<Group>>;
  */
 using Column =
     std::pair<std::shared_ptr<const Group>, std::shared_ptr<const Group::Field>>;
+
+/**
+ * Turn a `GroupMap` into a vector whose indices match those of each
+ * field's absolute index.
+ */
+std::vector<Column> flatten_group_map(const GroupMap&);
 
 } // namespace MzPeak::Schema

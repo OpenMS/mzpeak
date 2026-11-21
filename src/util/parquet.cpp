@@ -53,36 +53,89 @@ std::optional<std::size_t> get_kv_uint(const Parquet::file_metadata_t& fmd,
 }
 
 /******************************************************************************/
+std::shared_ptr<parquet::arrow::FileReader> mkreader(const Schema::File& file,
+                                                     const Arrow& arrow)
+{
+  auto raf = arrow.reader();
+
+  auto reader_builder = parquet::arrow::FileReaderBuilder();
+  auto status = reader_builder.Open(std::move(raf));
+
+  if (!status.ok()) {
+    std::string msg("while opening file: " + file.file_name() + ": ");
+    throw ParquetError(msg + status.ToString());
+  }
+
+  std::unique_ptr<parquet::arrow::FileReader> reader;
+  status = reader_builder.Build(&reader);
+
+  if (!status.ok()) {
+    std::string msg("while reading file: " + file.file_name() + ": ");
+    throw ParquetError(msg + status.ToString());
+  }
+
+  return reader;
+}
+
+/******************************************************************************/
+std::shared_ptr<Schema::GroupMap>
+parse_schema(const parquet::arrow::FileReader& reader, const Schema::File& file)
+{
+  auto groups = std::make_shared<Schema::GroupMap>();
+  auto fmd = reader.parquet_reader()->metadata();
+  auto root = fmd->schema()->group_node();
+  int32_t offset = 0;
+
+  auto add = [&groups,
+              &offset](const std::shared_ptr<Schema::Group>& group) -> void {
+    (*groups)[group->name()] = group;
+    offset += group->fields().size();
+  };
+
+  std::shared_ptr<Schema::Group> root_group =
+      std::make_shared<Schema::Group>(*root, file);
+  auto& root_fields = root_group->fields();
+
+  for (int32_t i : std::views::iota(0, root->field_count())) {
+    auto node = root->field(i);
+
+    if (auto it = root_fields.find(node->name());
+        it != root_fields.end() &&
+        it->second->kind() == Schema::Group::Field::Kind::Group &&
+        it->second->nested()) {
+
+      add(it->second->nested());
+      root_fields.erase(it);
+    } else if (node->is_group() && !node->logical_type()->is_list()) {
+      // NOTE: top-level lists are included in the root group.
+
+      std::shared_ptr<parquet::schema::GroupNode> group =
+          std::static_pointer_cast<parquet::schema::GroupNode>(node);
+
+      std::shared_ptr<Schema::Group> s =
+          std::make_shared<Schema::Group>(*group, file, i, offset);
+
+      add(s);
+    }
+  }
+
+  if (!root_group->fields().empty()) {
+    add(root_group);
+  }
+
+  return groups;
+}
+
+/******************************************************************************/
 struct Parquet::Impl {
   Impl(std::unique_ptr<IO::File> data, Schema::File file)
       : file_(std::move(file))
       , arrow_(std::make_unique<Arrow>(std::move(data)))
-      , reader_(nullptr)
-      , groups_(std::make_shared<Schema::GroupMap>())
+      , reader_(mkreader(file_, *arrow_))
+      , groups_(parse_schema(*reader_, file_))
+      , planner_(*reader_, groups_)
   {
-    auto raf = arrow_->reader();
-
-    auto reader_builder = parquet::arrow::FileReaderBuilder();
-    auto status = reader_builder.Open(std::move(raf));
-
-    if (!status.ok()) {
-      std::string msg("while opening file: " + file_.file_name() + ": ");
-      throw ParquetError(msg + status.ToString());
-    }
-
-    std::unique_ptr<parquet::arrow::FileReader> reader;
-    status = reader_builder.Build(&reader);
-
-    if (!status.ok()) {
-      std::string msg("while reading file: " + file_.file_name() + ": ");
-      throw ParquetError(msg + status.ToString());
-    }
-
-    reader_ = std::move(reader);
-    parse_schema();
   }
-
-  ~Impl() = default;
 
   void error(const std::string& error)
   {
@@ -90,43 +143,12 @@ struct Parquet::Impl {
     throw ParquetError(msg);
   }
 
-  /// Load the schema.
-  void parse_schema();
-
   Schema::File file_;
   std::unique_ptr<Arrow> arrow_;
   std::shared_ptr<parquet::arrow::FileReader> reader_;
   std::shared_ptr<Schema::GroupMap> groups_;
+  Planner planner_;
 };
-
-/******************************************************************************/
-void Parquet::Impl::parse_schema()
-{
-  auto fmd = reader_->parquet_reader()->metadata();
-  auto root = fmd->schema()->group_node();
-  int32_t offset = 0;
-
-  std::shared_ptr<Schema::Group> root_group =
-      std::make_shared<Schema::Group>(*root, file_);
-
-  if (!root_group->fields().empty()) {
-    (*groups_)[root_group->name()] = root_group;
-  }
-
-  for (int32_t i : std::views::iota(0, root->field_count())) {
-    auto node = root->field(i);
-
-    if (node->is_group() && !node->logical_type()->is_list()) {
-      std::shared_ptr<parquet::schema::GroupNode> group =
-          std::static_pointer_cast<parquet::schema::GroupNode>(node);
-
-      std::shared_ptr<Schema::Group> s =
-          std::make_shared<Schema::Group>(*group, file_, i, offset);
-      (*groups_)[s->name()] = s;
-      offset += group->field_count();
-    }
-  }
-}
 
 /******************************************************************************/
 Parquet::Parquet(std::unique_ptr<IO::File> data, Schema::File file)
@@ -183,7 +205,7 @@ std::optional<std::size_t> Parquet::kv_size_t(const file_metadata_t& fmd,
 parquet::arrow::FileReader& Parquet::reader() const { return *impl_->reader_; }
 
 /******************************************************************************/
-Planner Parquet::planner(const Query& q) { return Planner(*impl_->reader_, q); }
+Plan Parquet::plan(const Query& q) const { return impl_->planner_.plan(q); }
 
 /******************************************************************************/
 Executor Parquet::executor(const Projection& p)
