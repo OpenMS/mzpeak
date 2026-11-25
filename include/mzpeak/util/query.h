@@ -155,9 +155,6 @@ public:
     /// value, and that value is the given value.
     bool is(T) const;
 
-    /// See `Result.is`.
-    explicit operator bool() const noexcept;
-
     /// Convert to another type while preserving failure and NULL
     /// status.  That is, U is ignored if the current result is NULL.
     template <typename U> Result<U> to(U) const;
@@ -263,19 +260,6 @@ template <typename T> bool Query::Result<T>::is(T t) const
 {
   if (failed_) return false;
   return has_value() && value() == t;
-}
-
-/******************************************************************************/
-template <typename T> Query::Result<T>::operator bool() const noexcept
-{
-  if constexpr (std::is_same_v<T, bool>) {
-    return is(true);
-  } else if constexpr (requires(T t) { t.operator bool(); }) {
-    if (failed_) return false;
-    return has_value() && value();
-  } else {
-    static_assert(false_type<T>, "type has no boolean operator");
-  }
 }
 
 /******************************************************************************/

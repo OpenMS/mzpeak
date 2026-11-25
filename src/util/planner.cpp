@@ -40,7 +40,6 @@ private:
 
   std::shared_ptr<parquet::PageIndexReader> page_index_reader_;
   std::shared_ptr<parquet::RowGroupMetaData> rg_;
-  std::shared_ptr<parquet::RowGroupPageIndexReader> ri_;
   int32_t row_group_index_;
 };
 
@@ -50,7 +49,6 @@ StatsHelper::StatsHelper(std::shared_ptr<parquet::PageIndexReader> pir,
                          int32_t row_group_index)
     : page_index_reader_(std::move(pir))
     , rg_(std::move(rg))
-    , ri_(page_index_reader_->RowGroup(row_group_index))
     , row_group_index_(row_group_index)
 {
 }
@@ -96,14 +94,20 @@ void StatsHelper::index_via_page_stats(Index& idx, const Schema::Column& col)
   if (!col.second->type().has_value()) return;
 
   int32_t column_index = col.second->absolute_index();
+  std::shared_ptr<parquet::RowGroupPageIndexReader> ri = nullptr;
   std::shared_ptr<parquet::ColumnIndex> col_index = nullptr;
   std::shared_ptr<parquet::OffsetIndex> off_index = nullptr;
 
   try {
-    col_index = ri_->GetColumnIndex(column_index);
+    if (page_index_reader_ == nullptr) return;
+
+    ri = page_index_reader_->RowGroup(row_group_index_);
+    if (ri == nullptr) return;
+
+    col_index = ri->GetColumnIndex(column_index);
     if (col_index == nullptr) return;
 
-    off_index = ri_->GetOffsetIndex(column_index);
+    off_index = ri->GetOffsetIndex(column_index);
     if (off_index == nullptr) return;
   } catch (const parquet::ParquetException&) {
     // The page index is flaky, especially if the page index was
@@ -197,20 +201,15 @@ Query::Result<Plan> Planner::Impl::plan(const Query::Predicate& pred) const
       rgs.insert_range(it->row_groups_);
     }
 
-    if (rgs.empty()) {
-      return Plan::none(num_rgs());
-    } else {
-      return Plan(Plan::Some, std::move(rgs), num_rgs());
-    }
+    return Plan(Plan::Some, std::move(rgs), num_rgs());
   };
 
   auto key = index_.to_key(pred.dest);
   auto it = index_.get().find(key);
 
-  if (it == index_.get().end()) {
+  // We have no planning information so we need a full table scan.
+  if (it == index_.get().end() || it->second->empty()) {
     return Plan::full(num_rgs());
-  } else if (it->second->empty()) {
-    return Plan::none(num_rgs());
   }
 
   using namespace std::ranges;
@@ -284,7 +283,7 @@ Plan Planner::plan(const Query& q) const
   if (result.has_value()) {
     return result.value();
   } else {
-    return Plan::none(impl_->num_rgs());
+    return Plan(impl_->num_rgs());
   }
 }
 

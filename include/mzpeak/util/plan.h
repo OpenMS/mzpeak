@@ -14,6 +14,10 @@ directory of this repository.
 
 namespace MzPeak::Util {
 
+/// NOTE: The Plan class uses set logic (∧=∩ and ∨=∪) over the row
+/// groups that need to be fetched.  The `All` case serves two
+/// purposes, 1) mark that a full scan is needed, and 2) avoid
+/// materializing a set containing all of the row group IDs.
 class Plan final {
 public:
   // A set of row group IDs.
@@ -23,18 +27,12 @@ public:
     /// Full table scan required.
     All,
 
-    /// No row groups match.
-    None,
-
     /// Some row groups match.
     Some,
-
+    //
     /// All row groups except these.
     Except,
   };
-
-  /// Construct an invalid plan.
-  static Plan none(int32_t total) { return Plan(None, {}, total); }
 
   /// Construct a plan that requires a full table scan.
   static Plan full(int32_t total) { return Plan(All, {}, total); }
@@ -45,9 +43,6 @@ public:
   /// Constructor
   explicit Plan(Type, rgs_t, int32_t);
 
-  /// Conversion to bool.
-  explicit operator bool() const noexcept;
-
   /**
    * Return `true` if the plan requires a full table scan.
    */
@@ -56,9 +51,9 @@ public:
   /**
    * Return a list of row groups that are needed.
    *
-   * NOTE: if the plan requires a full table scan this function will
-   * return an empty set.  The same is true if no rows could match the
-   * query.
+   * NOTE: if the plan requires a full table scan this function can
+   * return a possibly large set.  Prefer using `is_full_scan()`
+   * first.
    */
   rgs_t materalize() const;
 
