@@ -19,6 +19,7 @@ directory of this repository.
 #include "mzpeak/exception.h"
 #include "mzpeak/util/arrow.h"
 #include "mzpeak/util/parquet.h"
+#include "mzpeak/util/planner.h"
 
 namespace MzPeak::Util {
 

@@ -69,7 +69,7 @@ BOOST_AUTO_TEST_CASE(can_use_two_columns)
 
   auto query = Util::Query::Builder(*index_field)
                    .eq<uint64_t>(3)
-                   .and_then(Util::Query::Builder(*start_time_field).gt<float>(0.0));
+                   .and_(Util::Query::Builder(*start_time_field).gt<float>(0.0));
 
   auto plan = parquet->plan(query);
   auto rgs = plan.materalize_as_vector();

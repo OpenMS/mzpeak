@@ -12,6 +12,7 @@ directory of this repository.
 #include "mzpeak/metadata/table.h"
 #include "mzpeak/schema/group.h"
 #include "mzpeak/util/parquet.h"
+#include "mzpeak/util/slice.h"
 
 namespace MzPeak::Metadata {
 

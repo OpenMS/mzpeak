@@ -52,6 +52,11 @@ public:
   std::shared_ptr<Parquet> parquet(const Schema::File&);
 
   /**
+   * Return the maximum size allowed for metadata caching.
+   */
+  std::size_t metadata_cache_size() const;
+
+  /**
    * Reset and clear the internal cache.
    */
   void clear();

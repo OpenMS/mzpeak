@@ -20,6 +20,10 @@ namespace MzPeak::Util {
 class Manager;
 }
 
+namespace MzPeak::Metadata {
+class Spectra;
+}
+
 namespace MzPeak {
 
 /**
@@ -34,6 +38,7 @@ private:
   // Internal data access.
   std::shared_ptr<Data::Signals> data_;
   std::shared_ptr<Util::Manager> manager_;
+  std::shared_ptr<Metadata::Spectra> metadata_;
   std::vector<Data::ArrayIndex::Dimension> default_dims_;
 
   // Function to fetch a specific spectrum.

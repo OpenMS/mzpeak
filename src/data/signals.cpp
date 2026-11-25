@@ -15,6 +15,7 @@ top-level directory of this repository.
 #include "mzpeak/util/executor.h"
 #include "mzpeak/util/planner.h"
 #include "mzpeak/util/projection.h"
+#include "mzpeak/util/slice.h"
 
 namespace MzPeak::Data {
 

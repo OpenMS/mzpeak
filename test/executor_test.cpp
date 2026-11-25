@@ -15,6 +15,7 @@ in the LICENSE file found in the top-level directory of this project.
 #include "mzpeak/util/parquet.h"
 #include "mzpeak/util/planner.h"
 #include "mzpeak/util/query.h"
+#include "mzpeak/util/slice.h"
 
 /******************************************************************************/
 BOOST_AUTO_TEST_CASE(can_find_spectrum)
