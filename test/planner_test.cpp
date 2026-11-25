@@ -34,6 +34,7 @@ BOOST_AUTO_TEST_CASE(can_locate_correct_rows)
 
   Util::Query queries[] = {
       Util::Query::Builder(*index_field).eq<uint64_t>(20),
+      Util::Query::Builder(*index_field).ge<uint64_t>(20),
       Util::Query::Builder(*mz_field).gt<double>(0),
   };
 
