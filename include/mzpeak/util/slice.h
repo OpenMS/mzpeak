@@ -18,6 +18,7 @@ namespace MzPeak::Util {
 
 // Forward declarations.
 class Executor;
+class Batch;
 
 /******************************************************************************/
 using Column = MzPeak::Schema::Column;
@@ -125,6 +126,7 @@ public:
 
 private:
   friend class MzPeak::Util::Executor;
+  friend class MzPeak::Util::Batch;
 
   /// Constructor.
   Slice(const std::vector<Column>&);

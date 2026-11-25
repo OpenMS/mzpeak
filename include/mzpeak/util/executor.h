@@ -8,9 +8,9 @@ top-level directory of this repository.
 
 #pragma once
 
-#include "mzpeak/util/planner.h"
-#include "mzpeak/util/projection.h"
-#include "mzpeak/util/slice.h"
+#include <memory>
+
+#include "mzpeak/util/compat.h" // IWYU pragma: keep
 
 namespace parquet::arrow {
 class FileReader;
@@ -18,18 +18,30 @@ class FileReader;
 
 namespace MzPeak::Util {
 
+class Batch;
 class Parquet;
+class Plan;
+class Projection;
+class Query;
+class Slice;
 
 /**
  * Query executor.
  */
 class Executor final {
 public:
-  /// Clean up signatures.
-  using Slice = MzPeak::Util::Slice;
-
   /// Destructor.
   ~Executor();
+
+  /**
+   * A function that accepts one batch at a time.
+   */
+  using Reader = std::move_only_function<void(const Batch&)>;
+
+  /**
+   * Read batches returned from a Query.
+   */
+  void read(const Query&, const Plan&, Reader) const;
 
   /**
    * Execute a query and extract the requested projection.

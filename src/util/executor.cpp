@@ -14,8 +14,14 @@ top-level directory of this repository.
 #include <ranges>
 #include <string_view>
 
+#include "mzpeak/schema/group.h"
 #include "mzpeak/util/algorithm.h"
+#include "mzpeak/util/batch.h"
+#include "mzpeak/util/decoders.h"
 #include "mzpeak/util/executor.h"
+#include "mzpeak/util/projection.h"
+#include "mzpeak/util/query.h"
+#include "mzpeak/util/slice.h"
 #include "mzpeak/util/types.h"
 
 namespace MzPeak::Util {
@@ -25,7 +31,6 @@ struct Executor::Impl {
   Impl(std::shared_ptr<parquet::arrow::FileReader> reader, const Projection& fields)
       : reader_(reader)
       , projection_(fields)
-      , slice_(nullptr)
   {
   }
 
@@ -44,13 +49,6 @@ struct Executor::Impl {
   /// indicating which rows should be kept.
   std::vector<bool> filter(const Query&, std::shared_ptr<arrow::RecordBatch>&);
 
-  /// Capture the requested columns.
-  void project(std::shared_ptr<arrow::RecordBatch>&);
-
-  /// Return the array associated with the given field.
-  std::shared_ptr<arrow::Array> array(std::shared_ptr<arrow::RecordBatch>& batch,
-                                      const Schema::Column& field);
-
   /// Helper to extract a single value from an array.
   struct ArrayValueHelper {
     template <Type T> Query::Result<Query::value_t> operator()();
@@ -62,14 +60,14 @@ struct Executor::Impl {
 
   std::shared_ptr<parquet::arrow::FileReader> reader_;
   Projection projection_;
-  std::unique_ptr<Slice> slice_;
 };
 
 /******************************************************************************/
 template <Type T>
 Query::Result<Query::value_t> Executor::Impl::ArrayValueHelper::operator()()
 {
-  std::shared_ptr<arrow::Array> a(impl_.array(batch_, field_));
+  Batch helper(batch_);
+  std::shared_ptr<arrow::Array> a(helper.raw(field_));
 
   if (row_index_ < 0 || row_index_ >= a->length() || a->IsNull(row_index_)) {
     return Query::Result<Query::value_t>::skip();
@@ -106,33 +104,6 @@ std::vector<bool> Executor::Impl::filter(const Query& q,
 }
 
 /******************************************************************************/
-void Executor::Impl::project(std::shared_ptr<arrow::RecordBatch>& batch)
-{
-  for (const auto& field : slice_->fields()) {
-    slice_->append(field, array(batch, field));
-  }
-}
-
-/******************************************************************************/
-std::shared_ptr<arrow::Array>
-Executor::Impl::array(std::shared_ptr<arrow::RecordBatch>& batch,
-                      const Schema::Column& field)
-{
-  if (field.first->is_root()) {
-    return batch->column(field.second->relative_index());
-  } else {
-    std::shared_ptr<arrow::Array> col(batch->column(field.first->index()));
-
-    if (col && col->type_id() == arrow::Type::STRUCT) {
-      auto sa = std::static_pointer_cast<arrow::StructArray>(col);
-      return sa->field(field.second->relative_index());
-    } else {
-      throw ParquetError("column not in batch: " + field.first->path(*field.second));
-    }
-  }
-}
-
-/******************************************************************************/
 Executor::Executor(std::shared_ptr<parquet::arrow::FileReader> reader,
                    const Projection& fields)
     : impl_(std::make_unique<Impl>(std::move(reader), fields))
@@ -143,21 +114,21 @@ Executor::Executor(std::shared_ptr<parquet::arrow::FileReader> reader,
 Executor::~Executor() = default;
 
 /******************************************************************************/
-std::unique_ptr<Executor::Slice> Executor::execute(const Query& q, const Plan& plan)
+void Executor::read(const Query& q, const Plan& plan, Reader reader) const
 {
   // Reduce a batch to just those rows that were selected by the query
   // and then capture the projected columns.
   auto project_wanted = [&](std::size_t i, std::size_t j,
-                            std::shared_ptr<arrow::RecordBatch>& batch) -> void {
+                            std::shared_ptr<arrow::RecordBatch>& rb) -> void {
     int64_t offset = i;
     int64_t length = j - i + 1;
     if (length <= 0) return;
 
-    auto sliced = batch->Slice(offset, length);
-    impl_->project(sliced);
+    auto sliced = rb->Slice(offset, length);
+    auto batch = Batch(sliced);
+    std::invoke(reader, batch);
   };
 
-  impl_->slice_ = std::unique_ptr<Slice>(new Slice(impl_->projection_.get()));
   std::unique_ptr<arrow::RecordBatchReader> batch_reader = nullptr;
 
   if (plan.is_full_scan()) {
@@ -175,8 +146,21 @@ std::unique_ptr<Executor::Slice> Executor::execute(const Query& q, const Plan& p
     auto want_rows = impl_->filter(q, batch);
     Algorithm::spans(want_rows, project_wanted, batch);
   }
+}
 
-  return std::move(impl_->slice_);
+/******************************************************************************/
+std::unique_ptr<Slice> Executor::execute(const Query& q, const Plan& plan)
+{
+  std::unique_ptr<Slice> slice(new Slice(impl_->projection_.get()));
+
+  auto reader = [&](const Batch& batch) -> void {
+    for (const auto& field : slice->fields()) {
+      slice->append(field, batch.raw(field));
+    }
+  };
+
+  read(q, plan, reader);
+  return slice;
 }
 
 } // namespace MzPeak::Util

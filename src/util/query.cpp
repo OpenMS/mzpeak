@@ -167,16 +167,13 @@ Query Query::negate() const
 }
 
 /******************************************************************************/
-Query Query::and_then(const Query& rhs) const
+Query Query::and_(const Query& rhs) const
 {
   return join(rhs, Node::Connective::AND);
 }
 
 /******************************************************************************/
-Query Query::or_else(const Query& rhs) const
-{
-  return join(rhs, Node::Connective::OR);
-}
+Query Query::or_(const Query& rhs) const { return join(rhs, Node::Connective::OR); }
 
 /******************************************************************************/
 Query Query::join(const Query& other, Node::Connective oper) const

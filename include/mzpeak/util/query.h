@@ -26,7 +26,7 @@ namespace MzPeak::Util {
  * predicate functions.
  *
  * More complex queries can be constructed using the logic operators
- * (`&&`, `||`, and `!`) using the `and_then`, `or_else`, and `negate`
+ * (`&&`, `||`, and `!`) using the `and_`, `or_`, and `negate`
  * functions.
  */
 class Query final {
@@ -160,8 +160,8 @@ public:
     template <typename U> Result<U> to(U) const;
 
     /// Combine values using logical operations.
-    Result and_then(const Result& other);
-    Result or_else(const Result& other);
+    Result and_(const Result& other);
+    Result or_(const Result& other);
     Result negate();
 
   private:
@@ -180,10 +180,10 @@ public:
 
 public:
   /// Join two queries together with a logical AND.
-  Query and_then(const Query&) const;
+  Query and_(const Query&) const;
 
   /// Join two queries together with a logical OR.
-  Query or_else(const Query&) const;
+  Query or_(const Query&) const;
 
   /// Negate a query.
   Query negate() const;
@@ -274,7 +274,7 @@ Query::Result<U> Query::Result<T>::to(U u) const
 
 /******************************************************************************/
 template <typename T>
-Query::Result<T> Query::Result<T>::and_then(const Query::Result<T>& other)
+Query::Result<T> Query::Result<T>::and_(const Query::Result<T>& other)
 {
   if (failed_) return *this;
   if (other.failed_) return other;
@@ -292,7 +292,7 @@ Query::Result<T> Query::Result<T>::and_then(const Query::Result<T>& other)
 
 /******************************************************************************/
 template <typename T>
-Query::Result<T> Query::Result<T>::or_else(const Query::Result<T>& other)
+Query::Result<T> Query::Result<T>::or_(const Query::Result<T>& other)
 {
   if (failed_) return *this;
   if (other.failed_) return other;

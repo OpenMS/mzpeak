@@ -16,6 +16,8 @@ top-level directory of this repository.
 namespace std {
 template <class S> using move_only_function = boost::compat::move_only_function<S>;
 } // namespace std
+#else
+#include <functional> // IWYU pragma: keep
 #endif
 
 /******************************************************************************/

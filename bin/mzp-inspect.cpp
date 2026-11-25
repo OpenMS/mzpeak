@@ -12,6 +12,7 @@ top-level directory of this repository.
 #include <iostream>
 #include <memory>
 #include <print>
+#include <ranges>
 
 #include "mzpeak.h"
 #include "mzpeak/schema/group.h"
