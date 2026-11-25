@@ -94,18 +94,22 @@ Visitor<T, Fn>::visit_node(const Query::Node& node, Fn fn) const
   assert(node.lhs_.has_value());
   result_t result(trampoline(walk(std::any_cast<Query>(node.lhs_), fn)));
 
+  constexpr bool can_short_circuit = std::is_same_v<T, bool>;
+
   if (node.rhs_.has_value()) {
     switch (node.connective_) {
     case Query::Node::Connective::AND:
-      if (result) {
-        return Trampoline(trampoline(walk(std::any_cast<Query>(node.rhs_), fn)));
+      if constexpr (can_short_circuit) {
+        if (!result.is(true)) return result;
       }
-      break;
+
+      return Trampoline(trampoline(walk(std::any_cast<Query>(node.rhs_), fn)));
     case Query::Node::Connective::OR:
-      if (!result) {
-        return Trampoline(trampoline(walk(std::any_cast<Query>(node.rhs_), fn)));
+      if constexpr (can_short_circuit) {
+        if (result.is(true)) return result;
       }
-      break;
+
+      return Trampoline(trampoline(walk(std::any_cast<Query>(node.rhs_), fn)));
     }
   }
 

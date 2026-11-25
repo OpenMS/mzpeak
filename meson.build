@@ -164,6 +164,7 @@ test_names = [
     'spectra',
     'util',
     'util_index',
+    'util_plan',
     'zip',
 ]
 

@@ -54,6 +54,9 @@ BOOST_AUTO_TEST_CASE(can_merge_nodes)
   insert(4, 6, 3);
   assert_single_node(2, 6, {0, 1, 2, 3});
 
+  insert(3, 5, 3);
+  assert_single_node(2, 6, {0, 1, 2, 3});
+
   // This should not get merged.
   insert(7, 12, 4);
   auto loc = idx.get().find(key);
