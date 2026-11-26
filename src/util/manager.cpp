@@ -15,6 +15,7 @@ namespace MzPeak::Util {
 const static char* INDEX_FILE_NAME = "mzpeak_index.json";
 
 /******************************************************************************/
+static constexpr std::size_t default_signal_data_cache_size = 500 * 1024 * 1024;
 static constexpr std::size_t default_metadata_cache_size = 10 * 1024 * 1024;
 
 /******************************************************************************/
@@ -63,6 +64,7 @@ struct Manager::Impl {
       : archive_(std::move(archive))
       , files_()
       , cache_()
+      , signal_data_cache_size_(default_signal_data_cache_size)
       , metadata_cache_size_(default_metadata_cache_size)
   {
     parse_index(archive_, files_);
@@ -71,6 +73,7 @@ struct Manager::Impl {
   std::shared_ptr<MzPeak::IO::Archive> archive_;
   std::vector<Schema::File> files_;
   std::map<std::string, std::shared_ptr<Parquet>> cache_;
+  std::size_t signal_data_cache_size_;
   std::size_t metadata_cache_size_;
 };
 
@@ -122,10 +125,25 @@ std::shared_ptr<Parquet> Manager::parquet(const Schema::File& file)
 }
 
 /******************************************************************************/
+std::size_t Manager::signal_data_cache_size() const
+{
+  return impl_->signal_data_cache_size_;
+}
+
+/******************************************************************************/
+void Manager::signal_data_cache_size(std::size_t n)
+{
+  impl_->signal_data_cache_size_ = n;
+}
+
+/******************************************************************************/
 std::size_t Manager::metadata_cache_size() const
 {
   return impl_->metadata_cache_size_;
 }
+
+/******************************************************************************/
+void Manager::metadata_cache_size(std::size_t n) { impl_->metadata_cache_size_ = n; }
 
 /******************************************************************************/
 void Manager::clear() { impl_->cache_.clear(); }

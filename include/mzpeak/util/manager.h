@@ -52,9 +52,24 @@ public:
   std::shared_ptr<Parquet> parquet(const Schema::File&);
 
   /**
+   * Return the maximum size allowed for signal data caching.
+   */
+  std::size_t signal_data_cache_size() const;
+
+  /**
+   * Set the maximum size allowed for signal data caching.
+   */
+  void signal_data_cache_size(std::size_t);
+
+  /**
    * Return the maximum size allowed for metadata caching.
    */
   std::size_t metadata_cache_size() const;
+
+  /**
+   * Set the maximum size allowed for metadata caching.
+   */
+  void metadata_cache_size(std::size_t);
 
   /**
    * Reset and clear the internal cache.
