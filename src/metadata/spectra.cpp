@@ -82,7 +82,7 @@ void Spectra::Impl::load(std::size_t index)
   std::vector<Spectra::Metadata> cache;
   cache.reserve(to_request.second - to_request.first);
 
-  executor.read(query, plan, [&](const Batch& batch) -> bool {
+  for (const auto& batch : executor.read(query, plan)) {
     for (int64_t row : std::views::iota(0, batch.size())) {
       Spectra::Metadata md{.ms_level = batch.scalar<uint8_t>(row, level_field),
                            .scan_time = batch.scalar<double>(row, scan_time_field),
@@ -91,9 +91,7 @@ void Spectra::Impl::load(std::size_t index)
 
       cache.push_back(md);
     }
-
-    return true;
-  });
+  }
 
   metadata_.swap(cache);
   begin_ = to_request.first;

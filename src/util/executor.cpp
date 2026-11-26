@@ -114,19 +114,16 @@ Executor::Executor(std::shared_ptr<parquet::arrow::FileReader> reader,
 Executor::~Executor() = default;
 
 /******************************************************************************/
-void Executor::read(const Query& q, const Plan& plan, Reader reader) const
+std::generator<const Batch&> Executor::read(const Query& q, const Plan& plan) const
 {
-  // Reduce a batch to just those rows that were selected by the query
-  // and then capture the projected columns.
-  auto project_wanted = [&](std::size_t i, std::size_t j,
-                            std::shared_ptr<arrow::RecordBatch>& rb) -> void {
+  // Reduce a batch to just those rows that were selected by the query.
+  auto narrow = [&](std::size_t i, std::size_t j,
+                    std::shared_ptr<arrow::RecordBatch>& rb)
+      -> std::shared_ptr<arrow::RecordBatch> {
     int64_t offset = i;
     int64_t length = j - i + 1;
-    if (length <= 0) return;
-
-    auto sliced = rb->Slice(offset, length);
-    auto batch = Batch(sliced);
-    std::invoke(reader, batch);
+    if (length <= 0) return rb;
+    return rb->Slice(offset, length);
   };
 
   std::unique_ptr<arrow::RecordBatchReader> batch_reader = nullptr;
@@ -144,7 +141,12 @@ void Executor::read(const Query& q, const Plan& plan, Reader reader) const
   for (auto batch_r : *batch_reader) {
     auto batch = impl_->check("invalid record batch", batch_r);
     auto want_rows = impl_->filter(q, batch);
-    Algorithm::spans(want_rows, project_wanted, batch);
+
+    for (const auto& span : Algorithm::spans(want_rows)) {
+      auto nb = narrow(span.first, span.second, batch);
+      Batch val(nb);
+      co_yield val;
+    }
   }
 }
 
@@ -153,13 +155,12 @@ std::unique_ptr<Slice> Executor::execute(const Query& q, const Plan& plan)
 {
   std::unique_ptr<Slice> slice(new Slice(impl_->projection_.get()));
 
-  auto reader = [&](const Batch& batch) -> void {
+  for (const auto& batch : read(q, plan)) {
     for (const auto& field : slice->fields()) {
       slice->append(field, batch.raw(field));
     }
-  };
+  }
 
-  read(q, plan, reader);
   return slice;
 }
 

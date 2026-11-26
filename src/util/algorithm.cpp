@@ -11,6 +11,21 @@ directory of this repository.
 namespace MzPeak::Util::Algorithm {
 
 /******************************************************************************/
+std::generator<const span_t&> spans(const std::vector<bool>& bins)
+{
+  auto i = std::ranges::find(bins.begin(), bins.end(), true);
+  auto j = bins.end();
+  auto val = std::make_pair<std::size_t, std::size_t>(0, 0);
+
+  for (; i != bins.end(); i = std::ranges::find(j, bins.end(), true)) {
+    j = std::ranges::find(i + 1, bins.end(), false);
+    val.first = std::distance(bins.begin(), i);
+    val.second = std::distance(bins.begin(), j - 1);
+    co_yield val;
+  }
+}
+
+/******************************************************************************/
 std::pair<std::size_t, std::size_t> range_to_request(std::size_t cache_size,
                                                      std::size_t record_size,
                                                      std::size_t index_wanted)

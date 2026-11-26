@@ -8,6 +8,7 @@ top-level directory of this repository.
 
 #pragma once
 
+#include <generator>
 #include <memory>
 
 #include "mzpeak/util/compat.h" // IWYU pragma: keep
@@ -34,14 +35,9 @@ public:
   ~Executor();
 
   /**
-   * A function that accepts one batch at a time.
-   */
-  using Reader = std::move_only_function<void(const Batch&)>;
-
-  /**
    * Read batches returned from a Query.
    */
-  void read(const Query&, const Plan&, Reader) const;
+  std::generator<const Batch&> read(const Query&, const Plan&) const;
 
   /**
    * Execute a query and extract the requested projection.

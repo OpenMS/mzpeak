@@ -8,11 +8,10 @@ top-level directory of this repository.
 
 #pragma once
 
+#include <generator>
 #include <arrow/array.h>
 #include <arrow/builder.h>
 #include <boost/math/statistics/univariate_statistics.hpp>
-#include <functional>
-#include <iterator>
 #include <ranges>
 #include <vector>
 
@@ -21,25 +20,15 @@ top-level directory of this repository.
 
 namespace MzPeak::Util::Algorithm {
 
+/// Values yielded by the spans function.
+using span_t = std::pair<std::size_t, std::size_t>;
+
 /**
  * Compute all runs of true values in the given vector.  For each run,
  * invoke the given function with index to the first and last true
  * value in the current span.
  */
-template <typename Fn, typename... Args>
-void spans(const std::vector<bool>& bins, Fn&& func, Args&&... args)
-{
-  auto i = std::ranges::find(bins.begin(), bins.end(), true);
-  auto j = bins.end();
-
-  for (; i != bins.end(); i = std::ranges::find(j, bins.end(), true)) {
-    j = std::ranges::find(i + 1, bins.end(), false);
-    auto first = std::distance(bins.begin(), i);
-    auto last = std::distance(bins.begin(), j - 1);
-    std::invoke(func, static_cast<std::size_t>(first), static_cast<size_t>(last),
-                args...);
-  }
-}
+std::generator<const span_t&> spans(const std::vector<bool>&);
 
 /**
  * Return a vector of deltas computed from the given input vector.
