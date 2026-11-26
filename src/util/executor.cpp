@@ -128,6 +128,10 @@ std::generator<const Batch&> Executor::read(const Query& q, const Plan& plan) co
 
   std::unique_ptr<arrow::RecordBatchReader> batch_reader = nullptr;
 
+  // FIXME: To reduce memory usage, compute the column indices that
+  // are needed and call `GetRecordBatchReader` with a vector of
+  // columns.
+
   if (plan.is_full_scan()) {
     // FIXME: We should emit a warning here.
     batch_reader =
